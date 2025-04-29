@@ -1,0 +1,144 @@
+{{extend 'layout.html'}}
+
+<h2>Cadastrar Novo Colaborador</h2>
+
+<form action="{{=URL('cadastrar_colaborador')}}" method="post">
+  <div class="form-group">
+    <label for="first_name">Nome</label>
+    <input
+      type="text"
+      class="form-control"
+      id="first_name"
+      name="first_name"
+      required
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="cpf">CPF</label>
+    <input type="text" class="form-control" id="cpf" name="cpf" required />
+  </div>
+
+  <div class="form-group">
+    <label for="birth_date">Data de Nascimento</label>
+    <input type="date" class="form-control" id="birth_date" name="birth_date" />
+    <small id="birth-date-message" class="text-danger"></small>
+  </div>
+
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input type="email" class="form-control" id="email" name="email" required />
+  </div>
+
+  <div class="form-group">
+    <label for="password">Senha</label>
+    <input
+      type="password"
+      class="form-control"
+      id="password"
+      name="password"
+      required
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="user_type">Tipo de Colaborador</label>
+    <select
+      class="form-control"
+      id="user_type"
+      name="user_type"
+      required
+      onchange="atualizarSetores()"
+    >
+      <option value="">Selecione</option>
+      {{for tipo in user_type_options:}}
+      <option value="{{=tipo.id}}">{{=tipo.name}}</option>
+      {{pass}}
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="setor_id">Setor</label>
+    <select class="form-control" id="setor_id" name="setor_id" required>
+      <option value="">Selecione</option>
+      {{for setor in setores:}}
+      <option value="{{=setor.id}}" data-name="{{=setor.name}}">
+        {{=setor.name}}
+      </option>
+      {{pass}}
+    </select>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Cadastrar Colaborador</button>
+</form>
+
+<script>
+  // Impede datas futuras no campo de nascimento
+  window.addEventListener("DOMContentLoaded", () => {
+    const birthDateField = document.getElementById("birth_date");
+    const today = new Date();
+    const maxDate = today.toISOString().split("T")[0];
+    birthDateField.max = maxDate;
+  });
+  
+  // Validação da Data de Nascimento
+  document.getElementById("birth_date").addEventListener("input", function () {
+    const birthDateField = document.getElementById("birth_date");
+    const birthDateMessage = document.getElementById("birth-date-message");
+    const birthDateValue = new Date(birthDateField.value);
+    const today = new Date();
+    const maxAgeDate = new Date();
+    maxAgeDate.setFullYear(today.getFullYear() - 120);
+
+    if (birthDateValue > today) {
+      birthDateMessage.textContent =
+        "A data de nascimento não pode ser futura.";
+      birthDateField.classList.add("is-invalid");
+    } else if (birthDateValue < maxAgeDate) {
+      birthDateMessage.textContent = "A idade máxima permitida é de 120 anos.";
+      birthDateField.classList.add("is-invalid");
+    } else {
+      birthDateMessage.textContent = "";
+      birthDateField.classList.remove("is-invalid");
+    }
+  });
+  
+  // Mapeamento de IDs de tipos de colaborador para setores permitidos
+  // Agora dinamico, vem do banco de dados
+  const setoresPermitidos = {{=XML(setores_por_tipo)}};
+
+  // Função para atualizar os setores com base no tipo selecionado
+  function atualizarSetores() {
+    // Captura o valor do tipo selecionado
+    const tipoSelecionado = parseInt(
+      document.getElementById("user_type").value,
+      10
+    );
+    const setorSelect = document.getElementById("setor_id");
+
+    // Ocultar todas as opções inicialmente
+    const options = Array.from(setorSelect.options);
+    options.forEach((option) => {
+      if (option.value !== "") option.style.display = "none"; // Oculta todas exceto o placeholder
+    });
+
+    // Mostra apenas os setores permitidos para o tipo selecionado
+    const setoresValidos = setoresPermitidos[tipoSelecionado] || []; // Obtém os setores permitidos
+    setoresValidos.forEach((setorNome) => {
+      options.forEach((option) => {
+        if (option.getAttribute("data-name") === setorNome) {
+          option.style.display = ""; // Mostra a opção correspondente
+        }
+      });
+    });
+
+    // Resetar o valor selecionado e desativar o campo se não houver setores permitidos
+    setorSelect.value = "";
+    setorSelect.disabled = setoresValidos.length === 0;
+  }
+
+  // Desativa o dropdown de setor até que o tipo de colaborador seja selecionado
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("setor_id").disabled = true;
+  });
+</script>

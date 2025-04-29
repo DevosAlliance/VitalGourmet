@@ -1,0 +1,65 @@
+{{extend 'layout.html'}}
+
+<h2>Financeiro - Saldo Devedor</h2>
+
+
+<h5>Saldo devedor total: <b  id="precoTotal" data-valor="{{=saldo_total}}"></b></h5>
+
+
+<!-- Filtro para selecionar entre Pacientes, Colaboradores e Todos -->
+<form method="GET" action="{{=URL('index')}}" class="form-inline mb-3">
+  <div class="form-group mr-2">
+    <label for="tipo_usuario">Tipo de Usuário:</label>
+    <select name="tipo_usuario" id="tipo_usuario" class="form-control ml-2" onchange="this.form.submit()">
+      <option value="Todos" {{='selected' if tipo_usuario == 'Todos' else ''}}>Todos</option>
+      <option value="Paciente" {{='selected' if tipo_usuario == 'Paciente' else ''}}>Pacientes</option>
+      <option value="Colaborador" {{='selected' if tipo_usuario == 'Colaborador' else ''}}>Colaboradores</option>
+    </select>
+  </div>
+</form>
+<a href="{{=URL('relatorio_financeiro')}}" class="btn btn-primary mb-3">Relatório</a>
+
+<!-- Tabela de usuários com saldo devedor -->
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>CPF</th>
+      <th>Saldo Devedor</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{for usuario in usuarios_com_debito:}}
+    <tr>
+      <td>{{=usuario.auth_user.first_name}}</td>
+<td>{{='{}.{}.{}-{}'.format(usuario.auth_user.cpf[:3], usuario.auth_user.cpf[3:6], usuario.auth_user.cpf[6:9], usuario.auth_user.cpf[9:]) if usuario.auth_user.cpf and len(usuario.auth_user.cpf) == 11 else usuario.auth_user.cpf}}</td>
+      <td id="precoTabela" data-valor="{{=usuario.user_balance.saldo_devedor}}"></td>
+      <td>
+        <a href="{{=URL('ver_solicitacoes_e_saldo', args=[usuario.auth_user.id])}}" class="btn btn-primary">Efetuar Pagamento</a>
+      </td>
+    </tr>
+    {{pass}}
+  </tbody>
+</table>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Função para formatar valores em BRL
+    function formatarBRL(valor) {
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      }).format(valor);
+    }
+
+    // Seleciona todos os elementos com o atributo data-valor
+    const elementosComValor = document.querySelectorAll("[data-valor]");
+    
+    // Itera sobre os elementos e formata os valores
+    elementosComValor.forEach(function(elemento) {
+      const valorBruto = parseFloat(elemento.getAttribute("data-valor"));
+      elemento.textContent = formatarBRL(valorBruto);
+    });
+  });
+</script>

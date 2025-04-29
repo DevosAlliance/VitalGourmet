@@ -1,0 +1,417 @@
+{{extend 'layout.html'}}
+
+<style>
+  /* Skeleton styles */
+  .container {
+    padding: 0 !important;
+  }
+  .skeleton {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    display: inline-block;
+    height: 20px;
+    width: 100%;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .skeleton-image {
+    height: 150px;
+  }
+  .skeleton::after {
+    content: "";
+    display: block;
+    position: absolute;
+    left: -100%;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    animation: loading 1.5s infinite;
+  }
+  @keyframes loading {
+    0% {
+      left: -100%;
+    }
+    50% {
+      left: 100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+
+  .custom-popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    min-width: 250px;
+    animation: fadeIn 0.5s;
+  }
+
+  .custom-popup.success {
+    border-left: 5px solid green;
+  }
+
+  .custom-popup.error {
+    border-left: 5px solid red;
+  }
+
+  .custom-popup .close-popup {
+    margin-left: auto;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    color: #555;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+
+<div class="container mt-4">
+  <h2 class="text-center">Cardápio</h2>
+  <div id="cardapio-container">
+    <!-- Skeleton loader -->
+    <div class="skeleton-row row">
+      <div class="col-6 mb-4 skeleton-container">
+        <div class="card">
+          <div class="skeleton skeleton-image"></div>
+          <div class="card-body text-center">
+            <div class="skeleton skeleton-text"></div>
+            <div class="skeleton skeleton-text"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 mb-4 skeleton-container">
+        <div class="card">
+          <div class="skeleton skeleton-image"></div>
+          <div class="card-body text-center">
+            <div class="skeleton skeleton-text"></div>
+            <div class="skeleton skeleton-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para visualizar detalhes do prato e solicitar -->
+  <div
+    class="modal fade"
+    id="modalDetalhesPrato"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="exampleModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalPratoNome"></h5>
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="modalPratoDescricao"></p>
+          <h6>Ingredientes:</h6>
+          <ul id="modalPratoIngredientes"></ul>
+          <div class="form-group">
+            <label for="quantidade">Quantidade:</label>
+            <input
+              type="number"
+              class="form-control"
+              id="quantidade"
+              value="1"
+              min="1"
+            />
+          </div>
+          <!-- Campo de Descrição (Oculto por padrão) -->
+          <div
+            class="form-group"
+            id="descricao-container"
+            style="display: none"
+          >
+            <label for="descricao">Descrição (opcional):</label>
+            <textarea
+              class="form-control"
+              id="descricao"
+              placeholder="Adicionar uma descrição"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            id="confirmarSolicitacao"
+          >
+            Confirmar Solicitação
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const container = document.getElementById("cardapio-container");
+    const skeletons = document.querySelectorAll(".skeleton-container");
+    const horarioAtual = new Date();
+    console.log("Horário atual:", horarioAtual);
+
+    // Verifica o setor do usuário logado
+    const id_user = "{{=auth.user.id}}";
+    const userSetor =
+      '{{=db.setor[auth.user.setor_id].name if auth.user.setor_id else "Sem setor"}}';
+    console.log("Setor do usuário:", userSetor);
+    console.log("ID do usuário:", id_user);
+
+    const descricaoContainer = document.getElementById("descricao-container");
+
+    fetch('{{=URL("usuario", "api_listar_pratos_para_usuario")}}')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          skeletons.forEach((skeleton) => skeleton.remove());
+
+          for (let tipo_prato in data.pratos) {
+            let container_cardapio = document.getElementById(`cardapio-${tipo_prato}`);
+            if (!container_cardapio) {
+              container_cardapio = document.createElement("div");
+              container_cardapio.id = `cardapio-${tipo_prato}`;
+              container_cardapio.className = 'row';
+
+              let titulo_tipo_cardapio = document.createElement('h3');
+              titulo_tipo_cardapio.textContent = tipo_prato;
+              titulo_tipo_cardapio.className = 'text-center mt-3';
+
+              container.appendChild(titulo_tipo_cardapio);
+              container.appendChild(container_cardapio);
+            }
+            data.pratos[tipo_prato].forEach((prato) => {
+              const col = document.createElement("div");
+              col.className = "col-6 mb-4";
+
+              const card = document.createElement("div");
+              card.className = "card";
+              card.style.cursor = "pointer";
+
+              const img = document.createElement("img");
+              img.className = "card-img-top";
+              img.src = `data:image/png;base64,${prato.foto_do_prato}`;
+              img.alt = prato.nome;
+
+              const cardBody = document.createElement("div");
+              cardBody.className = "card-body text-center";
+
+              const title = document.createElement("h5");
+              title.className = "card-title";
+              title.textContent = prato.nome;
+
+              const price = document.createElement("p");
+              price.className = "card-text";
+              price.textContent =
+                prato.preco === 0
+                  ? "Gratuito"
+                  : `R$ ${prato.preco.toFixed(2)}`;
+
+              cardBody.appendChild(title);
+              cardBody.appendChild(price);
+              card.appendChild(img);
+              card.appendChild(cardBody);
+              col.appendChild(card);
+              container_cardapio.appendChild(col);
+
+              card.addEventListener("click", function () {
+                abrirModalDetalhes(prato);
+              });
+            });
+          }
+        } else {
+          alert("Erro ao carregar o cardápio: " + data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar o cardápio:", error);
+        alert("Erro ao carregar o cardápio.");
+      });
+
+    function abrirModalDetalhes(prato) {
+      document.getElementById("modalPratoNome").textContent = prato.nome;
+      document.getElementById("modalPratoDescricao").textContent =
+        prato.descricao;
+
+      const ingredientesList = document.getElementById(
+        "modalPratoIngredientes"
+      );
+      ingredientesList.innerHTML = "";
+      prato.ingredientes.forEach((ing) => {
+        const li = document.createElement("li");
+        li.textContent = `${ing.nome} - ${ing.gramatura}g`;
+        ingredientesList.appendChild(li);
+      });
+
+      const quantidadeInput = document.getElementById("quantidade");
+
+      if (userSetor === "Hemodialise" || userSetor === "Instrumentador") {
+        quantidadeInput.value = 1;
+        quantidadeInput.disabled = false;
+        descricaoContainer.style.display = "block";
+      } else {
+        quantidadeInput.value = 1;
+        quantidadeInput.disabled = true;
+        descricaoContainer.style.display = "none";
+      }
+
+      $("#modalDetalhesPrato").modal("show");
+
+      document.getElementById("confirmarSolicitacao").onclick = function () {
+        confirmarSolicitacao(prato.id);
+      };
+    }
+
+    function confirmarSolicitacao(prato_id) {
+      const quantidade = document.getElementById("quantidade").value;
+      const descricao = document.getElementById("descricao").value;
+      const confirmarButton = document.getElementById("confirmarSolicitacao");
+
+      confirmarButton.disabled = true;
+      confirmarButton.textContent = "Processando...";
+
+      fetch('{{=URL("usuario", "api_registrar_solicitacao_refeicao")}}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          solicitante_id: id_user, // ID do usuário logado
+          pratoid: prato_id,
+          quantidade: quantidade,
+          descricao: descricao,
+          status: "Pendente",
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "success") {
+            showSuccessPopup("Refeição Solicitada com sucesso!");
+
+            $("#modalDetalhesPrato").modal("hide");
+          } else {
+            showErrorPopup("Erro ao registrar solicitação: " + data.message);
+          }
+        })
+        .catch((error) => {
+          console.error("Erro ao registrar solicitação:", error);
+          showErrorPopup("Erro ao registrar solicitação.");
+        })
+        .finally(() => {
+          confirmarButton.disabled = false;
+          confirmarButton.textContent = "Confirmar Solicitação";
+        });
+    }
+
+    function showSuccessPopup(message) {
+      const popup = document.createElement("div");
+      popup.className = "custom-popup success";
+      popup.innerHTML = `
+        <div class="popup-content">
+            <span class="close-popup">&times;</span>
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="green" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 13l4 4L19 7"/>
+            </svg>
+            <p>${message}</p>
+        </div>
+    `;
+      document.body.appendChild(popup);
+
+      popup.querySelector(".close-popup").addEventListener("click", () => {
+        popup.remove();
+      });
+
+      setTimeout(() => popup.remove(), 3000);
+    }
+
+    function showErrorPopup(message) {
+      const popup = document.createElement("div");
+      popup.className = "custom-popup error";
+      popup.innerHTML = `
+        <div class="popup-content">
+            <span class="close-popup">&times;</span>
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+            <p>${message}</p>
+        </div>
+    `;
+      document.body.appendChild(popup);
+
+      popup.querySelector(".close-popup").addEventListener("click", () => {
+        popup.remove();
+      });
+
+      setTimeout(() => popup.remove(), 3000);
+    }
+
+    function medirTempoExibicaoPratos(callback) {
+      const inicio = performance.now();
+
+      const observer = new MutationObserver(() => {
+        const skeletons = document.querySelectorAll(".skeleton-container");
+        if (skeletons.length === 0) {
+          observer.disconnect();
+          const fim = performance.now();
+          console.log(
+            `Tempo para exibição completa dos pratos: ${(fim - inicio).toFixed(
+              2
+            )}ms`
+          );
+          if (callback) callback(fim - inicio);
+        }
+      });
+
+      const container = document.getElementById("cardapio-container");
+      if (container) {
+        observer.observe(container, { childList: true, subtree: true });
+      } else {
+        console.error("Contêiner de cardápio não encontrado!");
+      }
+    }
+
+    medirTempoExibicaoPratos();
+  });
+</script>

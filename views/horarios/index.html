@@ -1,0 +1,86 @@
+{{extend 'layout.html'}}
+
+<h2>Horários de Refeições</h2>
+
+<!-- Filtros -->
+<div class="mb-3">
+    <form action="" method="GET" class="form-inline">
+        <div class="form-group mr-2">
+            <label for="setor">Setor:</label>
+            <select id="setor" name="setor" class="form-control" onchange="this.form.submit()">
+                <option value="">Todos os Setores</option>
+                {{for setor in setores:}}
+                    <option value="{{=setor}}" {{='selected' if setor == setor_filtro else ''}}>{{=setor}}</option>
+                {{pass}}
+            </select>
+        </div>
+        <div class="form-group mr-2">
+            <label for="refeicao">Refeição:</label>
+            <select id="refeicao" name="refeicao" class="form-control" onchange="this.form.submit()">
+                <option value="">Todas as Refeições</option>
+                {{for refeicao in refeicoes:}}
+                    <option value="{{=refeicao.refeicao}}" {{='selected' if refeicao.refeicao == refeicao_filtro else ''}}>{{=refeicao.refeicao}}</option>
+                {{pass}}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </form>
+</div>
+
+<!-- Botão para adicionar novo horário -->
+<div class="mb-3">
+<a href="{{=URL('cadastrar_horario_refeicao')}}" class="btn btn-primary mb-4">Adicionar Novo Horário</a>
+</div>
+
+<!-- Tabela de listagem dos horários -->
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Tipo de Usuário</th>
+            <th>Refeição</th>
+            <th>Pedido Início</th>
+            <th>Pedido Fim</th>
+            <th>Servido Início</th>
+<!--             <th>Ações</th> -->
+        </tr>
+    </thead>
+    <tbody>
+        {{for horario in horarios:}}
+            <tr>
+                <td>
+                    <span class="tipo-usuario" data-tipos="{{=horario.tipo_usuario}}"></span>
+                </td>
+                <td>{{=horario.refeicao}}</td>
+                <td>{{=horario.pedido_inicio}}</td>
+                <td>{{=horario.pedido_fim}}</td>
+                <td>{{=horario.servido_inicio}}</td>
+                <td>
+                    <a href="{{=URL('editar_horario_refeicao', args=[horario.id])}}" class="btn btn-warning btn-sm">Editar</a>
+              <!--      <a href="{{=URL('excluir_horario_refeicao', args=[horario.id])}}" class="btn btn-danger btn-sm">Excluir</a> -->
+                </td> 
+            </tr>
+        {{pass}}
+    </tbody>
+</table>
+
+
+<script>
+  // Manipula o conteúdo de 'tipo_usuario' ao carregar a página
+  document.addEventListener("DOMContentLoaded", function() {
+    const tipoUsuarioElements = document.querySelectorAll('.tipo-usuario');
+
+    tipoUsuarioElements.forEach(element => {
+      // Obtém o JSON do atributo data-tipos
+      const tipos = element.getAttribute('data-tipos');
+
+      try {
+        // Converte a string JSON para um array e exibe de forma amigável
+        const tiposArray = JSON.parse(tipos);
+        element.textContent = tiposArray.join(', ');
+      } catch (e) {
+        console.error("Erro ao processar tipos de usuário:", e);
+        element.textContent = "Erro na formatação";
+      }
+    });
+  });
+</script>

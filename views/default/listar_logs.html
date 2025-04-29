@@ -1,0 +1,123 @@
+{{extend 'layout.html'}}
+
+<style>
+    .pagination .btn {
+        margin-right: 5px;
+        color: #ffffff;
+    }
+
+    .pagination .btn.active {
+        background-color: #007bff !important;
+        color: #fff;
+        border-color: #007bff !important;
+    }
+
+    .pagination .btn.active:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .form-inline .form-group {
+        flex-direction: column !important;
+        align-items: baseline !important;
+    }
+
+    .form-inline {
+        gap: 1em;
+    }
+</style>
+
+<h2>Logs do Sistema</h2>
+
+<!-- Formulário de Filtro -->
+<form action="{{=URL('listar_logs')}}" method="get" class="form-inline mb-3">
+    <div class="form-group">
+        <label for="user_id">ID do Usuário</label>
+        <input type="text" name="user_id" value="{{=request.vars.user_id or ''}}" class="form-control" placeholder="ID do Usuário">
+    </div>
+    <div class="form-group">
+        <label for="data_inicio">Data Início</label>
+        <input type="date" name="data_inicio" value="{{=request.vars.data_inicio or ''}}" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="data_fim">Data Fim</label>
+        <input type="date" name="data_fim" value="{{=request.vars.data_fim or ''}}" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="entidade">Entidade</label>
+        <select name="entidade" class="form-control">
+            <option value="">Todas</option>
+            {{for entidade in entidades_disponiveis:}}
+                <option value="{{=entidade.entidade}}" {{='selected' if request.vars.entidade == entidade.entidade else ''}}>{{=entidade.entidade}}</option>
+            {{pass}}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="acao">Ação</label>
+        <select name="acao" class="form-control">
+            <option value="">Todas</option>
+            {{for acao in acoes_disponiveis:}}
+                <option value="{{=acao}}" {{='selected' if request.vars.acao == acao else ''}}>{{=acao.capitalize()}}</option>
+            {{pass}}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+</form>
+
+<!-- Tabela de Logs -->
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Usuário</th>
+            <th>Entidade</th>
+            <th>Ação</th>
+            <th>Data</th>
+            <th>Estado anterior</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{for log in logs:}}
+            <tr>
+                <td>{{=log.log_sistema.id}}</td>
+                <td>{{=log.log_sistema.user_id}} - {{=log.auth_user.first_name}} {{=log.auth_user.last_name}}</td>
+                <td>{{=log.log_sistema.entidade}}</td>
+                <td>{{=log.log_sistema.acao.capitalize()}}</td>
+                <td>{{=log.log_sistema.dataH}}</td>
+                <td>{{=str(log.log_sistema.observacao).replace("'", "").replace("{", "").replace("}", "")}}</td>
+            </tr>
+        {{pass}}
+    </tbody>
+</table>
+
+<!-- Controle de Paginação -->
+<div class="pagination">
+  {{if pagina > 1:}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=pagina-1))}}" class="btn btn-secondary">Anterior</a>
+  {{pass}}
+
+  <a href="{{=URL(vars=dict(request.vars, pagina=1))}}" class="btn btn-secondary {{='active' if pagina == 1 else ''}}">1</a>
+
+  {{if pagina > 4:}}
+    <span class="btn btn-secondary disabled">...</span>
+  {{pass}}
+
+  {{for i in range(max(2, pagina - 2), min((total_logs // registros_por_pagina) + 1, pagina + 3)):}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=i))}}" class="btn btn-secondary {{='active' if i == pagina else ''}}">{{=i}}</a>
+  {{pass}}
+
+  {{if pagina < (total_logs // registros_por_pagina) - 2:}}
+    <span class="btn btn-secondary disabled">...</span>
+  {{pass}}
+
+  {{if total_logs // registros_por_pagina > 1:}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=(total_logs // registros_por_pagina)))}}" 
+       class="btn btn-secondary {{='active' if pagina == (total_logs // registros_por_pagina) else ''}}">
+      {{=(total_logs // registros_por_pagina)}}
+    </a>
+  {{pass}}
+
+  {{if pagina < (total_logs // registros_por_pagina):}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=pagina+1))}}" class="btn btn-secondary">Próxima</a>
+  {{pass}}
+</div>

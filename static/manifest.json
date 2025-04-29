@@ -1,0 +1,20 @@
+{
+  "name": "VitalGourmet - Sistema de Gestão Hospitalar",
+  "short_name": "VitalGourmet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7ede0",
+  "theme_color": "#6c9980",
+  "icons": [
+    {
+      "src": "/static/iconShrt.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/static/iconDef.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

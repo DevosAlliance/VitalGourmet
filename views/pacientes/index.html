@@ -1,0 +1,103 @@
+{{extend 'layout.html'}}
+
+<h2>Lista de Pacientes</h2>
+
+<!-- Formulário de Filtros -->
+<div class="mb-3">
+    <form action="" method="GET" class="form-inline">
+        <div class="form-group mr-2">
+            <label for="nome">Nome:</label>
+            <input type="text" id="nome" name="nome" class="form-control" value="{{=nome_filtro}}" placeholder="Filtrar por Nome">
+        </div>
+        <div class="form-group mr-2">
+            <label for="cpf">CPF:</label>
+            <input type="text" id="cpf" name="cpf" class="form-control" value="{{=cpf_filtro}}" placeholder="Filtrar por CPF">
+        </div>
+        <div class="form-group mr-2">
+            <label for="status">Status:</label>
+            <select id="status" name="status" class="form-control" onchange="this.form.submit()">
+                <option value="Ativo" {{='selected' if status_selecionado == 'Ativo' else ''}}>Ativo</option>
+                <option value="Inativo" {{='selected' if status_selecionado == 'Inativo' else ''}}>Inativo</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </form>
+</div>
+
+<!-- Botão para adicionar paciente e exibição de subtotais -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{=URL('cadastrar_paciente')}}" class="btn btn-primary">+ Adicionar Paciente</a>
+    <div>
+        <span class="badge badge-success">Ativos: {{=total_ativos}}</span>
+        <span class="badge badge-danger">Inativos: {{=total_inativos}}</span>
+        <span class="badge badge-secondary">Total: {{=total_geral}}</span>
+    </div>
+</div>
+
+
+<!-- Tabela de Pacientes -->
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Data Nascimento</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{for paciente in pacientes:}}
+        <tr>
+            <td>{{=paciente.id}}</td>
+            <td>{{=paciente.first_name}}</td>
+            <td>{{='{}.{}.{}-{}'.format(paciente.cpf[:3], paciente.cpf[3:6], paciente.cpf[6:9], paciente.cpf[9:]) if paciente.cpf and len(paciente.cpf) == 11 else paciente.cpf}}</td>
+            <td>{{=paciente.birth_date.strftime('%d/%m/%Y') if paciente.birth_date else ''}}</td>
+            <td>
+                <a href="{{=URL('editar_paciente', args=[paciente.id])}}" class="btn btn-primary">Editar</a>
+                
+                <!-- Botão para alterar status -->
+                <a href="{{=URL('alterar_status_paciente', args=[paciente.id])}}" class="btn btn-secondary">
+                    {{='Desativar' if paciente.status == 'Ativo' else 'Ativar'}}
+                </a>
+                
+                <a href="{{=URL('vincular_acompanhante', args=[paciente.id])}}" class="btn btn-warning">Vincular Acompanhantes</a>
+                <a href="{{=URL('financeiro', 'ver_solicitacoes_e_saldo', args=[paciente.id])}}" class="btn btn-info">Ver Solicitações</a>
+            </td>
+        </tr>
+        {{pass}}
+    </tbody>
+</table>
+
+
+<!-- Paginação -->
+<nav>
+    <ul class="pagination">
+        <!-- Botão anterior -->
+        <li class="page-item {{'disabled' if page <= 1 else ''}}">
+            <a class="page-link" href="{{=URL('index', vars=dict(page=page-1, nome=nome_filtro, cpf=cpf_filtro, status=status_selecionado))}}" aria-label="Anterior">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+
+        <!-- Páginas -->
+        {{for i in range(1, total_pages + 1):}}
+            {{if abs(i - page) <= 2 or i in [1, total_pages]:}}
+                <li class="page-item {{'active' if i == page else ''}}">
+                    <a class="page-link" href="{{=URL('index', vars=dict(page=i, nome=nome_filtro, cpf=cpf_filtro, status=status_selecionado))}}">
+                        {{=i}}
+                    </a>
+                </li>
+            {{elif i == 2 or i == total_pages - 1:}}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            {{pass}}
+        {{pass}}
+
+        <!-- Botão próximo -->
+        <li class="page-item {{'disabled' if page >= total_pages else ''}}">
+            <a class="page-link" href="{{=URL('index', vars=dict(page=page+1, nome=nome_filtro, cpf=cpf_filtro, status=status_selecionado))}}" aria-label="Próximo">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>

@@ -1,0 +1,154 @@
+{{extend 'layout.html'}}
+
+<style>
+  th {
+    color: #ffffff !important;
+  }
+</style>
+
+<!-- Header com título e botão -->
+<div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+  <div>
+    <h2>Lista de Tickets</h2>
+  </div>
+  <div>
+    <button id="start-intro" class="btn btn-secondary d-flex align-items-center justify-content-center">
+      <i class="bi bi-question-circle-fill me-2"></i> Iniciar Tour
+    </button>
+    <a
+      href="{{=URL('clientesup', 'abrir_ticket')}}"
+      class="btn btn-primary d-flex align-items-center justify-content-center"
+    >
+      <i class="bi bi-plus-circle-fill me-2"></i> Novo Ticket
+    </a>
+  </div>
+</div>
+
+<!-- Formulário de Filtros -->
+<form method="GET" action="{{=URL('clientesup', 'listar_tickets')}}" class="mb-3">
+  <div class="row gx-3 gy-2 align-items-end flex-nowrap flex-wrap">
+    <!-- Campo Protocolo -->
+    <div class="col-auto flex-fill">
+      <label for="protocolo" class="form-label">Protocolo</label>
+      <input
+        type="text"
+        class="form-control"
+        id="protocolo"
+        name="protocolo"
+        value="{{=protocolo}}"
+        placeholder="Protocolo"
+      />
+    </div>
+
+    <!-- Campo Categoria -->
+    <div class="col-auto flex-fill">
+      <label for="categoria" class="form-label">Categoria</label>
+      <select class="form-select" id="categoria" name="categoria">
+        <option value="">Todas</option>
+        <option value="Sugestão" {{='selected' if categoria == 'Sugestão' else ''}}>Sugestão</option>
+        <option value="Reclamação" {{='selected' if categoria == 'Reclamação' else ''}}>Reclamação</option>
+        <option value="Suporte" {{='selected' if categoria == 'Suporte' else ''}}>Suporte</option>
+      </select>
+    </div>
+
+    <!-- Botões -->
+    <div class="col-auto">
+      <div class="d-flex">
+        <button type="submit" class="btn btn-success me-2">
+          <i class="bi bi-funnel-fill"></i> Filtrar
+        </button>
+        <a href="{{=URL('clientesup', 'listar_tickets')}}" class="btn btn-secondary">
+          <i class="bi bi-x-lg"></i> Limpar
+        </a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- Tabela de Tickets -->
+<table class="table table-striped table-hover">
+  <thead class="table-dark">
+    <tr>
+      <th scope="col" id="protocolof">Protocolo</th>
+      <th scope="col" class="d-none d-sm-table-cell">Categoria</th>
+      <th scope="col" class="d-none d-md-table-cell">Título</th>
+      <th scope="col" class="d-none d-lg-table-cell" id="status">Status</th>
+      <th scope="col" class="text-center">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{if not tickets:}}
+    <tr>
+      <td colspan="5" class="text-center">Nenhum ticket encontrado.</td>
+    </tr>
+    {{else:}} {{for ticket in tickets:}}
+    <tr>
+      <td>{{=ticket.protocolo}}</td>
+      <td class="d-none d-sm-table-cell">{{=ticket.categoria}}</td>
+      <td class="d-none d-md-table-cell">{{=ticket.titulo}}</td>
+      <td class="d-none d-lg-table-cell">{{=ticket.status}}</td>
+      <td class="text-center">
+        <div class="d-flex justify-content-center">
+          <a
+            href="{{=URL('clientesup', 'ver_ticket', args=[ticket.id])}}"
+            class="btn btn-sm btn-info me-2"
+          >
+            <i class="bi bi-chat-dots"></i> Visualizar
+          </a>
+        </div>
+      </td>
+    </tr>
+    {{pass}} {{pass}}
+  </tbody>
+</table>
+
+<script >
+  document.addEventListener("DOMContentLoaded", () => {
+    const startIntroButton = document.querySelector("#start-intro");
+
+    startIntroButton.addEventListener("click", () => {
+      introJs()
+        .setOptions({
+          steps: [
+            {
+              intro: "Bem-vindo à página de Lista de Tickets! Vamos apresentar as funcionalidades disponíveis."
+            },
+            {
+              element: document.querySelector(".btn-primary"),
+              title: "Novo Ticket",
+              intro: "Use este botão para abrir um novo ticket de suporte ou solicitação."
+            },
+            {
+              element: document.querySelector("form"),
+              title: "Filtros",
+              intro: "Aqui você pode filtrar os tickets pelo protocolo ou categoria."
+            },
+            {
+              element: document.querySelector("table"),
+              title: "Tabela de Tickets",
+              intro: "Esta tabela exibe todos os tickets abertos por você conforme os filtros aplicados."
+            },
+            {
+              element: document.querySelector("#protocolof"),
+              title: "Protocolo do Ticket",
+              intro: "O protocolo é um número único que identifica o ticket. Use-o para referenciar o ticket em conversas com o suporte via chat."
+            },
+            {
+              element: document.querySelector("#status"),
+              title: "Status do ticket",
+              intro: "Fique atento ao status do ticket para saber se ele foi respondido ou finalizado."
+            },
+            {
+              element: document.querySelector(".btn-info"),
+              title: "Visualizar Ticket",
+              intro: "Clique neste botão para visualizar os detalhes de um ticket e acessar o chat."
+            }
+          ]
+        })
+        .start();
+    });
+  });
+</script>
+
+
+<script src="https://cdn.jsdelivr.net/gh/ReisLucasF/intro/intro.js"></script>

@@ -1,0 +1,262 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+  <h2>Cadastrar Novo Item no Cardápio</h2>
+
+  <!-- Formulário para cadastro de novo item -->
+  <form id="formCardapio" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="nome">Nome do Prato</label>
+      <input type="text" class="form-control" id="nome" name="nome" required />
+    </div>
+
+    <div class="form-group">
+      <label for="descricao">Descrição</label>
+      <textarea
+        class="form-control"
+        id="descricao"
+        name="descricao"
+        rows="3"
+        required
+      ></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="preco">Preço</label>
+      <input
+        class="form-control"
+        id="preco"
+        name="preco"
+        type="text"
+        required
+        placeholder="Ex: 25,50"
+      />
+      <small class="text-muted">Use vírgula para casas decimais.</small>
+    </div>
+
+    <div class="form-group">
+      <label for="tipo">Tipo de Refeição</label>
+      <select class="form-control" id="tipo" name="tipo" required>
+        {{for tipo_refeicao in tipos_refeicoes:}}
+        <option value="{{=tipo_refeicao.refeicao}}">
+          {{=tipo_refeicao.refeicao}}
+        </option>
+        {{pass}}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="tipos_usuario">Tipos de Usuário</label>
+      <select
+        multiple
+        class="form-control"
+        id="tipos_usuario"
+        name="tipos_usuario"
+      >
+        {{for user_tipo in tipos_usuario:}}
+        <option value="{{=user_tipo.name}}">{{=user_tipo.name}}</option>
+        {{pass}}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="dias_semana">Dias da Semana</label>
+      <select multiple class="form-control" id="dias_semana" name="dias_semana">
+        <option value="Segunda-feira">Segunda-feira</option>
+        <option value="Terca-feira">Terça-feira</option>
+        <option value="Quarta-feira">Quarta-feira</option>
+        <option value="Quinta-feira">Quinta-feira</option>
+        <option value="Sexta-feira">Sexta-feira</option>
+        <option value="Sabado">Sábado</option>
+        <option value="Domingo">Domingo</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="foto_do_prato">Foto do Prato</label>
+      <input
+        type="file"
+        class="form-control-file"
+        id="foto_do_prato"
+        name="foto_do_prato"
+        accept=".png,.jpg,.jpeg"
+      />
+    </div>
+
+    <!-- Campos para adicionar ingredientes -->
+    <div class="form-group">
+      <label>Ingredientes</label>
+      <div id="ingredientesContainer">
+        <div class="ingrediente-row">
+          <select
+            class="form-control d-inline-block mb-2"
+            style="width: 45%"
+            id="ingrediente_nome"
+          >
+            {{for ingrediente in ingredientes_disponiveis:}}
+            <option value="{{=ingrediente.nome}}">{{=ingrediente.nome}}</option>
+            {{pass}}
+          </select>
+          <input
+            type="number"
+            class="form-control d-inline-block mb-2"
+            style="width: 45%"
+            placeholder="Quantidade (g)"
+            id="ingrediente_quantidade"
+          />
+          <button
+            type="button"
+            class="btn btn-success btn-sm mb-2"
+            id="add_ingrediente"
+          >
+            Adicionar
+          </button>
+        </div>
+      </div>
+      <!-- Campo oculto para armazenar os dados dos ingredientes -->
+      <input type="hidden" name="ingredientes" id="ingredientes" value="" />
+    </div>
+
+    <!-- Lista para mostrar os ingredientes adicionados -->
+    <ul id="ingredientesList" class="list-group"></ul>
+
+    <button type="submit" class="btn btn-primary">Enviar</button>
+  </form>
+</div>
+
+<script>
+   document.addEventListener('DOMContentLoaded', function() {
+
+    // Permitir apenas números e vírgula no campo de preço
+    document.getElementById('preco').addEventListener('input', function (e) {
+        // Remove caracteres não numéricos exceto vírgula
+        this.value = this.value.replace(/[^0-9,]/g, '');
+    });
+
+      const ingredientesList = document.getElementById('ingredientesList');
+      const ingredientesInput = document.getElementById('ingredientes');
+      const fotoInput = document.getElementById('foto_do_prato');
+      let ingredientesArray = []; // Array para armazenar os ingredientes
+
+      // Evento para adicionar ingrediente
+      document.getElementById('add_ingrediente').addEventListener('click', function() {
+          const nome = document.getElementById('ingrediente_nome').value;
+          const quantidade = document.getElementById('ingrediente_quantidade').value;
+
+          if (nome && quantidade) {
+              // Adicionar ingrediente ao array
+              ingredientesArray.push({ nome: nome, gramatura: quantidade });
+
+              // Atualizar a lista de ingredientes
+              atualizarListaIngredientes(nome, quantidade);
+
+              atualizarCampoIngredientes();  // Atualizar o campo oculto
+              document.getElementById('ingrediente_nome').value = '';
+              document.getElementById('ingrediente_quantidade').value = '';
+          } else {
+              alert('Por favor, preencha o nome e a quantidade do ingrediente.');
+          }
+      });
+
+      function atualizarListaIngredientes(nome, quantidade) {
+          const listItem = document.createElement('li');
+          listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+          listItem.textContent = `${nome} - ${quantidade}g`;
+
+          const removeButton = document.createElement('button');
+          removeButton.className = 'btn btn-danger btn-sm';
+          removeButton.textContent = 'Remover';
+          removeButton.onclick = function() {
+              // Remover o ingrediente do array e da lista
+              const index = ingredientesArray.findIndex(ing => ing.nome === nome && ing.gramatura === quantidade);
+              if (index > -1) {
+                  ingredientesArray.splice(index, 1);
+              }
+              ingredientesList.removeChild(listItem);
+              atualizarCampoIngredientes();
+          };
+
+          listItem.appendChild(removeButton);
+          ingredientesList.appendChild(listItem);
+      }
+
+      function atualizarCampoIngredientes() {
+          ingredientesInput.value = JSON.stringify(ingredientesArray);
+          console.log('Ingredientes array:', ingredientesArray); // Adicionando log para verificar o array
+      }
+
+      function resizeAndConvertToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const img = new Image();
+                img.src = reader.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Definindo o tamanho para 300x300
+                    canvas.width = 300;
+                    canvas.height = 300;
+
+                    // Preenchendo o fundo com branco antes de desenhar a imagem
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Desenhando a imagem no canvas
+                    ctx.drawImage(img, 0, 0, 300, 300);
+
+                    // Convertendo para base64 com qualidade ajustada
+                    const resizedBase64 = canvas.toDataURL('image/jpeg', 0.7); // ajusta a qualidade para 0.7
+                    resolve(resizedBase64.split(',')[1]); // Remover o prefixo
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+      }
+
+      document.getElementById('formCardapio').addEventListener('submit', async function(event) {
+          event.preventDefault();
+
+          const formData = new FormData(this);
+          const fotoFile = fotoInput.files[0];
+          let fotoBase64 = '';
+          if (fotoFile) {
+              fotoBase64 = await resizeAndConvertToBase64(fotoFile);
+          }
+
+          // Converter o preço com vírgula para ponto
+          let preco = document.getElementById('preco').value.replace(',', '.');
+
+          // Adiciona o base64 redimensionado ao formData
+          formData.set('preco', preco);
+          formData.set('foto_do_prato', fotoBase64);
+          formData.set('ingredientes', JSON.stringify(ingredientesArray));
+          formData.set('tipos_usuario', JSON.stringify($('#tipos_usuario').val()));
+          formData.set('dias_semana', JSON.stringify($('#dias_semana').val()));
+
+          const jsonData = Object.fromEntries(formData.entries());
+          console.log('JSON to be sent:', jsonData);
+
+          fetch('{{=URL('api_criar_cardapio')}}', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(jsonData)
+          }).then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = '{{=URL("index")}}';
+                } else {
+                    alert('Erro ao cadastrar o cardápio: ' + data.message);
+                }
+            }).catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao cadastrar o cardápio.');
+            });
+      });
+  });
+</script>

@@ -1,0 +1,47 @@
+{
+    "cliente1.exemplo.com": {
+        "id": "cliente1",
+        "name": "Cliente 1",
+        "db": {
+            "uri": "mysql+mysqlconnector://usuario1:senha1@servidor1/db_cliente1",
+            "migrate": false,
+            "pool_size": 10
+        },
+        "theme": "theme_cliente1",
+        "logo": "logo_cliente1.png",
+        "colors": {
+            "primary": "#4e73df",
+            "secondary": "#f8f9fc"
+        }
+    },
+    "cliente2.exemplo.com": {
+        "id": "cliente2",
+        "name": "Cliente 2",
+        "db": {
+            "uri": "mysql+mysqlconnector://usuario2:senha2@servidor2/db_cliente2",
+            "migrate": false,
+            "pool_size": 10
+        },
+        "theme": "theme_cliente2",
+        "logo": "logo_cliente2.png",
+        "colors": {
+            "primary": "#1cc88a",
+            "secondary": "#f0f0f0"
+        }
+    },
+    "default": {
+        "id": "default",
+        "name": "Sistema Padr\u00e3o",
+        "db": {
+            "uri": "mysql+mysqlconnector://lucas:!zJbfC!yamNVbJSnfPNJqN$1@srv647131.hstgr.cloud/hstdeveloper",
+            "migrate": false,
+            "pool_size": 10
+        },
+        "theme": "default",
+        "logo": "iconShrt.png",
+        "colors": {
+            "primary": "#4e73df",
+            "secondary": "#f8f9fc"
+        }
+    }
+}

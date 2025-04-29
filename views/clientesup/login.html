@@ -1,0 +1,122 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-5">
+  <h2 class="mb-4">Login do Cliente</h2>
+  <form
+    method="POST"
+    action="{{=URL('clientesup', 'login')}}"
+    class="card p-4 shadow-sm"
+    id="loginForm"
+  >
+    <div class="mb-3">
+      <label for="email" class="form-label">E-mail</label>
+      <input
+        type="email"
+        name="email"
+        id="email"
+        class="form-control"
+        placeholder="Digite seu e-mail"
+        required
+      />
+    </div>
+    <div class="mb-3">
+      <label for="password" class="form-label">Senha</label>
+      <input
+        type="password"
+        name="password"
+        id="password"
+        class="form-control"
+        placeholder="Digite sua senha"
+        required
+      />
+    </div>
+    <input type="hidden" id="siteEsperado" value="{{=site_atual}}" />
+    <button type="submit" class="btn btn-primary w-100">Entrar</button>
+  </form>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const siteEsperado = document.getElementById("siteEsperado").value;
+    const siteAtual = window.location.origin; // Obtém a URL atual do navegador
+
+    if (siteAtual === siteEsperado) {
+      console.log("Tentando login automático...");
+
+      fetch("{{=URL('clientesup', 'login')}}", {
+        method: "GET",
+        headers: {
+          Accept: "application/json", // Pedimos um formato de resposta JSON
+        },
+      })
+        .then(async (response) => {
+          // Verifica se o backend sinalizou o login automático
+          if (
+            response.ok &&
+            response.headers.get("X-Automatic-Login") === "true"
+          ) {
+            // Salva os dados no sessionStorage
+            sessionStorage.setItem(
+              "cliente_id",
+              response.headers.get("X-Cliente-ID")
+            );
+            sessionStorage.setItem(
+              "cliente_nome",
+              response.headers.get("X-Cliente-Nome")
+            );
+            sessionStorage.setItem(
+              "cliente_email",
+              response.headers.get("X-Cliente-Email")
+            );
+
+            console.log("Login automático realizado com sucesso.");
+            console.log("Dados salvos no sessionStorage:", {
+              cliente_id: sessionStorage.getItem("cliente_id"),
+              cliente_nome: sessionStorage.getItem("cliente_nome"),
+              cliente_email: sessionStorage.getItem("cliente_email"),
+            });
+
+            // Redireciona para o dashboard
+            const redirectUrl = "{{=URL('clientesup', 'dashboard')}}";
+            window.location.href = redirectUrl;
+          } else {
+            console.log("Login automático não realizado.");
+          }
+        })
+        .catch((error) => {
+          console.error("Erro no login automático:", error);
+        });
+    }
+
+    // Login manual
+    const loginForm = document.getElementById("loginForm");
+    loginForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const formData = new FormData(loginForm);
+
+      fetch("{{=URL('clientesup', 'login')}}", {
+        method: "POST",
+        body: new URLSearchParams(formData),
+      })
+        .then((response) => {
+          if (response.redirected) {
+            // Em caso de sucesso, redireciona para o URL correto
+            window.location.href = response.url;
+          } else {
+            return response.text(); // Carrega o HTML renderizado em caso de erro
+          }
+        })
+        .then((html) => {
+          if (html) {
+            document.open();
+            document.write(html);
+            document.close();
+          }
+        })
+        .catch((error) => {
+          console.error("Erro no login manual:", error);
+        });
+    });
+  });
+</script>

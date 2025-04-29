@@ -1,0 +1,41 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-5">
+  <h2>Criar Ticket</h2>
+  <form method="POST" enctype="multipart/form-data">
+    <div class="mb-3">
+      <label for="categoria" class="form-label">Categoria</label>
+      <select class="form-select" name="categoria" id="categoria" required>
+        <option value="">Selecione...</option>
+        <option value="Sugestão">Sugestão</option>
+        <option value="Reclamação">Reclamação</option>
+        <option value="Suporte">Suporte</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="titulo" class="form-label">Título</label>
+      <input
+        type="text"
+        class="form-control"
+        id="titulo"
+        name="titulo"
+        required
+      />
+    </div>
+    <div class="mb-3">
+      <label for="descricao" class="form-label">Descrição</label>
+      <textarea
+        class="form-control"
+        id="descricao"
+        name="descricao"
+        rows="4"
+        required
+      ></textarea>
+    </div>
+<!--     <div class="mb-3">
+      <label for="evidencia" class="form-label">Anexar Evidência</label>
+      <input type="file" class="form-control" id="evidencia" name="evidencia" />
+    </div> -->
+    <button type="submit" class="btn btn-primary">Abrir Ticket</button>
+  </form>
+</div>

@@ -1,0 +1,63 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+  <h2>Gerenciar Tipos para Categoria: {{=categoria.nome}}</h2>
+  <p class="text-muted">
+    Associe tipos de usuário à categoria "{{=categoria.nome}}"
+  </p>
+  
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>Adicionar Tipo à Categoria</h5>
+        </div>
+        <div class="card-body">
+          {{=form}}
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>Tipos Associados</h5>
+        </div>
+        <div class="card-body">
+          {{if tipos_associados:}}
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Nome do Tipo</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{for tipo in tipos_associados:}}
+                  <tr>
+                    <td>{{=tipo.name}}</td>
+                    <td>
+                      <a href="{{=URL('remover_tipo_categoria', args=[categoria.id, tipo.id])}}" 
+                         class="btn btn-sm btn-danger"
+                         onclick="return confirm('Tem certeza que deseja remover esse tipo da categoria?');">
+                        <i class="fa fa-trash"></i> Remover
+                      </a>
+                    </td>
+                  </tr>
+                {{pass}}
+              </tbody>
+            </table>
+          {{else:}}
+            <p class="text-muted">Nenhum tipo associado a esta categoria.</p>
+          {{pass}}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mt-3">
+    <a href="{{=URL('gerenciar_categorias')}}" class="btn btn-secondary">
+      <i class="fa fa-arrow-left"></i> Voltar para Categorias
+    </a>
+  </div>
+</div>

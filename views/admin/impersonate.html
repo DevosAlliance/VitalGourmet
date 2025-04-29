@@ -1,0 +1,193 @@
+{{extend 'layout.html'}}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Incorporação de Usuários (User Impersonation)</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>Atenção!</strong> Esta funcionalidade permite que você veja o sistema como se fosse outro usuário, sem alterar seu login atual. Isto é útil para testar diferentes permissões e visualizações sem precisar fazer logout.
+                </div>
+                
+                {{if usuario_incorporado:}}
+                <div class="alert alert-warning">
+                    <strong>Aviso!</strong> Você está atualmente incorporando o usuário: 
+                    <strong>{{=usuario_incorporado.first_name}} {{=usuario_incorporado.last_name}}</strong>
+                    ({{=db.user_type[session.impersonation_user_type or usuario_incorporado.user_type].name if (session.impersonation_user_type or usuario_incorporado.user_type) else 'Sem tipo'}} / 
+                    {{=db.setor[session.impersonation_setor_id or usuario_incorporado.setor_id].name if (session.impersonation_setor_id or usuario_incorporado.setor_id) else 'Sem setor'}})
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Alterar Tipo de Usuário</label>
+                            <select id="tipo-usuario-select" class="form-control">
+                                <option value="">Selecione um tipo...</option>
+                                {{for tipo in tipos_usuario:}}
+                                <option value="{{=tipo.id}}" {{='selected' if session.impersonation_user_type == tipo.id else ''}}>{{=tipo.name}}</option>
+                                {{pass}}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Alterar Setor</label>
+                            <select id="setor-select" class="form-control">
+                                <option value="">Selecione um setor...</option>
+                                {{for setor in setores:}}
+                                <option value="{{=setor.id}}" {{='selected' if session.impersonation_setor_id == setor.id else ''}}>{{=setor.name}}</option>
+                                {{pass}}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="margin-top: 32px;">
+                            <a href="{{=URL('impersonation', 'finalizar')}}" class="btn btn-danger btn-block">
+                                <i class="fas fa-sign-out-alt"></i> Finalizar Incorporação
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {{pass}}
+                
+                {{if not usuario_incorporado:}}
+                <h4 class="mb-3">Selecione um Usuário para Incorporar</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="usuariosTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Tipo de Usuário</th>
+                                <th>Setor</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{for usuario in usuarios:}}
+                            <tr>
+                                <td>{{=usuario.first_name}} {{=usuario.last_name}}</td>
+                                <td>{{=db.user_type[usuario.user_type].name if usuario.user_type else 'Não definido'}}</td>
+                                <td>{{=db.setor[usuario.setor_id].name if usuario.setor_id else 'Não definido'}}</td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm iniciar-impersonation" data-id="{{=usuario.id}}">
+                                        <i class="fas fa-user-secret"></i> Incorporar
+                                    </button>
+                                </td>
+                            </tr>
+                            {{pass}}
+                        </tbody>
+                    </table>
+                </div>
+                {{pass}}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Inicializa a tabela de usuários com DataTables
+    $('#usuariosTable').DataTable({
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Portuguese-Brasil.json"
+        }
+    });
+    
+    // Evento para iniciar incorporação
+    $('.iniciar-impersonation').click(function() {
+        var usuarioId = $(this).data('id');
+        
+        $.ajax({
+            url: "{{=URL('impersonation', 'iniciar')}}",
+            method: "POST",
+            data: {
+                usuario_id: usuarioId
+            },
+            dataType: "json",
+            success: function(response) {
+                if (response.success) {
+                    // Exibe mensagem de sucesso
+                    web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                    {message: response.message, category: 'success'});
+                    
+                    // Recarrega a página
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    // Exibe mensagem de erro
+                    web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                    {message: response.message, category: 'error'});
+                }
+            },
+            error: function() {
+                web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                {message: "Ocorreu um erro ao processar a solicitação", category: 'error'});
+            }
+        });
+    });
+    
+    // Evento para alterar tipo de usuário
+    $('#tipo-usuario-select').change(function() {
+        var tipoId = $(this).val();
+        
+        if (!tipoId) return;
+        
+        $.ajax({
+            url: "{{=URL('impersonation', 'alterar_tipo')}}",
+            method: "POST",
+            data: {
+                tipo_id: tipoId
+            },
+            dataType: "json",
+            success: function(response) {
+                if (response.success) {
+                    // Exibe mensagem de sucesso
+                    web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                    {message: response.message, category: 'success'});
+                } else {
+                    // Exibe mensagem de erro
+                    web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                    {message: response.message, category: 'error'});
+                }
+            },
+            error: function() {
+                web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                {message: "Ocorreu um erro ao processar a solicitação", category: 'error'});
+            }
+        });
+    });
+    
+    // Evento para alterar setor
+    $('#setor-select').change(function() {
+        var setorId = $(this).val();
+        
+        if (!setorId) return;
+        
+        $.ajax({
+            url: "{{=URL('impersonation', 'alterar_setor')}}",
+            method: "POST",
+            data: {
+                setor_id: setorId
+            },
+            dataType: "json",
+            success: function(response) {
+                if (response.success) {
+                    // Exibe mensagem de sucesso
+                    web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                    {message: response.message, category: 'success'});
+                } else {
+                    // Exibe mensagem de erro
+                    web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                    {message: response.message, category: 'error'});
+                }
+            },
+            error: function() {
+                web2py_component("{{=URL('default', 'message.load')}}", "flash", 
+                                {message: "Ocorreu um erro ao processar a solicitação", category: 'error'});
+            }
+        });
+    });
+});
+</script>

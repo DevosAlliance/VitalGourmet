@@ -1,0 +1,79 @@
+{{extend 'layout.html'}}
+
+<h2 class="mb-4">Bem-vindo(a), {{=cliente.nome}}</h2>
+<button id="start-intro" class="btn btn-primary mt-2 mb-2">Iniciar Tour</button>
+
+<div class="list-group">
+  <a
+    id="meus-servicos"
+    href="{{=URL('clientesup', 'servicos_vigentes')}}"
+    class="list-group-item list-group-item-action"
+  >
+    <i class="bi bi-gear-fill me-2"></i> Meus Serviços
+  </a>
+  <a
+    id="contas-pagar"
+    href="{{=URL('clientesup', 'contas_pagar')}}"
+    class="list-group-item list-group-item-action"
+  >
+    <i class="bi bi-cash-coin me-2"></i> Contas a Pagar
+  </a>
+  <a
+    id="suporte"
+    href="{{=URL('clientesup', 'listar_tickets')}}"
+    class="list-group-item list-group-item-action"
+  >
+    <i class="bi bi-ticket me-2"></i> Suporte
+  </a>
+  <a
+    id="logout"
+    href="{{=URL('clientesup', 'logout')}}"
+    class="list-group-item list-group-item-action text-danger"
+  >
+    <i class="bi bi-box-arrow-right me-2"></i> Sair
+  </a>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const startIntroButton = document.querySelector("#start-intro");
+
+    startIntroButton.addEventListener("click", () => {
+      introJs()
+        .setOptions({
+          steps: [
+            {
+              intro:
+                "Bem-vindo! Vamos apresentar as funcionalidades do seu painel do cliente!",
+            },
+            {
+              element: document.querySelector("#meus-servicos"),
+              title: "Seus Serviços Vigentes",
+              intro:
+                "Veja os serviços que você contratou que ainda estão vigentes.",
+            },
+            {
+              element: document.querySelector("#contas-pagar"),
+              title: "Contas a Pagar",
+              intro:
+                "Aqui você pode acompanhar as contas pendentes, realizar pagamentos e visualizar toda a sua programação financeira. 🤑",
+            },
+            {
+              element: document.querySelector("#suporte"),
+              title: "Precisou de ajuda?",
+              intro:
+                "Acesse o suporte por aqui! Temos uma equipe de suporte via chat disposta a te ajudar. Basta abrir um ticket 😉.",
+            },
+            {
+              element: document.querySelector("#logout"),
+              title: "Contas a Pagar",
+              intro: "Clique aqui para sair com segurança. Até a próxima! 👋",
+            },
+          ],
+        })
+        .start();
+    });
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/gh/ReisLucasF/intro/intro.js"></script>

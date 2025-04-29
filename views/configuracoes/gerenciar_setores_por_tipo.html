@@ -1,0 +1,128 @@
+{{extend 'layout.html'}}
+
+<style>
+    #ocultar {
+        display: none !important;
+    }
+
+    #tipo_usuario_setor_tipo_id__row {
+        display: none !important;
+    }
+</style>
+
+<div class="container mt-4">
+  {{if not tipo:}}
+    <!-- Lista de tipos de usuário para selecionar -->
+    <h2>Gerenciar Setores por Tipo de Usuário</h2>
+    <p class="text-muted">
+      Selecione um tipo de usuário para configurar os setores permitidos
+    </p>
+    
+    <div class="card" id="ocultar"></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="tipo_selector">Selecione um tipo de usuário:</label>
+          <select id="tipo_selector" class="form-control">
+            <option value="">Selecione...</option>
+            {{for t in tipos:}}
+              <option value="{{=t.id}}">{{=t.name}}</option>
+            {{pass}}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById('tipo_selector').addEventListener('change', function() {
+        const tipoId = this.value;
+        if (tipoId) {
+          window.location.href = "{{=URL('gerenciar_setores_por_tipo')}}/" + tipoId;
+        }
+      });
+    </script>
+  {{else:}}
+    <!-- Formulário para configurar setores do tipo selecionado -->
+    <h2>Setores Permitidos para: {{=tipo.name}}</h2>
+    <p class="text-muted">
+      Configure quais setores são permitidos para usuários do tipo "{{=tipo.name}}"
+    </p>
+    
+    <!-- Dropdown para navegação rápida entre tipos -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="form-group mb-0">
+          <label for="tipo_nav">Mudar para outro tipo de usuário:</label>
+          <select id="tipo_nav" class="form-control">
+            {{for t in tipos:}}
+              <option value="{{=t.id}}" {{='selected' if str(t.id) == str(tipo.id) else ''}}>{{=t.name}}</option>
+            {{pass}}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById('tipo_nav').addEventListener('change', function() {
+        const tipoId = this.value;
+        if (tipoId != {{=tipo.id}}) {
+          window.location.href = "{{=URL('gerenciar_setores_por_tipo')}}/" + tipoId;
+        }
+      });
+    </script>
+    
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5>Adicionar Setor ao Tipo</h5>
+          </div>
+          <div class="card-body">
+            {{=form}}
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5>Setores Associados</h5>
+          </div>
+          <div class="card-body">
+            {{if setores_associados:}}
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Nome do Setor</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{for setor in setores_associados:}}
+                    <tr>
+                      <td>{{=setor.name}}</td>
+                      <td>
+                        <a href="{{=URL('remover_setor_tipo', args=[tipo.id, setor.id])}}" 
+                           class="btn btn-sm btn-danger"
+                           onclick="return confirm('Tem certeza que deseja remover esse setor do tipo?');">
+                          <i class="fa fa-trash"></i> Remover
+                        </a>
+                      </td>
+                    </tr>
+                  {{pass}}
+                </tbody>
+              </table>
+            {{else:}}
+              <p class="text-muted">Nenhum setor associado a este tipo.</p>
+            {{pass}}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="mt-3">
+      <a href="{{=URL('gerenciar_setores_por_tipo')}}" class="btn btn-secondary">
+        <i class="fa fa-arrow-left"></i> Voltar para Lista de Tipos
+      </a>
+    </div>
+  {{pass}}
+</div>

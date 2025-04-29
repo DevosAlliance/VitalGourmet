@@ -1,0 +1,106 @@
+{{extend 'layout.html'}}
+
+<h2>Editar Colaborador</h2>
+
+<form action="{{=URL('editar_colaborador', args=[colaborador_id])}}" method="post">
+    <div class="form-group">
+        <label for="first_name">Nome</label>
+        <input type="text" class="form-control" id="first_name" name="first_name" value="{{=colaborador.first_name}}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="cpf">CPF</label>
+        <input type="text" class="form-control" id="cpf" name="cpf" value="{{=colaborador.cpf}}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="birth_date">Data de Nascimento</label>
+        <input type="date" class="form-control" id="birth_date" name="birth_date" value="{{=colaborador.birth_date}}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" class="form-control" id="email" name="email" value="{{=colaborador.email}}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Senha (deixe em branco para não alterar)</label>
+        <input type="password" class="form-control" id="password" name="password">
+    </div>
+
+    <div class="form-group">
+        <label for="user_type">Tipo de Colaborador</label>
+        <select class="form-control" id="user_type" name="user_type" required onchange="atualizarSetores()">
+            <option value="">Selecione</option>
+            {{for tipo in user_type_options:}}
+            <option value="{{=tipo.id}}" {{='selected' if tipo.id == colaborador.user_type else ''}}>{{=tipo.name}}</option>
+            {{pass}}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="setor_id">Setor</label>
+        <select class="form-control" id="setor_id" name="setor_id" data-current="{{=colaborador.setor_id}}" required>
+            <option value="">Selecione</option>
+            {{for setor in setores_permitidos:}}
+            <option value="{{=setor.id}}" data-name="{{=setor.name}}" {{='selected' if setor.id == colaborador.setor_id else ''}}>{{=setor.name}}</option>
+            {{pass}}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+</form>
+
+<script>
+  // Mapeamento de IDs de tipos de colaborador para setores permitidos
+  const setoresPermitidos = {
+    3: ["Administrativo"], // "Gestor"
+    9: ["Hemodialise","Colaborador Hemodialise"], // "Hemodialise"
+    10: ["Enfermagem", "Radiologia", "Nutrição", "Hemodialise", "Medico"], // "Medico"
+    5: ["Instrumentador"], // "Instrumentador"
+    2: ["Recepção", "Serviços Gerais", "Faturamento", "Cozinha", "Centro Cirurgico", "Consultorio Particular", "U.T.I", "Lavanderia"], // "Colaborador"
+  };
+
+  // Função para atualizar os setores com base no tipo selecionado
+  function atualizarSetores() {
+    // Captura o valor do tipo selecionado
+    const tipoSelecionado = parseInt(document.getElementById("user_type").value, 10); // Agora é um número
+    const setorSelect = document.getElementById("setor_id");
+
+    // Ocultar todas as opções inicialmente
+    const options = Array.from(setorSelect.options);
+    options.forEach((option) => {
+      if (option.value !== "") option.style.display = "none"; // Oculta todas exceto o placeholder
+    });
+
+    // Mostra apenas os setores permitidos para o tipo selecionado
+    const setoresValidos = setoresPermitidos[tipoSelecionado] || []; // Obtém os setores permitidos
+    setoresValidos.forEach((setorNome) => {
+      options.forEach((option) => {
+        if (option.getAttribute("data-name") === setorNome) {
+          option.style.display = ""; // Mostra a opção correspondente
+        }
+      });
+    });
+
+    // Resetar o valor selecionado e desativar o campo se não houver setores permitidos
+    setorSelect.value = "";
+    setorSelect.disabled = setoresValidos.length === 0;
+  }
+
+  // Configuração inicial: atualiza os setores com base no tipo do colaborador carregado
+  document.addEventListener("DOMContentLoaded", () => {
+    const userTypeSelect = document.getElementById("user_type");
+    const setorSelect = document.getElementById("setor_id");
+
+    // Atualiza os setores com base no tipo de colaborador carregado
+    const tipoSelecionado = parseInt(userTypeSelect.value, 10);
+    atualizarSetores();
+
+    // Certifique-se de que o setor associado ao colaborador permaneça selecionado
+    const setorAtual = parseInt(setorSelect.getAttribute("data-current"), 10); // Valor atual do setor
+    if (setorAtual && !isNaN(setorAtual)) {
+      setorSelect.value = setorAtual;
+    }
+  });
+</script>

@@ -1,0 +1,122 @@
+{{extend 'layout.html'}}
+
+<h2>Cardápio</h2>
+
+<style>
+    .pagination .btn {
+        margin-right: 5px;
+        color: #ffffff;
+    }
+
+    .pagination .btn.active {
+        background-color: #007bff !important;
+        color: #fff;
+        border-color: #007bff !important;
+    }
+
+    .pagination .btn.active:focus {
+        outline: none;
+        box-shadow: none;
+    }
+</style>
+
+<!-- Filtros -->
+<form action="{{=URL('index')}}" method="get" class="mb-4">
+    <div class="form-row">
+        <div class="col">
+            <input type="text" name="nome" placeholder="Filtrar por Nome" class="form-control" value="{{=request.vars.nome or ''}}">
+        </div>
+        <div class="col">
+            <select name="tipo" class="form-control">
+                <option value="">Tipo de Refeição</option>
+                {{for tipo in db().select(db.cardapio.tipo, distinct=True):}}
+                    <option value="{{=tipo.tipo}}" {{='selected' if request.vars.tipo == tipo.tipo else ''}}>{{=tipo.tipo}}</option>
+                {{pass}}
+            </select>
+        </div>
+        <div class="col">
+            <select name="dia_semana" class="form-control">
+                <option value="">Dia da Semana</option>
+                {{for dia in ['Segunda-feira', 'Terca-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sabado', 'Domingo']:}}
+                    <option value="{{=dia}}" {{='selected' if request.vars.dia_semana == dia else ''}}>{{=dia}}</option>
+                {{pass}}
+            </select>
+        </div>
+        <div class="col">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+        </div>
+    </div>
+</form>
+
+<!-- Botão para adicionar novo item -->
+<a href="{{=URL('cadastrar_cardapio')}}" class="btn btn-primary mb-4">Adicionar Novo Item ao Cardápio</a>
+
+<!-- Tabela de listagem -->
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Tipo de Refeição</th>
+            <th>Dias da Semana</th>
+            <th>Preço</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{for item in cardapio:}}
+            <tr>
+                <td>{{=item.nome}}</td>
+                <td>{{=item.tipo}}</td>
+                <td>{{=', '.join(item.dias_semana)}}</td>
+                <td>{{=item.preco}}</td>
+                <td>
+                    <a href="{{=URL('visualizar_cardapio', args=[item.id])}}" class="btn btn-info btn-sm">Visualizar</a>
+                    <a href="{{=URL('editar_cardapio', args=[item.id])}}" class="btn btn-warning btn-sm">Editar</a>
+                    <a href="{{=URL('excluir_cardapio', args=[item.id])}}" class="btn btn-danger btn-sm">Excluir</a>
+                </td>
+            </tr>
+        {{pass}}
+    </tbody>
+</table>
+
+
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        <!-- Botão "Anterior" -->
+        {{if pagina > 1:}}
+        <li class="page-item">
+            <a class="page-link" href="{{=URL(vars=dict(request.vars, pagina=pagina-1))}}" aria-label="Anterior">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {{else:}}
+        <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Anterior">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {{pass}}
+
+        <!-- Gerar números de páginas -->
+        {{for i in range(1, total_paginas + 1):}}
+        <li class="page-item {{'active' if i == pagina else ''}}">
+            <a class="page-link" href="{{=URL(vars=dict(request.vars, pagina=i))}}">{{=i}}</a>
+        </li>
+        {{pass}}
+
+        <!-- Botão "Próxima" -->
+        {{if pagina < total_paginas:}}
+        <li class="page-item">
+            <a class="page-link" href="{{=URL(vars=dict(request.vars, pagina=pagina+1))}}" aria-label="Próxima">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        {{else:}}
+        <li class="page-item disabled">
+            <a class="page-link" href="#" aria-label="Próxima">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        {{pass}}
+    </ul>
+</nav>

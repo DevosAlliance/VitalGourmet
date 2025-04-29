@@ -1,0 +1,593 @@
+[
+    {
+        "type": "header",
+        "version": "5.2.1",
+        "comment": "Export to JSON plugin for PHPMyAdmin"
+    },
+    {
+        "type": "database",
+        "name": "u242936904_agend"
+    },
+    {
+        "type": "table",
+        "name": "agendamentos",
+        "database": "u242936904_agend",
+        "data": [
+            {
+                "id": "3",
+                "title": "Pedro Oliveira",
+                "color": "#ffc300",
+                "inicio": "2024-02-22 17:00:00",
+                "fim": "2024-02-22 18:00:00",
+                "cliente_id": "3",
+                "valor": null
+            },
+            {
+                "id": "4",
+                "title": "Aniversário do Cliente",
+                "color": "#8E44AD",
+                "inicio": "2024-02-23 16:00:00",
+                "fim": "2024-02-23 18:00:00",
+                "cliente_id": "4",
+                "valor": "10.00"
+            },
+            {
+                "id": "5",
+                "title": "Visita ao Cliente",
+                "color": "#2ECC71",
+                "inicio": "2024-02-24 10:00:00",
+                "fim": "2024-02-24 11:30:00",
+                "cliente_id": "5",
+                "valor": "10.00"
+            },
+            {
+                "id": "9",
+                "title": "",
+                "color": "#000000",
+                "inicio": "2024-02-21 06:00:00",
+                "fim": "2024-02-21 08:00:00",
+                "cliente_id": "1",
+                "valor": null
+            },
+            {
+                "id": "8",
+                "title": "descrição",
+                "color": "#f50000",
+                "inicio": "2024-02-21 14:00:00",
+                "fim": "2024-02-21 19:00:00",
+                "cliente_id": "1",
+                "valor": null
+            },
+            {
+                "id": "10",
+                "title": "Tatuagem LOL",
+                "color": "#00e096",
+                "inicio": "2024-03-09 13:30:00",
+                "fim": "2024-03-09 18:20:00",
+                "cliente_id": "7",
+                "valor": "350.00"
+            },
+            {
+                "id": "11",
+                "title": "Duas tatuagens",
+                "color": "#76bb40",
+                "inicio": "2024-03-03 14:23:00",
+                "fim": "2024-03-03 16:23:00",
+                "cliente_id": "8",
+                "valor": "0.00"
+            },
+            {
+                "id": "12",
+                "title": "5 tattoos",
+                "color": "#00ff40",
+                "inicio": "2024-05-11 16:00:00",
+                "fim": "2024-05-11 21:00:00",
+                "cliente_id": "9",
+                "valor": "450.00"
+            },
+            {
+                "id": "13",
+                "title": "Hieróglifos",
+                "color": "#00ff04",
+                "inicio": "2024-06-01 13:00:00",
+                "fim": "2024-06-01 14:00:00",
+                "cliente_id": "11",
+                "valor": "150.00"
+            },
+            {
+                "id": "14",
+                "title": "tatuagem iemanjá",
+                "color": "#00ff04",
+                "inicio": "2024-06-01 20:00:00",
+                "fim": "2024-06-01 20:53:00",
+                "cliente_id": "14",
+                "valor": "150.00"
+            },
+            {
+                "id": "15",
+                "title": "Tatuagem dragão guerreiro",
+                "color": "#00ff55",
+                "inicio": "2024-06-01 15:00:00",
+                "fim": "2024-06-01 17:00:00",
+                "cliente_id": "13",
+                "valor": "180.00"
+            },
+            {
+                "id": "16",
+                "title": "2 Tatuagens",
+                "color": "#00ff62",
+                "inicio": "2024-06-01 17:00:00",
+                "fim": "2024-06-01 19:30:00",
+                "cliente_id": "12",
+                "valor": "180.00"
+            },
+            {
+                "id": "17",
+                "title": "Fechamento braco",
+                "color": "#000000",
+                "inicio": "2024-06-22 12:00:00",
+                "fim": "2024-06-22 20:32:00",
+                "cliente_id": "15",
+                "valor": "250.00"
+            },
+            {
+                "id": "18",
+                "title": "Duas Tattoos",
+                "color": "#000000",
+                "inicio": "2024-06-29 16:52:00",
+                "fim": "2024-06-29 16:52:00",
+                "cliente_id": "16",
+                "valor": "250.00"
+            },
+            {
+                "id": "19",
+                "title": "Tattoo psyduck",
+                "color": "#04ff00",
+                "inicio": "2024-07-05 17:30:00",
+                "fim": "2024-07-05 18:21:00",
+                "cliente_id": "13",
+                "valor": "100.00"
+            },
+            {
+                "id": "20",
+                "title": "Tattoo ainz",
+                "color": "#76bb40",
+                "inicio": "2024-07-25 15:47:00",
+                "fim": "2024-07-25 15:47:00",
+                "cliente_id": "12",
+                "valor": "300.00"
+            },
+            {
+                "id": "21",
+                "title": "Tattoo shenlong",
+                "color": "#96d35f",
+                "inicio": "2024-07-27 15:48:00",
+                "fim": "2024-07-27 15:48:00",
+                "cliente_id": "17",
+                "valor": "700.00"
+            },
+            {
+                "id": "22",
+                "title": "Tattoo vegeta",
+                "color": "#96d35f",
+                "inicio": "2024-08-03 15:48:00",
+                "fim": "2024-08-03 15:48:00",
+                "cliente_id": "17",
+                "valor": "700.00"
+            }
+        ]
+    },
+    {
+        "type": "table",
+        "name": "clientes",
+        "database": "u242936904_agend",
+        "data": [
+            {
+                "id": "9",
+                "nome": "Marlon Anderson",
+                "email": "resre@gmail.com",
+                "telefone": "31 983229826",
+                "data_nascimento": "2004-01-09"
+            },
+            {
+                "id": "8",
+                "nome": "Mariana Mô",
+                "email": "teste@gmail.com",
+                "telefone": "31 994782865",
+                "data_nascimento": "2001-07-23"
+            },
+            {
+                "id": "7",
+                "nome": "Gabriel Santos",
+                "email": "teste@gmail.com",
+                "telefone": "31 991221953",
+                "data_nascimento": "2000-02-26"
+            },
+            {
+                "id": "11",
+                "nome": "Marco (amigo do marlon)",
+                "email": "t@t.com",
+                "telefone": "31 980211389",
+                "data_nascimento": "2004-04-17"
+            },
+            {
+                "id": "12",
+                "nome": "Mateus Freitas",
+                "email": "mateus@gmail.com",
+                "telefone": "31 8749-2386",
+                "data_nascimento": "2024-06-03"
+            },
+            {
+                "id": "13",
+                "nome": "Lorena Mantovani",
+                "email": "lobs@gmail.com",
+                "telefone": "31 8969-1757",
+                "data_nascimento": "2024-06-02"
+            },
+            {
+                "id": "14",
+                "nome": "Sônia Mantovani",
+                "email": "sonia@gmail.com",
+                "telefone": "3199999999",
+                "data_nascimento": "2024-06-03"
+            },
+            {
+                "id": "15",
+                "nome": "Marcos Samuel",
+                "email": "teste@gmail.com",
+                "telefone": "31999999999",
+                "data_nascimento": "2003-06-24"
+            },
+            {
+                "id": "16",
+                "nome": "Ellen (amiga da Mari)",
+                "email": "elen@gmail.com",
+                "telefone": "32999999999",
+                "data_nascimento": "2024-06-24"
+            },
+            {
+                "id": "17",
+                "nome": "Rafael (amigo do felipe)",
+                "email": "teste@gmail.com",
+                "telefone": "319999",
+                "data_nascimento": "2024-07-23"
+            }
+        ]
+    },
+    {
+        "type": "table",
+        "name": "estoque",
+        "database": "u242936904_agend",
+        "data": [
+            {
+                "id": "1",
+                "nome": "Cartucho - Agulha 3RL",
+                "quantidade": "20",
+                "marca": "Wite Head"
+            },
+            {
+                "id": "2",
+                "nome": "Cartucho - Agulha 7RL",
+                "quantidade": "7",
+                "marca": "Wite Head"
+            },
+            {
+                "id": "3",
+                "nome": "Cartucho - Agulha 15RM",
+                "quantidade": "5",
+                "marca": "Wite Head"
+            },
+            {
+                "id": "4",
+                "nome": "Cartucho - Agulha 5RL",
+                "quantidade": "20",
+                "marca": "Wite Head"
+            },
+            {
+                "id": "5",
+                "nome": "Tinta Ultra Liner Black 30ml",
+                "quantidade": "1",
+                "marca": "Electric Ink"
+            },
+            {
+                "id": "6",
+                "nome": "Manteiga 300g",
+                "quantidade": "1",
+                "marca": "Easy Inn"
+            },
+            {
+                "id": "7",
+                "nome": "luvas nitrilicas",
+                "quantidade": "40",
+                "marca": "Descarpack"
+            },
+            {
+                "id": "8",
+                "nome": "transfer It 120ml",
+                "quantidade": "1",
+                "marca": "Electric Ink"
+            },
+            {
+                "id": "9",
+                "nome": "Grommets",
+                "quantidade": "43",
+                "marca": "Electric Ink"
+            },
+            {
+                "id": "10",
+                "nome": "Seal It 120ml",
+                "quantidade": "1",
+                "marca": "Mboah"
+            },
+            {
+                "id": "11",
+                "nome": "No plastic 30ml",
+                "quantidade": "1",
+                "marca": "Mboah"
+            },
+            {
+                "id": "12",
+                "nome": "Solução Antisséptica 1L",
+                "quantidade": "1",
+                "marca": "Electric Ink"
+            },
+            {
+                "id": "13",
+                "nome": "Diluente 60ml",
+                "quantidade": "1",
+                "marca": "Viper"
+            },
+            {
+                "id": "15",
+                "nome": "Tinta Ultra Liner Black 240ml",
+                "quantidade": "1",
+                "marca": "Electric Ink"
+            },
+            {
+                "id": "16",
+                "nome": "Tinta Vemelha easyglow 30ml",
+                "quantidade": "1",
+                "marca": "Electric Ink"
+            },
+            {
+                "id": "17",
+                "nome": "Tinta Branca easyglow 30ml",
+                "quantidade": "1",
+                "marca": "Electric Ink"
+            },
+            {
+                "id": "18",
+                "nome": "formador de filme 250g",
+                "quantidade": "1",
+                "marca": "TTS"
+            },
+            {
+                "id": "19",
+                "nome": "Cartucho - Agulha 9RS",
+                "quantidade": "2",
+                "marca": "Wite Head"
+            },
+            {
+                "id": "20",
+                "nome": "Cartucho - Agulha 9RM",
+                "quantidade": "4",
+                "marca": "Wite Head"
+            },
+            {
+                "id": "21",
+                "nome": "Cartucho - Agulha 23RM",
+                "quantidade": "4",
+                "marca": "Wite Head"
+            },
+            {
+                "id": "22",
+                "nome": "papel hectografico",
+                "quantidade": "99",
+                "marca": "INK"
+            },
+            {
+                "id": "23",
+                "nome": "Papel termico",
+                "quantidade": "13",
+                "marca": "Spirit"
+            }
+        ]
+    },
+    {
+        "type": "table",
+        "name": "registros",
+        "database": "u242936904_agend",
+        "data": [
+            {
+                "id": "3",
+                "nome": "Rec. Tattoo",
+                "descricao": "Tattoo Gabriel ",
+                "data_registro": "2024-03-09",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "175.00",
+                "banco_id": null
+            },
+            {
+                "id": "4",
+                "nome": "Material",
+                "descricao": "Maca",
+                "data_registro": "2024-03-07",
+                "tipo": "despesa",
+                "categoria": "esporadica",
+                "valor": "-270.00",
+                "banco_id": null
+            },
+            {
+                "id": "5",
+                "nome": "PIX",
+                "descricao": "Tatuagem Marlon",
+                "data_registro": "2024-05-11",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "450.00",
+                "banco_id": "1"
+            },
+            {
+                "id": "6",
+                "nome": "Rec. Tattoo",
+                "descricao": "Tattoo Gabriel",
+                "data_registro": "2024-04-20",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "175.00",
+                "banco_id": null
+            },
+            {
+                "id": "7",
+                "nome": "PIX",
+                "descricao": "Tatuagem Marco ",
+                "data_registro": "2024-06-01",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "150.00",
+                "banco_id": "1"
+            },
+            {
+                "id": "8",
+                "nome": "PIX",
+                "descricao": "Tatuagem Sônia",
+                "data_registro": "2024-06-01",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "150.00",
+                "banco_id": "1"
+            },
+            {
+                "id": "9",
+                "nome": "PIX",
+                "descricao": "Tatuagem Lorena",
+                "data_registro": "2024-06-01",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "180.00",
+                "banco_id": "1"
+            },
+            {
+                "id": "10",
+                "nome": "PIX",
+                "descricao": "Tatuagem Mateus",
+                "data_registro": "2024-06-01",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "180.00",
+                "banco_id": "1"
+            },
+            {
+                "id": "11",
+                "nome": "PIX",
+                "descricao": "tatuagem lorena psyduck",
+                "data_registro": "2024-07-05",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "100.00",
+                "banco_id": "1"
+            },
+            {
+                "id": "12",
+                "nome": "PIX",
+                "descricao": "Tattoo pastor Marcio",
+                "data_registro": "2024-07-06",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "200.00",
+                "banco_id": "1"
+            },
+            {
+                "id": "13",
+                "nome": "Rec. Tattoo",
+                "descricao": "Marcos fechamento braco",
+                "data_registro": "2024-06-22",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "250.00",
+                "banco_id": null
+            },
+            {
+                "id": "14",
+                "nome": "PIX",
+                "descricao": "Hellen amiga da mar",
+                "data_registro": "2024-06-29",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "250.00",
+                "banco_id": "1"
+            },
+            {
+                "id": "15",
+                "nome": "Contas",
+                "descricao": "Percentual estudio",
+                "data_registro": "2024-05-11",
+                "tipo": "despesa",
+                "categoria": "esporadica",
+                "valor": "-135.00",
+                "banco_id": null
+            },
+            {
+                "id": "16",
+                "nome": "Material",
+                "descricao": "Percentual estudio",
+                "data_registro": "2024-06-30",
+                "tipo": "despesa",
+                "categoria": "esporadica",
+                "valor": "-348.00",
+                "banco_id": null
+            },
+            {
+                "id": "17",
+                "nome": "Rec. Tattoo",
+                "descricao": "Tatuagem Rafael",
+                "data_registro": "2024-07-27",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "700.00",
+                "banco_id": null
+            },
+            {
+                "id": "18",
+                "nome": "Rec. Tattoo",
+                "descricao": "Mateus Freitas ",
+                "data_registro": "2024-07-25",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "300.00",
+                "banco_id": null
+            },
+            {
+                "id": "19",
+                "nome": "Material",
+                "descricao": "Agulhas",
+                "data_registro": "2024-06-24",
+                "tipo": "despesa",
+                "categoria": "esporadica",
+                "valor": "-360.00",
+                "banco_id": null
+            },
+            {
+                "id": "20",
+                "nome": "Rec. Tattoo",
+                "descricao": "Tattoo rafael",
+                "data_registro": "2024-08-03",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "700.00",
+                "banco_id": null
+            },
+            {
+                "id": "21",
+                "nome": "Material",
+                "descricao": "Tattoo rafael",
+                "data_registro": "2024-07-27",
+                "tipo": "receita",
+                "categoria": "esporadica",
+                "valor": "700.00",
+                "banco_id": null
+            }
+        ]
+    }
+]

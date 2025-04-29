@@ -1,0 +1,594 @@
+{{extend 'layout.html'}}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Configurações do Sistema</h2>
+    </div>
+
+    <!-- Tabela de Configurações -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Parâmetros de Configuração</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Valor</th>
+                            <th>Descrição</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{for config in configuracoes:}}
+                        <tr>
+                            <td>{{=config.nome}}</td>
+                            <td>
+                                {{if config.tipo == 'json':}}
+                                    <button class="btn btn-sm btn-info visualizar-json" data-json="{{=config.valor}}" data-nome="{{=config.nome}}">
+                                        <i class="fas fa-eye"></i> Visualizar
+                                    </button>
+                                {{elif len(config.valor or '') > 50:}}
+                                    {{=config.valor[:50]}}...
+                                {{else:}}
+                                    {{=config.valor}}
+                                {{pass}}
+                            </td>
+                            <td>{{=config.descricao}}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning editar-config" 
+                                        data-id="{{=config.id}}" 
+                                        data-nome="{{=config.nome}}" 
+                                        data-valor="{{=config.valor}}" 
+                                        data-tipo="{{=config.tipo}}" 
+                                        data-descricao="{{=config.descricao}}">
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                            </td>
+                        </tr>
+                        {{pass}}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginação -->
+            <div class="d-flex justify-content-center mt-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        {{if pagina > 1:}}
+                        <li class="page-item">
+                            <a class="page-link" href="{{=URL('admin', 'configuracoes', vars=dict(pagina=pagina-1))}}">Anterior</a>
+                        </li>
+                        {{pass}}
+                        
+                        {{for p in range(max(1, pagina-2), min(total_paginas+1, pagina+3)):}}
+                        <li class="page-item {{='active' if p == pagina else ''}}">
+                            <a class="page-link" href="{{=URL('admin', 'configuracoes', vars=dict(pagina=p))}}">{{=p}}</a>
+                        </li>
+                        {{pass}}
+                        
+                        {{if pagina < total_paginas:}}
+                        <li class="page-item">
+                            <a class="page-link" href="{{=URL('admin', 'configuracoes', vars=dict(pagina=pagina+1))}}">Próxima</a>
+                        </li>
+                        {{pass}}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Visualizar JSON Como Lista -->
+<div class="modal fade" id="modalVisualizarJson" tabindex="-1" aria-labelledby="modalVisualizarJsonLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalVisualizarJsonLabel">Lista de Valores</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="jsonTitle" class="mb-3">Valores configurados</h6>
+                <ul id="jsonList" class="list-group">
+                    <!-- Lista preenchida via JavaScript -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Configuração -->
+<div class="modal fade" id="modalEditarConfiguracao" tabindex="-1" aria-labelledby="modalEditarConfiguracaoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditarConfiguracaoLabel">Editar Configuração</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarConfiguracao">
+                    <input type="hidden" id="edit_id" name="id">
+                    <input type="hidden" id="edit_tipo" name="tipo">
+                    
+                    <div class="mb-3">
+                        <label for="edit_nome" class="form-label">Nome da Configuração</label>
+                        <input type="text" class="form-control" id="edit_nome" name="nome" required readonly>
+                    </div>
+                    
+                    <!-- Campo para valores de string, int, float -->
+                    <div class="mb-3" id="edit_valor_container">
+                        <label for="edit_valor" class="form-label">Valor</label>
+                        <input type="text" class="form-control" id="edit_valor" name="valor" required>
+                    </div>
+                    
+                    <!-- Campo para valores booleanos -->
+                    <div class="mb-3" id="edit_valor_boolean_container" style="display: none;">
+                        <label class="form-label">Valor</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="edit_valor_boolean" id="edit_valor_true" value="true">
+                            <label class="form-check-label" for="edit_valor_true">
+                                Ativado (True)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="edit_valor_boolean" id="edit_valor_false" value="false">
+                            <label class="form-check-label" for="edit_valor_false">
+                                Desativado (False)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Campo para Tipos de Usuário (JSON) -->
+                    <div class="mb-3" id="edit_valor_tipos_usuario_container" style="display: none;">
+                        <label class="form-label">Selecione os Tipos de Usuário</label>
+                        <div class="mb-2 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="select_all_tipos">Selecionar Todos</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="unselect_all_tipos">Desmarcar Todos</button>
+                        </div>
+                        <div id="tipos_usuario_checkbox_list" class="border p-3 rounded">
+                            <div class="row">
+                                <!-- Checkboxes para tipos de usuário são preenchidos aqui -->
+                                {{for tipo in tipos_usuario:}}
+                                <div class="col-md-6 col-lg-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input tipo-usuario-checkbox" type="checkbox" 
+                                               id="tipo_{{=tipo.replace(' ', '_')}}" 
+                                               value="{{=tipo}}">
+                                        <label class="form-check-label" for="tipo_{{=tipo.replace(' ', '_')}}">
+                                            {{=tipo}}
+                                        </label>
+                                    </div>
+                                </div>
+                                {{pass}}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Campo para Tipos de Refeição (JSON) -->
+                    <div class="mb-3" id="edit_valor_tipos_refeicao_container" style="display: none;">
+                        <label class="form-label">Selecione os Tipos de Refeição</label>
+                        <div class="mb-2 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="select_all_refeicoes">Selecionar Todos</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="unselect_all_refeicoes">Desmarcar Todos</button>
+                        </div>
+                        <div id="tipos_refeicao_checkbox_list" class="border p-3 rounded">
+                            <div class="row">
+                                <!-- Checkboxes para tipos de refeição são preenchidos aqui -->
+                                {{for refeicao in tipos_refeicao:}}
+                                <div class="col-md-6 col-lg-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input tipo-refeicao-checkbox" type="checkbox" 
+                                               id="refeicao_{{=refeicao.replace(' ', '_')}}" 
+                                               value="{{=refeicao}}">
+                                        <label class="form-check-label" for="refeicao_{{=refeicao.replace(' ', '_')}}">
+                                            {{=refeicao}}
+                                        </label>
+                                    </div>
+                                </div>
+                                {{pass}}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Campo para outros valores JSON -->
+                    <div class="mb-3" id="edit_valor_json_container" style="display: none;">
+                        <label for="edit_valor_json" class="form-label">Valores (um por linha)</label>
+                        <textarea class="form-control" id="edit_valor_json" name="edit_valor_json" rows="5"></textarea>
+                        <div class="form-text">Digite os valores, um em cada linha</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_descricao" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="edit_descricao" name="descricao" rows="3"  readonly></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnAtualizarConfig">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Função para formatar JSON como uma lista amigável
+    function formatarJsonParaLista(jsonStr, nome) {
+        try {
+            const jsonObj = JSON.parse(jsonStr);
+            const lista = document.getElementById('jsonList');
+            lista.innerHTML = '';
+            
+            // Atualiza o título
+            document.getElementById('jsonTitle').textContent = `Valores para "${nome}"`;
+            
+            if (Array.isArray(jsonObj)) {
+                jsonObj.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = item;
+                    lista.appendChild(li);
+                });
+            } else if (typeof jsonObj === 'object') {
+                Object.entries(jsonObj).forEach(([chave, valor]) => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between';
+                    
+                    const chaveSpan = document.createElement('span');
+                    chaveSpan.className = 'fw-bold';
+                    chaveSpan.textContent = chave;
+                    
+                    const valorSpan = document.createElement('span');
+                    valorSpan.textContent = valor;
+                    
+                    li.appendChild(chaveSpan);
+                    li.appendChild(valorSpan);
+                    lista.appendChild(li);
+                });
+            }
+            
+            if (lista.children.length === 0) {
+                const li = document.createElement('li');
+                li.className = 'list-group-item text-muted';
+                li.textContent = 'Nenhum valor encontrado';
+                lista.appendChild(li);
+            }
+        } catch (e) {
+            console.error('Erro ao processar JSON:', e);
+            const lista = document.getElementById('jsonList');
+            lista.innerHTML = '<li class="list-group-item text-danger">Erro ao processar os dados</li>';
+        }
+    }
+    
+    // Configurar botões de selecionar/desmarcar todos
+    document.getElementById('select_all_tipos').addEventListener('click', function() {
+        document.querySelectorAll('.tipo-usuario-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+    });
+    
+    document.getElementById('unselect_all_tipos').addEventListener('click', function() {
+        document.querySelectorAll('.tipo-usuario-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+    });
+    
+    document.getElementById('select_all_refeicoes').addEventListener('click', function() {
+        document.querySelectorAll('.tipo-refeicao-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+    });
+    
+    document.getElementById('unselect_all_refeicoes').addEventListener('click', function() {
+        document.querySelectorAll('.tipo-refeicao-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+    });
+    
+    // Visualizar JSON como lista
+    document.querySelectorAll('.visualizar-json').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const jsonStr = this.getAttribute('data-json');
+            const nome = this.getAttribute('data-nome');
+            formatarJsonParaLista(jsonStr, nome);
+            
+            // Abre o modal
+            const modal = new bootstrap.Modal(document.getElementById('modalVisualizarJson'));
+            modal.show();
+        });
+    });
+    
+    // Abrir modal de edição
+    document.querySelectorAll('.editar-config').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const nome = this.getAttribute('data-nome');
+            const valor = this.getAttribute('data-valor');
+            const tipo = this.getAttribute('data-tipo');
+            const descricao = this.getAttribute('data-descricao');
+            
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_nome').value = nome;
+            document.getElementById('edit_tipo').value = tipo;
+            document.getElementById('edit_descricao').value = descricao;
+            
+            // Esconde todos os containers de valor e remove required de todos
+            const inputValor = document.getElementById('edit_valor');
+            inputValor.removeAttribute('required'); // Remove required para evitar validação de campo oculto
+            
+            document.getElementById('edit_valor_container').style.display = 'none';
+            document.getElementById('edit_valor_boolean_container').style.display = 'none';
+            document.getElementById('edit_valor_tipos_usuario_container').style.display = 'none';
+            document.getElementById('edit_valor_tipos_refeicao_container').style.display = 'none';
+            document.getElementById('edit_valor_json_container').style.display = 'none';
+            
+            // Configura o valor com base no tipo
+            if (tipo === 'boolean') {
+                document.getElementById('edit_valor_boolean_container').style.display = 'block';
+                
+                if (valor.toLowerCase() === 'true') {
+                    document.getElementById('edit_valor_true').checked = true;
+                } else {
+                    document.getElementById('edit_valor_false').checked = true;
+                }
+            } else if (tipo === 'json') {
+                // Para JSON, armazenamos o valor original em um campo oculto
+                // Isso mantém o valor JSON original disponível, mesmo que usemos interfaces diferentes
+                inputValor.value = valor;
+                
+                if (nome.includes('tipos_usuario')) {
+                    // Editor de tipos de usuário
+                    document.getElementById('edit_valor_tipos_usuario_container').style.display = 'block';
+                    
+                    // Analisar o JSON e marcar os checkboxes apropriados
+                    try {
+                        const tiposSelecionados = JSON.parse(valor);
+                        
+                        // Limpar todos os checkboxes
+                        document.querySelectorAll('.tipo-usuario-checkbox').forEach(cb => {
+                            cb.checked = false;
+                        });
+                        
+                        // Marcar os checkboxes selecionados
+                        if (Array.isArray(tiposSelecionados)) {
+                            // console.log('Tipos selecionados no banco:', tiposSelecionados);
+                            tiposSelecionados.forEach(tipo => {
+                                const checkbox = document.getElementById(`tipo_${tipo.replace(' ', '_')}`);
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Erro ao processar tipos de usuário:', e);
+                    }
+                } else if (nome === 'tipos_prato_sem_gratuidade') {
+                    // Editor de tipos de refeição
+                    document.getElementById('edit_valor_tipos_refeicao_container').style.display = 'block';
+                    
+                    // Analisar o JSON e marcar os checkboxes apropriados
+                    try {
+                        const tiposSelecionados = JSON.parse(valor);
+                        
+                        // Limpar todos os checkboxes
+                       document.querySelectorAll('.tipo-refeicao-checkbox').forEach(cb => {
+                            // Debug para ver cada checkbox disponível
+                            // console.log('Checkbox:', cb.value);
+                            
+                            // Verifica se o valor do checkbox está na lista normalizando as strings
+                            const cbValorNormalizado = cb.value.trim();
+                            const encontrado = tiposSelecionados.some(tipo => 
+                                tipo.trim() === cbValorNormalizado
+                            );
+                            
+                            if (encontrado) {
+                                console.log('Marcando checkbox:', cbValorNormalizado);
+                                cb.checked = true;
+                            }
+                        });
+                        
+                        // Marcar os checkboxes selecionados
+                        if (Array.isArray(tiposSelecionados)) {
+                            tiposSelecionados.forEach(tipo => {
+                                const checkbox = document.getElementById(`refeicao_${tipo.replace(' ', '_')}`);
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Erro ao processar tipos de refeição:', e);
+                    }
+                } else {
+                    // Editor genérico para outros JSONs
+                    document.getElementById('edit_valor_json_container').style.display = 'block';
+                    
+                    try {
+                        const jsonObj = JSON.parse(valor);
+                        
+                        if (Array.isArray(jsonObj)) {
+                            // Para arrays, mostra um item por linha
+                            document.getElementById('edit_valor_json').value = jsonObj.join('\n');
+                        } else {
+                            // Para objetos, mostra o JSON formatado
+                            document.getElementById('edit_valor_json').value = JSON.stringify(jsonObj, null, 2);
+                        }
+                    } catch (e) {
+                        console.error('Erro ao processar JSON:', e);
+                        document.getElementById('edit_valor_json').value = valor;
+                    }
+                }
+            } else {
+                // Para tipos simples (string, int, float)
+                document.getElementById('edit_valor_container').style.display = 'block';
+                inputValor.setAttribute('required', 'required'); // Reativa o required para estes tipos
+                inputValor.value = valor;
+            }
+            
+            // Abre o modal
+            const modal = new bootstrap.Modal(document.getElementById('modalEditarConfiguracao'));
+            modal.show();
+        });
+    });
+    
+    // Botão para atualizar configuração
+    document.getElementById('btnAtualizarConfig').addEventListener('click', function() {
+        const form = document.getElementById('formEditarConfiguracao');
+        
+        // Não usamos checkValidity para o formulário inteiro
+        // Em vez disso, validamos manualmente os campos relevantes
+        
+        // Desabilita o botão durante o processamento
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
+        
+        const id = document.getElementById('edit_id').value;
+        const nome = document.getElementById('edit_nome').value;
+        const tipo = document.getElementById('edit_tipo').value;
+        const descricao = document.getElementById('edit_descricao').value;
+        let valor;
+        
+        // Obter o valor correto com base no tipo
+        if (tipo === 'boolean') {
+            const radioSelecionado = document.querySelector('input[name="edit_valor_boolean"]:checked');
+            if (!radioSelecionado) {
+                alert('Por favor, selecione um valor (Verdadeiro ou Falso).');
+                this.disabled = false;
+                this.innerHTML = 'Salvar Alterações';
+                return;
+            }
+            valor = radioSelecionado.value;
+        } else if (tipo === 'json') {
+            if (nome.includes('tipos_usuario')) {
+                // Coletar valores das checkboxes de tipos de usuário
+                const checkboxes = document.querySelectorAll('.tipo-usuario-checkbox:checked');
+                const tiposSelecionados = Array.from(checkboxes).map(cb => cb.value);
+                
+                if (tiposSelecionados.length === 0 && nome !== 'tipos_prato_sem_gratuidade') {
+                    alert('Por favor, selecione pelo menos um tipo de usuário.');
+                    this.disabled = false;
+                    this.innerHTML = 'Salvar Alterações';
+                    return;
+                }
+                
+                valor = JSON.stringify(tiposSelecionados);
+                console.log('Tipos de usuário selecionados:', tiposSelecionados);
+                console.log('JSON serializado para tipos de usuário:', valor);
+                
+            } else if (nome === 'tipos_prato_sem_gratuidade') {
+                // Coletar valores das checkboxes de tipos de refeição
+                const checkboxes = document.querySelectorAll('.tipo-refeicao-checkbox:checked');
+                const tiposSelecionados = Array.from(checkboxes).map(cb => cb.value);
+                
+                if (tiposSelecionados.length === 0) {
+                    alert('Por favor, selecione pelo menos um tipo de refeição.');
+                    this.disabled = false;
+                    this.innerHTML = 'Salvar Alterações';
+                    return;
+                }
+                
+                valor = JSON.stringify(tiposSelecionados);
+                console.log('Tipos de refeição selecionados:', tiposSelecionados);
+                console.log('JSON serializado para tipos de refeição:', valor);
+                
+            } else {
+                // Para outros JSONs, processar o texto como lista
+                try {
+                    const textoJson = document.getElementById('edit_valor_json').value.trim();
+                    
+                    if (!textoJson) {
+                        alert('O campo de valor não pode estar vazio.');
+                        this.disabled = false;
+                        this.innerHTML = 'Salvar Alterações';
+                        return;
+                    }
+                    
+                    if (textoJson.startsWith('{') || textoJson.startsWith('[')) {
+                        // Se já parece ser um JSON, apenas valida
+                        JSON.parse(textoJson);
+                        valor = textoJson;
+                    } else {
+                        // Se é uma lista de itens, um por linha
+                        const linhas = textoJson.split('\n');
+                        // Remover linhas vazias
+                        const itens = linhas.filter(linha => linha.trim() !== '').map(linha => linha.trim());
+                        valor = JSON.stringify(itens);
+                    }
+                } catch (e) {
+                    console.error('Erro ao processar valores JSON:', e);
+                    alert('Erro ao processar os valores. Verifique o formato.');
+                    this.disabled = false;
+                    this.innerHTML = 'Salvar Alterações';
+                    return;
+                }
+            }
+        } else {
+            // Validação para tipos simples
+            const inputValor = document.getElementById('edit_valor');
+            if (!inputValor.value.trim()) {
+                alert('O campo de valor não pode estar vazio.');
+                this.disabled = false;
+                this.innerHTML = 'Salvar Alterações';
+                return;
+            }
+            valor = inputValor.value;
+        }
+        
+        // Preparar dados como JSON
+        const jsonData = {
+            id: id,
+            nome: nome,
+            tipo: tipo,
+            valor: valor,
+            descricao: descricao
+        };
+        
+        console.log('Enviando dados:', jsonData);
+        
+        // Enviar requisição AJAX com dados JSON
+        fetch('{{=URL("configuracoes", "api_atualizar_configuracao")}}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+            console.log('Resposta recebida:', response);
+            return response.json().catch(error => {
+                console.error('Erro ao ler JSON da resposta:', error);
+                throw new Error('Não foi possível processar a resposta do servidor');
+            });
+        })
+        .then(data => {
+            console.log('Dados recebidos:', data);
+            if (data.status === 'success') {
+                // Feedback visual de sucesso
+                this.className = 'btn btn-success';
+                this.innerHTML = '<i class="fas fa-check"></i> Salvo com sucesso!';
+                
+                // Atualizar a página após um breve delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                alert('Erro ao atualizar configuração: ' + (data.message || 'Erro desconhecido'));
+                this.disabled = false;
+                this.innerHTML = 'Salvar Alterações';
+            }
+        })
+        .catch(error => {
+            console.error('Erro detalhado:', error);
+            console.error('Stack trace:', error.stack);
+            alert('Erro ao processar sua solicitação: ' + error.message);
+            this.disabled = false;
+            this.innerHTML = 'Salvar Alterações';
+        });
+    });
+});
+
+</script>

@@ -1,0 +1,506 @@
+<script>
+  // Referências aos botões de toggle e à lista
+  const toggleDiario = document.getElementById("toggleDiario");
+  const toggleMensal = document.getElementById("toggleMensal");
+  const listaPedidosPorSetor = document.getElementById(
+    "lista-pedidos-por-setor"
+  );
+
+  // Função para formatar datas no formato YYYY-MM-DD
+  function formatarData(data) {
+    return data.toISOString().split("T")[0];
+  }
+
+  // Função para carregar os pedidos com base na API e período selecionado
+  function carregarPedidosPorSetor(apiUrl, dataInicio, dataFim) {
+    // Limpa a lista antes de carregar os novos dados
+    listaPedidosPorSetor.innerHTML =
+      "<li class='list-group-item text-center'>Carregando...</li>";
+
+    fetch(apiUrl)
+      .then((response) => response.json())
+      .then((data) => {
+        // Limpa a lista novamente para exibir os novos itens
+        listaPedidosPorSetor.innerHTML = "";
+        if (data.pedidos_por_setor && data.pedidos_por_setor.length > 0) {
+          data.pedidos_por_setor.forEach((item) => {
+            const listItem = document.createElement("li");
+            listItem.className =
+              "list-group-item d-flex justify-content-between align-items-center";
+            listItem.innerHTML = `
+            <a href="{{=URL('default', 'admin_pedidos')}}?nome=&tipo_usuario=&setor=${item.setor_id}&data_inicio=${dataInicio}&data_fim=${dataFim}" class="text-decoration-none">
+              ${item.setor}
+            </a>
+            <span class="badge bg-primary rounded-pill">${item.quantidade_pedidos}</span>
+          `;
+            listaPedidosPorSetor.appendChild(listItem);
+          });
+        } else {
+          listaPedidosPorSetor.innerHTML =
+            "<li class='list-group-item text-center'>Nenhum pedido encontrado.</li>";
+        }
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar pedidos por setor:", err);
+        listaPedidosPorSetor.innerHTML =
+          "<li class='list-group-item text-center'>Erro ao carregar dados.</li>";
+      });
+  }
+
+  // Inicializa com o modo diário
+  const hoje = new Date();
+  const dataAtual = formatarData(hoje); // Data atual no formato YYYY-MM-DD
+  const primeiroDiaMes = formatarData(
+    new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  ); // Dia 1 do mês corrente
+
+  const apiDiaria =
+    "{{=URL('dashboard', 'api_pedidos_por_setor_dia_corrente')}}";
+  const apiMensal =
+    "{{=URL('dashboard', 'api_pedidos_por_setor_mes_corrente')}}";
+
+  carregarPedidosPorSetor(apiDiaria, dataAtual, dataAtual); // Inicia com a API de pedidos diários
+
+  // Alterna entre as APIs com base no toggle
+  toggleDiario.addEventListener("click", () => {
+    toggleDiario.classList.add("btn-primary");
+    toggleDiario.classList.remove("btn-secondary");
+    toggleMensal.classList.add("btn-secondary");
+    toggleMensal.classList.remove("btn-primary");
+
+    // Carrega dados do dia corrente
+    carregarPedidosPorSetor(apiDiaria, dataAtual, dataAtual);
+  });
+
+  toggleMensal.addEventListener("click", () => {
+    toggleMensal.classList.add("btn-primary");
+    toggleMensal.classList.remove("btn-secondary");
+    toggleDiario.classList.add("btn-secondary");
+    toggleDiario.classList.remove("btn-primary");
+
+    // Carrega dados do mês corrente
+    carregarPedidosPorSetor(apiMensal, primeiroDiaMes, dataAtual);
+  });
+</script>
+
+<!-- Script para renderizar valores de resumo -->
+<script>
+  // Função para buscar dados da Receita A La Carte - api_receita_a_la_carte
+  async function fetchReceitaALaCarte() {
+    try {
+      const response = await fetch(
+        "{{=URL('dashboard','api_receita_a_la_carte')}}"
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // Atualiza os elementos do DOM com os dados retornados, formatados em BRL
+      document.getElementById("receita-hoje").textContent =
+        data.receita_hoje.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        });
+
+      document.getElementById("receita-hoje-comum").textContent =
+        data.receita_hoje_comum.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        });
+
+      document.getElementById("receita-mes").textContent =
+        data.receita_mes.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        });
+
+      document.getElementById("receita-mes-comum").textContent =
+        data.receita_mes_comum.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        });
+    } catch (error) {
+      console.error("Erro ao buscar Receita A La Carte:", error);
+    }
+  }
+
+  async function fetchPedidosPorTipoPrato() {
+    try {
+      const response = await fetch(
+        "{{=URL('dashboard','api_pedidos_por_tipo_prato')}}"
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Atualize os valores no DOM
+      document.getElementById("total-pedidos-a-la-carte").textContent =
+        data.total_a_la_carte;
+    } catch (error) {
+      console.error("Erro ao buscar Pedidos por Tipo de Prato:", error);
+    }
+  }
+
+  // Função para buscar dados dos Pedidos por Tipo de Usuário - api_pedidos_por_tipo
+  async function fetchPedidosPorTipoUsuario() {
+    try {
+      const response = await fetch(
+        "{{=URL('dashboard','api_pedidos_por_setor_dia_corrente')}}"
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // Atualiza os elementos do DOM com os dados retornados
+      document.getElementById("pedidos-colaboradores").textContent =
+        data.total_pedidos_colaboradores;
+      document.getElementById("pedidos-pacientes").textContent =
+        data.total_pedidos_pacientes;
+    } catch (error) {
+      console.error("Erro ao buscar Pedidos por Tipo de Usuário:", error);
+    }
+  }
+
+  // Chama todas as funções de fetch para carregar os dados
+  document.addEventListener("DOMContentLoaded", () => {
+    fetchReceitaALaCarte();
+    fetchPedidosPorTipoPrato();
+    fetchPedidosPorTipoUsuario();
+  });
+</script>
+
+<!-- gráfico de comparação -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  async function fetchReceitaSemanal() {
+    try {
+      // Fazendo requisição direta ao endpoint
+      const response = await fetch(
+        "{{=URL('dashboard','api_receita_semanal')}}"
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+
+        if (data && data.receita_por_semana) {
+          const semanas = data.receita_por_semana.map(
+            (item) => `Semana ${item.semana}`
+          );
+
+          // Formata os valores para BRL
+          const receitaAlaCarte = data.receita_por_semana.map(
+            (item) => item.receita_a_la_carte
+          );
+          const receitaConvencional = data.receita_por_semana.map(
+            (item) => item.receita_convencional
+          );
+
+          const ctx = document.getElementById("profitChart").getContext("2d");
+          new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: semanas,
+              datasets: [
+                {
+                  label: "A La Carte",
+                  data: receitaAlaCarte,
+                  borderColor: "magenta",
+                  backgroundColor: "rgba(255, 0, 255, 0.1)",
+                  fill: true,
+                },
+                {
+                  label: "Convencional",
+                  data: receitaConvencional,
+                  borderColor: "blue",
+                  backgroundColor: "rgba(0, 0, 255, 0.1)",
+                  fill: true,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: "top",
+                },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    // Formata os valores do eixo Y para BRL
+                    callback: function (value) {
+                      return new Intl.NumberFormat("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      }).format(value);
+                    },
+                  },
+                },
+              },
+              tooltips: {
+                callbacks: {
+                  // Formata os valores do tooltip para BRL
+                  label: function (tooltipItem) {
+                    return new Intl.NumberFormat("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    }).format(tooltipItem.yLabel);
+                  },
+                },
+              },
+            },
+          });
+        } else {
+          console.error("Dados da API não estão no formato esperado.");
+        }
+      } else {
+        throw new Error("A resposta não é JSON.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar dados da API:", error);
+    }
+  }
+
+  // Chama a função para buscar e renderizar os dados no gráfico
+  fetchReceitaSemanal();
+</script>
+
+<!-- Formatar moeda -->
+<script>
+  function formatarMoeda(valor) {
+    return parseFloat(valor).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  const elementos = document.querySelectorAll("[data-valor]");
+
+  elementos.forEach((elemento) => {
+    const valorBruto = elemento.getAttribute("data-valor");
+    if (valorBruto) {
+      elemento.textContent = formatarMoeda(valorBruto);
+    }
+  });
+</script>
+
+<script>
+  // Referências aos elementos do DOM
+  const toggleDiario = document.getElementById("toggleDiario");
+  const toggleMensal = document.getElementById("toggleMensal");
+  const listaPedidosPorSetor = document.getElementById(
+    "lista-pedidos-por-setor"
+  );
+
+  // Variável para armazenar a instância do gráfico
+  let graficoSetores;
+
+  // Função para formatar datas no formato YYYY-MM-DD
+  function formatarData(data) {
+    return data.toISOString().split("T")[0];
+  }
+
+  // Gera cores aleatórias com base no índice
+  function gerarCores(quantidade) {
+    const coresPredefinidas = [
+      "#7cb5ec",
+      "#434348",
+      "#90ed7d",
+      "#f7a35c",
+      "#8085e9",
+      "#f15c80",
+      "#e4d354",
+      "#2b908f",
+      "#f45b5b",
+      "#91e8e1",
+      "#2f7ed8",
+      "#0d233a",
+      "#8bbc21",
+      "#910000",
+      "#1aadce",
+      "#492970",
+      "#f28f43",
+      "#77a1e5",
+      "#c42525",
+      "#a6c96a",
+    ];
+
+    const cores = [];
+    for (let i = 0; i <script quantidade; i++) {
+      cores.push(coresPredefinidas[i % coresPredefinidas.length]);
+    }
+    return cores;
+  }
+
+  // Função para inicializar ou atualizar o gráfico
+  function atualizarGrafico(dados) {
+    // Limpa o contêiner se o gráfico já existir
+    if (graficoSetores) {
+      graficoSetores.destroy();
+    }
+
+    if (!dados || dados.length === 0) {
+      return;
+    }
+
+    // Prepara os dados para o gráfico
+    const dadosGrafico = dados.map((item) => ({
+      name: item.setor,
+      y: item.quantidade_pedidos,
+    }));
+
+    // Cria o novo gráfico
+    graficoSetores = Highcharts.chart("grafico-pizza-setores", {
+      chart: {
+        type: "pie",
+        backgroundColor: null,
+        style: {
+          fontFamily: "inherit",
+        },
+      },
+      title: {
+        text: null, // Remove o título padrão
+      },
+      tooltip: {
+        pointFormat:
+          "{series.name}: <b>{point.y}</b> ({point.percentage:.1f}%)",
+      },
+      accessibility: {
+        point: {
+          valueSuffix: "%",
+        },
+      },
+      plotOptions: {
+        pie: {
+          allowPointSelect: true,
+          cursor: "pointer",
+          borderWidth: 2,
+          borderColor: "#ffffff",
+          dataLabels: {
+            enabled: false, // Desabilita os rótulos no gráfico
+          },
+          showInLegend: true, // Mostra na legenda
+        },
+      },
+      legend: {
+        layout: "horizontal",
+        align: "center",
+        verticalAlign: "bottom",
+        itemStyle: {
+          fontSize: "11px",
+          fontWeight: "normal",
+        },
+        symbolHeight: 12,
+        symbolWidth: 12,
+        symbolRadius: 3,
+      },
+      credits: {
+        enabled: false, // Remove os créditos do Highcharts
+      },
+      exporting: {
+        enabled: false, // Remove botões de exportação
+      },
+      series: [
+        {
+          name: "Pedidos",
+          colorByPoint: true,
+          data: dadosGrafico,
+        },
+      ],
+    });
+  }
+
+  // Função para carregar os pedidos com base na API e período selecionado
+  function carregarPedidosPorSetor(apiUrl, dataInicio, dataFim) {
+    // Limpa a lista antes de carregar os novos dados
+    listaPedidosPorSetor.innerHTML =
+      "<li class='list-group-item text-center'>Carregando...</li>";
+
+    fetch(apiUrl)
+      .then((response) => response.json())
+      .then((data) => {
+        // Limpa a lista novamente para exibir os novos itens
+        listaPedidosPorSetor.innerHTML = "";
+
+        if (data.pedidos_por_setor && data.pedidos_por_setor.length > 0) {
+          // Atualiza a lista
+          data.pedidos_por_setor.forEach((item) => {
+            const listItem = document.createElement("li");
+            listItem.className =
+              "list-group-item d-flex justify-content-between align-items-center";
+            listItem.innerHTML = `
+              <a href="{{=URL('default', 'admin_pedidos')}}?nome=&tipo_usuario=&setor=${item.setor_id}&data_inicio=${dataInicio}&data_fim=${dataFim}" class="text-decoration-none">
+                ${item.setor}
+              </a>
+              <span class="badge bg-primary rounded-pill">${item.quantidade_pedidos}</span>
+            `;
+            listaPedidosPorSetor.appendChild(listItem);
+          });
+
+          // Atualiza o gráfico
+          atualizarGrafico(data.pedidos_por_setor);
+        } else {
+          listaPedidosPorSetor.innerHTML =
+            "<li class='list-group-item text-center'>Nenhum pedido encontrado.</li>";
+          // Limpa o contêiner do gráfico
+          document.querySelector("#grafico-pizza-setores").innerHTML = "";
+        }
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar pedidos por setor:", err);
+        listaPedidosPorSetor.innerHTML =
+          "<li class='list-group-item text-center'>Erro ao carregar dados.</li>";
+        // Limpa o contêiner do gráfico
+        document.querySelector("#grafico-pizza-setores").innerHTML = "";
+      });
+  }
+
+  // Inicializa com o modo diário
+  const hoje = new Date();
+  const dataAtual = formatarData(hoje); // Data atual no formato YYYY-MM-DD
+  const primeiroDiaMes = formatarData(
+    new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  ); // Dia 1 do mês corrente
+
+  const apiDiaria =
+    "{{=URL('dashboard', 'api_pedidos_por_setor_dia_corrente')}}";
+  const apiMensal =
+    "{{=URL('dashboard', 'api_pedidos_por_setor_mes_corrente')}}";
+
+  // Carrega os dados iniciais
+  carregarPedidosPorSetor(apiDiaria, dataAtual, dataAtual);
+
+  // Alterna entre as APIs com base no toggle
+  toggleDiario.addEventListener("click", () => {
+    toggleDiario.classList.add("btn-primary");
+    toggleDiario.classList.remove("btn-secondary");
+    toggleMensal.classList.add("btn-secondary");
+    toggleMensal.classList.remove("btn-primary");
+
+    // Carrega dados do dia corrente
+    carregarPedidosPorSetor(apiDiaria, dataAtual, dataAtual);
+  });
+
+  toggleMensal.addEventListener("click", () => {
+    toggleMensal.classList.add("btn-primary");
+    toggleMensal.classList.remove("btn-secondary");
+    toggleDiario.classList.add("btn-secondary");
+    toggleDiario.classList.remove("btn-primary");
+
+    // Carrega dados do mês corrente
+    carregarPedidosPorSetor(apiMensal, primeiroDiaMes, dataAtual);
+  });
+</script>

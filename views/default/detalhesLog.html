@@ -1,0 +1,185 @@
+{{extend 'layout.html'}}
+
+{{import json}}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow mb-4">
+        <div
+          class="card-header py-3 d-flex flex-row align-items-center justify-content-between"
+          style="background-color: {{=tenant.primary_color}}; color: white;"
+        >
+          <h6 class="m-0 font-weight-bold">Detalhes do Log #{{=log.id}}</h6>
+          <div>
+            <a
+              href="{{=URL('default', 'logs')}}"
+              class="btn btn-light btn-sm"
+            >
+              <i class="fas fa-arrow-left"></i> Voltar para Lista
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header py-3">
+                  <h6 class="m-0 font-weight-bold text-primary">
+                    Informações do Log
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-bordered">
+                      <tr>
+                        <th style="width: 200px">ID</th>
+                        <td>{{=log.id}}</td>
+                      </tr>
+                      <tr>
+                        <th>Data e Hora</th>
+                        <td>{{=log.dataH.strftime('%d/%m/%Y %H:%M:%S')}}</td>
+                      </tr>
+                      <tr>
+                        <th>Entidade</th>
+                        <td>{{=log.entidade}}</td>
+                      </tr>
+                      <tr>
+                        <th>Ação</th>
+                        <td>
+                          {{if log.acao == 'exclusao':}}
+                          <span class="badge badge-danger">Exclusão</span>
+                          {{elif log.acao == 'edicao':}}
+                          <span class="badge badge-warning">Edição</span>
+                          {{else:}}
+                          <span class="badge badge-secondary"
+                            >{{=log.acao}}</span
+                          >
+                          {{pass}}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>ID do Registro</th>
+                        <td>{{=log.registro_id}}</td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card mb-4">
+                <div class="card-header py-3">
+                  <h6 class="m-0 font-weight-bold text-primary">
+                    Usuário Responsável
+                  </h6>
+                </div>
+                <div class="card-body">
+                  {{if usuario:}}
+                  <div class="table-responsive">
+                    <table class="table table-bordered">
+                      <tr>
+                        <th style="width: 200px">ID</th>
+                        <td>{{=usuario.id}}</td>
+                      </tr>
+                      <tr>
+                        <th>Nome</th>
+                        <td>{{=usuario.first_name}} {{=usuario.last_name}}</td>
+                      </tr>
+                      <tr>
+                        <th>E-mail</th>
+                        <td>{{=usuario.email}}</td>
+                      </tr>
+                      <tr>
+                        <th>Tipo de Usuário</th>
+                        <td>
+                          {{if hasattr(usuario, 'user_type') and usuario.user_type:}}
+                            {{tipo_usuario = db.user_type(usuario.user_type)}}
+                            {{=tipo_usuario.name if tipo_usuario else 'N/A'}}
+                          {{else:}}
+                            N/A
+                          {{pass}}
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                  {{else:}}
+                  <div class="alert alert-warning">
+                    Informações do usuário não disponíveis
+                  </div>
+                  {{pass}}
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card mb-4">
+                <div class="card-header py-3">
+                  <h6 class="m-0 font-weight-bold text-primary">
+                    Detalhes da Observação
+                  </h6>
+                </div>
+                <div class="card-body">
+                  {{if log.observacao:}}
+                  <div class="alert alert-info">
+                    <p><strong>Estado anterior ao {{=log.acao}}:</strong></p>
+                    <pre class="p-3 bg-light">{{=XML(json.dumps(log.observacao, indent=4))}}</pre>
+                  </div>
+                  {{else:}}
+                  <div class="alert alert-warning">
+                    Nenhuma observação disponível para este log
+                  </div>
+                  {{pass}}
+                </div>
+              </div>
+
+              <div class="card mb-4">
+                <div class="card-header py-3">
+                  <h6 class="m-0 font-weight-bold text-primary">
+                    Informações da Entidade
+                  </h6>
+                </div>
+                <div class="card-body">
+                  {{if entidade_info:}}
+                  <div class="table-responsive">
+                    <table class="table table-bordered">
+                      {{for key in entidade_info:}}
+                        {{if key not in ['id', 'created_by', 'created_on', 'modified_by', 'modified_on']:}}
+                        <tr>
+                          <th style="width: 200px">
+                            {{=key.replace('_', ' ').title()}}
+                          </th>
+                          <td>
+                            {{if isinstance(entidade_info[key], (dict, list)):}}
+                              <pre>{{=XML(json.dumps(entidade_info[key], indent=2))}}</pre>
+                            {{else:}}
+                              {{=entidade_info[key]}}
+                            {{pass}}
+                          </td>
+                        </tr>
+                        {{pass}}
+                      {{pass}}
+                    </table>
+                  </div>
+                  {{else:}}
+                  <div class="alert alert-warning">
+                    {{if log.acao == 'exclusao':}}
+                      O registro foi excluído e não está mais disponível no sistema.
+                    {{else:}}
+                      Não foi possível encontrar informações sobre esta entidade.
+                    {{pass}}
+                  </div>
+                  {{pass}}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(document).ready(function () {
+    // Funções para melhorar a experiência do usuário podem ser adicionadas aqui
+  });
+</script>

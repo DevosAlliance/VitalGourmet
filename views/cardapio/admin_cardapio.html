@@ -1,0 +1,195 @@
+{{extend 'layout.html'}}
+
+<!-- Botão para abrir o modal de solicitação excepcional -->
+<button
+  class="btn btn-warning mb-3"
+  data-toggle="modal"
+  data-target="#modalExcecao"
+>
+  Solicitação Excepcional
+</button>
+
+<!-- Modal de Solicitação Excepcional -->
+<div
+  class="modal fade"
+  id="modalExcecao"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="tituloExcecao"
+  aria-hidden="true"
+>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="tituloExcecao">
+          Nova Solicitação Excepcional
+        </h5>
+        <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-label="Fechar"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label for="usuarioDestino">Destinatário:</label>
+        <select class="form-control" id="usuarioDestino">
+          <option disabled selected>Carregando usuários...</option>
+        </select>
+
+        <label class="mt-3" for="pratoSelecionado">Prato:</label>
+        <select class="form-control" id="pratoSelecionado">
+          <option disabled selected>Carregando pratos...</option>
+        </select>
+
+        <label class="mt-3" for="quantidadeExcecao">Quantidade:</label>
+        <input
+          type="number"
+          class="form-control"
+          id="quantidadeExcecao"
+          value="1"
+          min="1"
+        />
+
+        <label class="mt-3" for="precoPersonalizado">Preço (R$):</label>
+        <input
+          type="number"
+          class="form-control"
+          id="precoPersonalizado"
+          step="0.01"
+          min="0"
+        />
+
+        <label class="mt-3" for="descricaoExcecao">Descrição adicional:</label>
+        <textarea
+          class="form-control"
+          id="descricaoExcecao"
+          placeholder="Motivo ou observações..."
+        ></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" onclick="enviarSolicitacaoExcecao()">
+          Confirmar Pedido
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    carregarUsuariosEDados();
+
+    // Preenche o preço automaticamente ao trocar o prato
+    document
+      .getElementById("pratoSelecionado")
+      .addEventListener("change", function () {
+        const selectedOption = this.options[this.selectedIndex];
+        const preco = selectedOption.dataset.preco;
+        document.getElementById("precoPersonalizado").value = preco;
+      });
+  });
+
+  function carregarUsuariosEDados() {
+    // 🔄 Carregar usuários
+    fetch('{{=URL("cardapio", "api_listar_usuarios_para_excecao")}}')
+      .then((response) => response.json())
+      .then((data) => {
+        const select = document.getElementById("usuarioDestino");
+        select.innerHTML = ""; // Limpa o placeholder
+
+        if (data.status === "success") {
+          data.usuarios.forEach((u) => {
+            const opt = document.createElement("option");
+            opt.value = u.id;
+            opt.textContent = `${u.first_name} ${u.last_name} (${u.user_type})`;
+            select.appendChild(opt);
+          });
+        } else {
+          const opt = document.createElement("option");
+          opt.disabled = true;
+          opt.textContent = "Erro ao carregar usuários.";
+          select.appendChild(opt);
+        }
+      })
+      .catch(() => {
+        const select = document.getElementById("usuarioDestino");
+        select.innerHTML =
+          "<option disabled>Erro ao carregar usuários</option>";
+      });
+
+    // 🍽 Carregar pratos (sem restrição para o admin)
+    fetch('{{=URL("cardapio", "api_listar_pratos_excessao")}}')
+      .then((response) => response.json())
+      .then((data) => {
+        const select = document.getElementById("pratoSelecionado");
+        select.innerHTML = ""; // Limpa o placeholder
+
+        if (data.status === "success") {
+          data.pratos.forEach((p) => {
+            const opt = document.createElement("option");
+            opt.value = p.id;
+            opt.textContent = `${p.nome} - R$ ${p.preco.toFixed(2)}`;
+            opt.dataset.preco = p.preco;
+            select.appendChild(opt);
+          });
+
+          if (select.options.length > 0) {
+            select.selectedIndex = 0;
+            select.dispatchEvent(new Event("change"));
+          }
+        } else {
+          const opt = document.createElement("option");
+          opt.disabled = true;
+          opt.textContent = "Erro ao carregar pratos.";
+          select.appendChild(opt);
+        }
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar pratos para exceção:", err);
+        const select = document.getElementById("pratoSelecionado");
+        select.innerHTML = "<option disabled>Erro ao carregar pratos</option>";
+      });
+  }
+
+  function enviarSolicitacaoExcecao() {
+    const userId = document.getElementById("usuarioDestino").value;
+    const pratoId = document.getElementById("pratoSelecionado").value;
+    const quantidade = parseInt(
+      document.getElementById("quantidadeExcecao").value
+    );
+    const preco = parseFloat(
+      document.getElementById("precoPersonalizado").value
+    );
+    const descricao = document.getElementById("descricaoExcecao").value;
+
+    fetch('{{=URL("cardapio", "api_registrar_solicitacao_excecao")}}', {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        solicitante_id: userId,
+        pratoid: pratoId,
+        quantidade: quantidade,
+        preco: preco,
+        descricao: descricao,
+        status: "Excepcional",
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          alert("✅ Solicitação registrada com sucesso!");
+          $("#modalExcecao").modal("hide");
+        } else {
+          alert("Erro: " + (data.message || "Falha ao registrar solicitação."));
+        }
+      })
+      .catch((error) => {
+        alert("Erro de comunicação com o servidor.");
+        console.error(error);
+      });
+  }
+</script>

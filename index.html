@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Pedidos</title>
+
+    <!-- Bootstrap 5 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Highcharts -->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/bar.js"></script>
+
+    <style>
+      body {
+        background-color: #f8f9fa;
+      }
+      .dashboard-container {
+        padding: 20px;
+      }
+      .top-card {
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container dashboard-container">
+      <div class="row mb-4">
+        <!-- Título -->
+        <div class="col-12 text-center">
+          <h2 class="mb-3">📊 Dashboard de Pedidos</h2>
+        </div>
+      </div>
+
+      <!-- Top 3 Categorias Mais Pedidas -->
+      <div class="row mb-4">
+        <div class="col-lg-4">
+          <div class="top-card text-center">
+            <h5>🍽️ Pratos Mais Pedidos</h5>
+            <ul class="list-group">
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Feijoada</span>
+                <span class="badge bg-primary">120 pedidos</span>
+              </li>
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Frango Grelhado</span>
+                <span class="badge bg-success">95 pedidos</span>
+              </li>
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Macarrão Bolonhesa</span>
+                <span class="badge bg-warning">80 pedidos</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="top-card text-center">
+            <h5>🍛 À La Carte Mais Pedido</h5>
+            <ul class="list-group">
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Filé à Parmegiana</span>
+                <span class="badge bg-danger">110 pedidos</span>
+              </li>
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Frango Grelhado</span>
+                <span class="badge bg-success">83 pedidos</span>
+              </li>
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Macarrão Bolonhesa</span>
+                <span class="badge bg-warning">34 pedidos</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="top-card text-center">
+            <h5>🥤 Bebidas Mais Pedidas</h5>
+            <ul class="list-group">
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Suco de Laranja</span>
+                <span class="badge bg-info">85 pedidos</span>
+              </li>
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Coca-Cola</span>
+                <span class="badge bg-success">12 pedidos</span>
+              </li>
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <span>Cachaça</span>
+                <span class="badge bg-warning">6 pedidos</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Gráfico de Barras Horizontais (Pedidos por Tipo) -->
+        <div class="col-lg-6">
+          <div class="top-card">
+            <h5>📌 Pedidos Mensais por Tipo</h5>
+            <div id="grafico-barras"></div>
+          </div>
+        </div>
+
+        <!-- Gráfico de Pizza (Distribuição de Pedidos) -->
+        <div class="col-lg-6">
+          <div class="top-card">
+            <h5>📊 Distribuição de Pedidos</h5>
+            <div id="grafico-pizza"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Highcharts Configuração -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // 📊 Gráfico de Barras Horizontais - Pedidos por Tipo no mês
+        Highcharts.chart("grafico-barras", {
+          chart: { type: "bar" },
+          title: { text: "" },
+          xAxis: {
+            categories: ["Almoço", "Jantar", "Café da Manhã", "Bebida"],
+            title: { text: "Tipo de Pedido" },
+          },
+          yAxis: {
+            title: { text: "Quantidade de Pedidos" },
+          },
+          series: [
+            {
+              name: "Pedidos",
+              data: [100, 85, 70, 60],
+              color: "#007bff",
+            },
+          ],
+        });
+
+        // 🥧 Gráfico de Pizza - Distribuição de Pedidos por Tipo
+        Highcharts.chart("grafico-pizza", {
+          chart: { type: "pie" },
+          title: { text: "" },
+          series: [
+            {
+              name: "Pedidos",
+              data: [
+                { name: "Almoço", y: 40, color: "#28a745" },
+                { name: "Jantar", y: 30, color: "#007bff" },
+                { name: "Café da Manhã", y: 20, color: "#ffc107" },
+                { name: "Bebida", y: 10, color: "#dc3545" },
+              ],
+            },
+          ],
+        });
+      });
+    </script>
+  </body>
+</html>

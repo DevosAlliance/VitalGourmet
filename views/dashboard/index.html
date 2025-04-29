@@ -1,0 +1,1134 @@
+{{extend 'layout.html'}}
+
+<style>
+  body {
+    background-color: #f8f9fc;
+    font-family: "Inter", sans-serif;
+  }
+
+  .dashboard-title {
+    color: var(--primary-color, #4e73df);
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--primary-color, #4e73df);
+    padding-left: 10px;
+  }
+
+  .badge {
+    color: #ffffff;
+    font-weight: 500;
+  }
+
+  .card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.25rem 2rem 0 rgba(58, 59, 69, 0.2);
+  }
+
+  .stats-icon {
+    background: linear-gradient(
+      135deg,
+      var(--primary-color, #4e73df) 0%,
+      #224abe 100%
+    );
+    color: white;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .stats-card h5 {
+    color: #5a5c69;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .stats-card h4 {
+    color: #333;
+    font-weight: 700;
+    font-size: 1.75rem;
+    margin-bottom: 0;
+  }
+
+  .chart-container {
+    height: auto;
+    border-radius: 12px;
+    background-color: white;
+    padding: 1.5rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  }
+
+  .chart-container h5 {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 10px;
+  }
+
+  #lista-pedidos-por-setor {
+    max-height: 340px;
+    overflow-y: auto;
+  }
+
+  #lista-pedidos-por-setor::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  #lista-pedidos-por-setor::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  #lista-pedidos-por-setor::-webkit-scrollbar-thumb {
+    background: var(--primary-color, #4e73df);
+    border-radius: 10px;
+  }
+
+  #lista-pedidos-por-setor::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+  }
+
+  #lista-pedidos-por-setor {
+    scrollbar-color: var(--primary-color, #4e73df) #f1f1f1;
+  }
+
+  .highcharts-credits {
+    display: none;
+  }
+
+  .list-group-item {
+    border-left: none;
+    border-right: none;
+    padding: 0.75rem 1rem;
+    transition: background-color 0.2s;
+  }
+
+  .list-group-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  .list-group-item:first-child {
+    border-top: none;
+  }
+
+  .list-group-item:last-child {
+    border-bottom: none;
+  }
+
+  .summary-card h5 {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 10px;
+  }
+
+  .summary-card a {
+    color: #5a5c69;
+    transition: color 0.2s;
+  }
+
+  .summary-card a:hover {
+    color: var(--primary-color, #4e73df);
+  }
+
+  .summary-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .summary-item:last-child {
+    border-bottom: none;
+  }
+
+  .summary-item span {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .summary-item h6 {
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+  }
+
+  .btn-toggle-group {
+    margin-bottom: 15px;
+  }
+
+  .btn-toggle-group .btn {
+    padding: 0.375rem 1rem;
+    font-size: 0.85rem;
+    border-radius: 50rem;
+    box-shadow: none;
+  }
+
+  .top-card {
+    background-color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  }
+
+  .top-card h5 {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 10px;
+  }
+
+  .category-card {
+    height: 100%;
+  }
+
+  .category-card h5 {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 10px;
+  }
+
+  .category-card .list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  a:hover {
+    text-decoration: none !important;
+  }
+</style>
+
+<div class="container-fluid py-4">
+  <!-- Header com título da dashboard -->
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h1 class="dashboard-title">Dashboard Operacional</h1>
+    </div>
+    <div class="col-md-4 text-end">
+      <button
+        class="btn btn-primary rounded-pill shadow-sm"
+        id="start-intro"
+        data-bs-toggle="tooltip"
+        data-bs-placement="top"
+        title="Iniciar Tour"
+      >
+        <span class="material-icons align-middle">tour</span>
+        <span class="ms-1 d-none d-md-inline-block">Iniciar Tour</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Cards principais com estatísticas -->
+  <div class="row g-3">
+    <div class="col-md-3 colaboradores">
+      <div class="card p-3 text-center stats-card">
+        <div class="stats-icon mx-auto">
+          <span class="material-icons">groups</span>
+        </div>
+        <h5>COLABORADORES</h5>
+        <h4>{{=total_colaboradores}}</h4>
+      </div>
+    </div>
+    <div class="col-md-3 pacientes">
+      <div class="card p-3 text-center stats-card">
+        <div class="stats-icon mx-auto">
+          <span class="material-icons">person</span>
+        </div>
+        <h5>PACIENTES</h5>
+        <h4>{{=total_pacientes}}</h4>
+      </div>
+    </div>
+    <div class="col-md-3 acompanhantes">
+      <div class="card p-3 text-center stats-card">
+        <div class="stats-icon mx-auto">
+          <span class="material-icons">group_add</span>
+        </div>
+        <h5>ACOMPANHANTES</h5>
+        <h4>{{=total_acompanhantes}}</h4>
+      </div>
+    </div>
+    <div class="col-md-3 lucros">
+      <div class="card p-3 text-center stats-card">
+        <div class="stats-icon mx-auto">
+          <span class="material-icons">attach_money</span>
+        </div>
+        <h5>LUCROS RECEBIDOS</h5>
+        <h4 data-valor="{{=lucro_total_ano}}">{{=lucro_total_ano}}</h4>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segunda linha - Gráficos e indicadores -->
+  <div class="row mt-4">
+    <div class="col-md-8">
+      <!-- Gráfico de lucros -->
+      <div class="chart-container mb-4 grafico-lucros">
+        <h5>
+          <i class="material-icons align-middle me-1" style="font-size: 1.1rem"
+            >trending_up</i
+          >
+          Análise de Lucros
+        </h5>
+        <canvas id="profitChart"></canvas>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-12">
+          <h5 class="dashboard-title">Pedidos mais solicitados (Mês atual)</h5>
+        </div>
+      </div>
+
+      <!-- Top 3 Categorias -->
+      <div class="row mb-4">
+        <!-- Pratos mais pedidos -->
+        <div class="col-lg-4">
+          <div class="card p-3 category-card pratos-mais-pedidos">
+            <h5>🍽️ Pratos Mais Pedidos</h5>
+            <ul class="list-group" id="top-pratos">
+              <!-- Lista será populada dinamicamente -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- A La Carte -->
+        <div class="col-lg-4">
+          <div class="card p-3 category-card a-la-carte-mais-pedido">
+            <h5>🍛 À La Carte Mais Pedido</h5>
+            <ul class="list-group" id="top-a-la-carte">
+              <!-- Lista será populada dinamicamente -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Bebidas -->
+        <div class="col-lg-4">
+          <div class="card p-3 category-card bebidas-mais-pedidas">
+            <h5>🥤 Bebidas Mais Pedidas</h5>
+            <ul class="list-group" id="top-bebidas">
+              <!-- Lista será populada dinamicamente -->
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard de pedidos do mês atual -->
+      <div class="container dashboard-container p-0">
+        <div class="row mb-3">
+          <div class="col-12">
+            <h5 class="dashboard-title">📊 Dashboard de Pedidos (Mês atual)</h5>
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Gráfico de Barras -->
+          <div class="col-lg-6">
+            <div class="top-card pedidos-tipo-mes">
+              <h5>
+                <i
+                  class="material-icons align-middle me-1"
+                  style="font-size: 1.1rem"
+                  >bar_chart</i
+                >
+                Pedidos por Tipo
+              </h5>
+              <div id="grafico-barras"></div>
+            </div>
+          </div>
+
+          <!-- Gráfico de Linhas -->
+          <div class="col-lg-6">
+            <div class="top-card pedidos-distribuicao-mes">
+              <h5>
+                <i
+                  class="material-icons align-middle me-1"
+                  style="font-size: 1.1rem"
+                  >pie_chart</i
+                >
+                Distribuição de Pedidos
+              </h5>
+              <div id="grafico-linhas"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coluna lateral com resumos -->
+    <div class="col-md-4">
+      <!-- Resumo do mês -->
+      <div class="card p-3 summary-card resumo-mes">
+        <h5>
+          <i class="material-icons align-middle me-1" style="font-size: 1.1rem"
+            >calendar_month</i
+          >
+          Resumo do Mês
+        </h5>
+
+        <div class="summary-item">
+          <a
+            href="{{=URL('default', 'admin_pedidos', vars=dict(nome='', tipo_usuario='', setor='', data_inicio=request.now.replace(day=1).date(), data_fim=request.now.date(), tipo_refeicao='especial'))}}"
+            class="text-decoration-none d-flex justify-content-between align-items-center w-100"
+          >
+            <span>Receita (A La Carte+Bebidas) </span>
+            <h6 id="receita-mes">...</h6>
+          </a>
+        </div>
+
+        <div class="summary-item">
+          <a
+            href="{{=URL('default', 'admin_pedidos', vars=dict(nome='', tipo_usuario='', setor='', data_inicio=request.now.replace(day=1).date(), data_fim=request.now.date(), tipo_refeicao='comum'))}}"
+            class="text-decoration-none d-flex justify-content-between align-items-center w-100"
+          >
+            <span>Receita (Comum) </span>
+            <h6 id="receita-mes-comum">...</h6>
+          </a>
+        </div>
+
+        <div class="summary-item">
+          <a
+            href="{{=URL('default', 'admin_pedidos', vars=dict(nome='', tipo_usuario='', setor='', data_inicio=request.now.replace(day=1).date(), data_fim=request.now.date(), tipo_refeicao='especial'))}}"
+            class="text-decoration-none d-flex justify-content-between align-items-center w-100"
+          >
+            <span>Pedidos (A La Carte+Bebidas)</span>
+            <h6 id="total-pedidos-a-la-carte">...</h6>
+          </a>
+        </div>
+
+        <div class="summary-item">
+          <a
+            href="{{=URL('default', 'admin_pedidos', vars=dict(nome='', tipo_usuario='', setor='', data_inicio=request.now.replace(day=1).date(), data_fim=request.now.date()))}}"
+            class="text-decoration-none d-flex justify-content-between align-items-center w-100"
+          >
+            <span>Pedidos Totais</span>
+            <h6>{{=total_vendas_mes}}</h6>
+          </a>
+        </div>
+      </div>
+
+      <!-- Resumo de hoje -->
+      <div class="card p-3 summary-card resumo-hoje">
+        <h5>
+          <i class="material-icons align-middle me-1" style="font-size: 1.1rem"
+            >today</i
+          >
+          Resumo de Hoje
+        </h5>
+
+        <div class="summary-item">
+          <a
+            href="{{=URL('default', 'admin_pedidos', vars=dict(nome='', tipo_usuario='', setor='', data_inicio=request.now.date(), data_fim=request.now.date(), tipo_refeicao='especial'))}}"
+            class="text-decoration-none d-flex justify-content-between align-items-center w-100"
+          >
+            <span>Receita (A La Carte + Bebidas)</span>
+            <h6 id="receita-hoje">...</h6>
+          </a>
+        </div>
+
+        <div class="summary-item">
+          <a
+            href="{{=URL('default', 'admin_pedidos', vars=dict(nome='', tipo_usuario='', setor='', data_inicio=request.now.date(), data_fim=request.now.date(), tipo_refeicao='comum'))}}"
+            class="text-decoration-none d-flex justify-content-between align-items-center w-100"
+          >
+            <span>Receita (Comum)</span>
+            <h6 id="receita-hoje-comum">...</h6>
+          </a>
+        </div>
+
+        <div class="summary-item">
+          <a
+            href="{{=URL('default', 'admin_pedidos', vars=dict(nome='', tipo_usuario='Colaboradores Generalizados', setor='', data_inicio=request.now.date(), data_fim=request.now.date()))}}"
+            class="text-decoration-none d-flex justify-content-between align-items-center w-100"
+          >
+            <span>Quantidade de Pratos (Colaboradores)</span>
+            <h6 id="pedidos-colaboradores">...</h6>
+          </a>
+        </div>
+
+        <div class="summary-item">
+          <a
+            href="{{=URL('default', 'admin_pedidos', vars=dict(nome='', tipo_usuario='Pacientes Generalizados', setor='', data_inicio=request.now.date(), data_fim=request.now.date()))}}"
+            class="text-decoration-none d-flex justify-content-between align-items-center w-100"
+          >
+            <span>Quantidade de Pratos (Pacientes)</span>
+            <h6 id="pedidos-pacientes">...</h6>
+          </a>
+        </div>
+      </div>
+
+      <!-- Pratos por setor -->
+      <div class="card p-3 pedidos-por-setor">
+        <h5>
+          <i class="material-icons align-middle me-1" style="font-size: 1.1rem"
+            >business</i
+          >
+          Pratos por Setor
+        </h5>
+
+        <!-- Toggle buttons -->
+        <div
+          class="btn-group btn-toggle-group mt-2"
+          role="group"
+          aria-label="Toggle de período"
+        >
+          <button
+            id="toggleDiario"
+            type="button"
+            class="btn btn-primary active"
+          >
+            Hoje
+          </button>
+          <button id="toggleMensal" type="button" class="btn btn-secondary">
+            Este Mês
+          </button>
+        </div>
+
+        <!-- Lista de pedidos por setor -->
+        <div id="lista-pedidos-por-setor" class="list-group mt-3">
+          <!-- Lista será populada dinamicamente -->
+        </div>
+      </div>
+
+      <!-- Gráfico de distribuição por setor -->
+      <div class="card p-3 mt-4">
+        <h5>
+          <i class="material-icons align-middle me-1" style="font-size: 1.1rem"
+            >pie_chart</i
+          >
+          Distribuição por Setor
+        </h5>
+
+        <!-- Gráfico de pizza -->
+        <div id="grafico-pizza-setores" style="height: 400px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const startIntroButton = document.querySelector("#start-intro");
+
+    startIntroButton &&
+      startIntroButton.addEventListener("click", () => {
+        introJs()
+          .setOptions({
+            steps: [
+              {
+                intro:
+                  "Bem-vindo ao Dashboard! Vamos conhecer as principais informações disponíveis. 🚀",
+              },
+              {
+                element: document.querySelector(".colaboradores"),
+                title: "Colaboradores",
+                intro:
+                  "Aqui você encontra o total de colaboradores cadastrados no sistema.",
+                position: "bottom",
+              },
+              {
+                element: document.querySelector(".pacientes"),
+                title: "pacientes",
+                intro:
+                  "Aqui você encontra o total de pacientes cadastrados no sistema.",
+                position: "bottom",
+              },
+              {
+                element: document.querySelector(".acompanhantes"),
+                title: "Acompanhantes",
+                intro:
+                  "Aqui você encontra o total de acompanhantes cadastrados no sistema.",
+                position: "bottom",
+              },
+              {
+                element: document.querySelector(".lucros"),
+                title: "Lucros",
+                intro:
+                  "Aqui você encontra o total de lucros obtidos com os pagamentos recebidos.",
+                position: "bottom",
+              },
+              {
+                element: document.querySelector(".grafico-lucros"),
+                title: "Gráfico de Lucros",
+                intro:
+                  "Este gráfico mostra a evolução dos lucros ao longo do tempo.",
+                position: "top",
+              },
+              {
+                element: document.querySelector(".resumo-mes"),
+                title: "Resumo do Mês",
+                intro:
+                  "Um resumo completo das receitas e pedidos do mês atual.",
+                position: "left",
+              },
+              {
+                element: document.querySelector(".resumo-hoje"),
+                title: "Resumo de Hoje",
+                intro: "Informações sobre os pedidos e receitas do dia atual.",
+                position: "left",
+              },
+              {
+                element: document.querySelector(".pedidos-por-setor"),
+                title: "Pedidos por Setor",
+                intro:
+                  "Veja quais setores estão fazendo mais pedidos, com opção de visualização diária ou mensal.",
+                position: "left",
+              },
+              {
+                element: document.querySelector(".pratos-mais-pedidos"),
+                title: "Pratos Mais Pedidos",
+                intro:
+                  "Aqui você vê os pratos mais populares em todo o sistema.",
+                position: "bottom",
+              },
+              {
+                element: document.querySelector(".a-la-carte-mais-pedido"),
+                title: "A La Carte Mais Pedido",
+                intro: "Estes são os pratos à la carte mais solicitados.",
+                position: "bottom",
+              },
+              {
+                element: document.querySelector(".bebidas-mais-pedidas"),
+                title: "Bebidas Mais Pedidas",
+                intro: "As bebidas mais populares são exibidas nesta seção.",
+                position: "bottom",
+              },
+              {
+                element: document.querySelector(".pedidos-tipo-mes"),
+                title: "Pedidos por Tipo",
+                intro:
+                  "Este gráfico mostra a distribuição de pedidos por tipo no mês atual.",
+                position: "left",
+              },
+              {
+                element: document.querySelector(".pedidos-distribuicao-mes"),
+                title: "Distribuição de Pedidos",
+                intro:
+                  "Aqui você ve em quais dias generalizados os pedidos são mais frequentes por turnos no mês atual.",
+                position: "right",
+              },
+
+              {
+                element: document.querySelector("#grafico-pizza-setores"),
+                title: "Gráfico de Setores",
+                intro:
+                  "Este gráfico ilustra visualmente a distribuição de pedidos por setor.",
+                position: "left",
+              },
+
+              {
+                intro: "Agora você está pronto para utilizar o Dashboard! 🎉",
+              },
+            ],
+            tooltipClass: "customTooltip",
+            highlightClass: "customHighlight",
+            prevLabel: "Anterior",
+            nextLabel: "Próximo",
+            doneLabel: "Concluir",
+            showBullets: false,
+            showProgress: true,
+            disableInteraction: false,
+            exitOnOverlayClick: false,
+          })
+          .start();
+      });
+  });
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", async function () {
+    try {
+      const response = await fetch(
+        "{{=URL('dashboard','api_top_a_la_carte')}}"
+      );
+      if (!response.ok) throw new Error("Erro ao obter os dados da API");
+
+      const data = await response.json();
+      if (data.status === "success") {
+        const listaPratos = document.querySelector("#top-a-la-carte");
+        listaPratos.innerHTML = "";
+
+        data.top_a_la_carte.forEach((prato) => {
+          const item = `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      <a href="{{=URL('default', 'admin_pedidos')}}?nome_prato=${prato.nome}&data_inicio={{=request.now.replace(day=1).date()}}&data_fim={{=request.now.date()}}">
+                        <span>${prato.nome}</span>
+                        <span class="badge bg-primary">${prato.quantidade}</span>
+                      </a>
+                    </li>
+                `;
+          listaPratos.innerHTML += item;
+        });
+      } else {
+        console.error("Erro ao buscar dados:", data.message);
+      }
+    } catch (error) {
+      console.error("Erro na requisição:", error);
+    }
+
+    // Consulta para os pratos mais pedidos
+    try {
+      const responsePratos = await fetch(
+        "{{=URL('dashboard','api_top_pratos')}}"
+      );
+      if (!responsePratos.ok) throw new Error("Erro ao obter os dados da API");
+
+      const dataPratos = await responsePratos.json();
+      if (dataPratos.status === "success") {
+        const listaPratos = document.querySelector("#top-pratos");
+        listaPratos.innerHTML = "";
+
+        dataPratos.top_pratos.forEach((prato) => {
+          listaPratos.innerHTML += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{{=URL('default', 'admin_pedidos')}}?nome_prato=${prato.nome}&data_inicio={{=request.now.replace(day=1).date()}}&data_fim={{=request.now.date()}}">
+                <span>${prato.nome}</span>
+                <span class="badge bg-primary">${prato.quantidade}</span>
+                </a>
+            </li>`;
+        });
+      } else {
+        console.error("Erro ao buscar dados (Pratos):", dataPratos.message);
+      }
+    } catch (error) {
+      console.error("Erro na requisição (Pratos):", error);
+    }
+
+    // Consulta para as três bebidas mais pedidas
+    try {
+      const responseBebidas = await fetch(
+        "{{=URL('dashboard','api_top_bebidas')}}"
+      );
+      if (!responseBebidas.ok) throw new Error("Erro ao obter os dados da API");
+
+      const dataBebidas = await responseBebidas.json();
+      console.log("Resposta da API (Bebidas):", dataBebidas); // Log da resposta
+
+      if (dataBebidas.status === "success") {
+        const listaBebidas = document.querySelector("#top-bebidas");
+        listaBebidas.innerHTML = ""; // Limpa a lista antes de adicionar os itens
+
+        // Verifica se há resultados ou se a API retornou 0
+        if (dataBebidas.top_bebidas === 0) {
+          // Exibe uma mensagem indicando que não há pedidos
+          listaBebidas.innerHTML = `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Nenhum pedido de bebidas neste mês.</span>
+            </li>`;
+        } else {
+          // Itera sobre as bebidas recebidas e as exibe
+          dataBebidas.top_bebidas.forEach((bebida) => {
+            listaBebidas.innerHTML += `
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{{=URL('default', 'admin_pedidos')}}?nome_prato=${bebida.nome}&data_inicio={{=request.now.replace(day=1).date()}}&data_fim={{=request.now.date()}}">
+                  <span>${bebida.nome}</span>
+                  <span class="badge bg-primary">${bebida.quantidade}</span>
+              </a>
+              </li>`;
+          });
+        }
+      } else {
+        console.error("Erro ao buscar dados (Bebidas):", dataBebidas.message);
+      }
+    } catch (error) {
+      console.error("Erro na requisição (Bebidas):", error);
+    }
+
+    try {
+      const response = await fetch(
+        "{{=URL('dashboard','api_pedidos_mensais')}}"
+      );
+      if (!response.ok) throw new Error("Erro ao obter os dados da API");
+
+      const data = await response.json();
+      if (data.status === "success") {
+        const categorias = data.pedidos_mensais.map((item) => item.tipo);
+        const valores = data.pedidos_mensais.map((item) => item.quantidade);
+
+        // Atualiza o gráfico Highcharts
+        Highcharts.chart("grafico-barras", {
+          chart: { type: "bar" },
+          title: { text: "" },
+          xAxis: {
+            categories: categorias,
+            title: { text: "Tipo de Pedido" },
+          },
+          yAxis: { title: { text: "Quantidade de Pedidos" } },
+          series: [
+            {
+              name: "Pedidos",
+              data: valores,
+              color: "#007bff",
+            },
+          ],
+        });
+      } else {
+        console.error("Erro ao buscar dados:", data.message);
+      }
+    } catch (error) {
+      console.error("Erro na requisição:", error);
+    }
+
+    try {
+      const responsePedidos = await fetch(
+        "{{=URL('dashboard','api_distribuicao_pedidos_semana')}}"
+      );
+      if (!responsePedidos.ok) throw new Error("Erro ao obter os dados da API");
+
+      const dataPedidos = await responsePedidos.json();
+      console.log("Resposta da API (Pedidos):", dataPedidos); // Log da resposta
+
+      if (dataPedidos.status === "success") {
+        const distribuicaoPedidos = dataPedidos.distribuicao_pedidos;
+
+        // Criar estrutura de dados para Highcharts
+        const diasSemana = [
+          "Segunda",
+          "Terça",
+          "Quarta",
+          "Quinta",
+          "Sexta",
+          "Sábado",
+          "Domingo",
+        ];
+        const turnos = ["Manhã", "Tarde", "Noite"];
+
+        // Inicializa os dados para cada turno
+        const seriesData = turnos.map((turno) => ({
+          name: turno,
+          data: diasSemana.map((dia) => {
+            // Procura os pedidos do turno naquele dia da semana
+            const pedido = distribuicaoPedidos.find(
+              (p) => p.dia_semana === dia && p.turno === turno
+            );
+            return pedido ? pedido.quantidade : 0;
+          }),
+        }));
+
+        // Seleciona o container do gráfico
+        const graficoContainer = document.querySelector("#grafico-linhas");
+        graficoContainer.innerHTML = ""; // Limpa antes de recriar
+
+        // Verifica se todos os valores são zero
+        if (seriesData.every((turno) => turno.data.every((qtd) => qtd === 0))) {
+          graficoContainer.innerHTML = `
+                    <div class="alert alert-warning text-center">Nenhum pedido registrado nas últimas semanas.</div>`;
+        } else {
+          Highcharts.chart("grafico-linhas", {
+            chart: {
+              type: "line",
+            },
+            title: {
+              text: "Distribuição de Pedidos por Dia da Semana e Turno",
+            },
+            xAxis: {
+              categories: diasSemana,
+              title: {
+                text: "Dia da Semana",
+              },
+            },
+            yAxis: {
+              title: {
+                text: "Quantidade de Pedidos",
+              },
+            },
+            series: seriesData.map((turno, index) => ({
+              ...turno,
+              zIndex: index === 0 ? 1 : 0, // Dá prioridade visual ao primeiro turno (azul)
+              lineWidth: 2, // Ajuste de espessura das linhas para tornar visíveis
+              marker: {
+                enabled: true, // Marca os pontos para melhor visualização
+                radius: 3, // Tamanho da marcação
+              },
+            })),
+          });
+        }
+      } else {
+        console.error("Erro ao buscar dados (Pedidos):", dataPedidos.message);
+      }
+    } catch (error) {
+      console.error("Erro na requisição (Pedidos):", error);
+    }
+  });
+</script>
+
+<script>
+  // Referências aos elementos do DOM
+  const toggleDiario = document.getElementById("toggleDiario");
+  const toggleMensal = document.getElementById("toggleMensal");
+  const listaPedidosPorSetor = document.getElementById(
+    "lista-pedidos-por-setor"
+  );
+
+  // Variável para armazenar a instância do gráfico
+  let graficoSetores;
+
+  // Função para formatar datas no formato YYYY-MM-DD
+  function formatarData(data) {
+    return data.toISOString().split("T")[0];
+  }
+
+  // Gera cores aleatórias com base no índice
+  function gerarCores(quantidade) {
+    const coresPredefinidas = [
+      "#7cb5ec",
+      "#434348",
+      "#90ed7d",
+      "#f7a35c",
+      "#8085e9",
+      "#f15c80",
+      "#e4d354",
+      "#2b908f",
+      "#f45b5b",
+      "#91e8e1",
+      "#2f7ed8",
+      "#0d233a",
+      "#8bbc21",
+      "#910000",
+      "#1aadce",
+      "#492970",
+      "#f28f43",
+      "#77a1e5",
+      "#c42525",
+      "#a6c96a",
+    ];
+
+    const cores = [];
+    for (let i = 0; i < quantidade; i++) {
+      cores.push(coresPredefinidas[i % coresPredefinidas.length]);
+    }
+    return cores;
+  }
+
+  // Função para inicializar ou atualizar o gráfico
+  function atualizarGrafico(dados) {
+    // Limpa o contêiner se o gráfico já existir
+    if (graficoSetores) {
+      graficoSetores.destroy();
+    }
+
+    if (!dados || dados.length === 0) {
+      return;
+    }
+
+    // Prepara os dados para o gráfico
+    const dadosGrafico = dados.map((item) => ({
+      name: item.setor,
+      y: item.quantidade_pedidos,
+    }));
+
+    // Cria o novo gráfico
+    graficoSetores = Highcharts.chart("grafico-pizza-setores", {
+      chart: {
+        type: "pie",
+        backgroundColor: null,
+        style: {
+          fontFamily: "inherit",
+        },
+      },
+      title: {
+        text: null, // Remove o título padrão
+      },
+      tooltip: {
+        pointFormat:
+          "{series.name}: <b>{point.y}</b> ({point.percentage:.1f}%)",
+      },
+      accessibility: {
+        point: {
+          valueSuffix: "%",
+        },
+      },
+      plotOptions: {
+        pie: {
+          allowPointSelect: true,
+          cursor: "pointer",
+          borderWidth: 2,
+          borderColor: "#ffffff",
+          dataLabels: {
+            enabled: false, // Desabilita os rótulos no gráfico
+          },
+          showInLegend: true, // Mostra na legenda
+        },
+      },
+      legend: {
+        layout: "horizontal",
+        align: "center",
+        verticalAlign: "bottom",
+        itemStyle: {
+          fontSize: "11px",
+          fontWeight: "normal",
+        },
+        symbolHeight: 12,
+        symbolWidth: 12,
+        symbolRadius: 3,
+      },
+      credits: {
+        enabled: false, // Remove os créditos do Highcharts
+      },
+      exporting: {
+        enabled: false, // Remove botões de exportação
+      },
+      series: [
+        {
+          name: "Pedidos",
+          colorByPoint: true,
+          data: dadosGrafico,
+        },
+      ],
+    });
+  }
+
+  // Função para carregar os pedidos com base na API e período selecionado
+  function carregarPedidosPorSetor(apiUrl, dataInicio, dataFim) {
+    // Limpa a lista antes de carregar os novos dados
+    listaPedidosPorSetor.innerHTML =
+      "<li class='list-group-item text-center'>Carregando...</li>";
+
+    fetch(apiUrl)
+      .then((response) => response.json())
+      .then((data) => {
+        // Limpa a lista novamente para exibir os novos itens
+        listaPedidosPorSetor.innerHTML = "";
+
+        if (data.pedidos_por_setor && data.pedidos_por_setor.length > 0) {
+          // Atualiza a lista
+          data.pedidos_por_setor.forEach((item) => {
+            const listItem = document.createElement("li");
+            listItem.className =
+              "list-group-item d-flex justify-content-between align-items-center";
+            listItem.innerHTML = `
+              <a href="{{=URL('default', 'admin_pedidos')}}?nome=&tipo_usuario=&setor=${item.setor_id}&data_inicio=${dataInicio}&data_fim=${dataFim}" class="text-decoration-none">
+                ${item.setor}
+              </a>
+              <span class="badge bg-primary rounded-pill">${item.quantidade_pedidos}</span>
+            `;
+            listaPedidosPorSetor.appendChild(listItem);
+          });
+
+          // Atualiza o gráfico
+          atualizarGrafico(data.pedidos_por_setor);
+        } else {
+          listaPedidosPorSetor.innerHTML =
+            "<li class='list-group-item text-center'>Nenhum pedido encontrado.</li>";
+          // Limpa o contêiner do gráfico
+          document.querySelector("#grafico-pizza-setores").innerHTML = "";
+        }
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar pedidos por setor:", err);
+        listaPedidosPorSetor.innerHTML =
+          "<li class='list-group-item text-center'>Erro ao carregar dados.</li>";
+        // Limpa o contêiner do gráfico
+        document.querySelector("#grafico-pizza-setores").innerHTML = "";
+      });
+  }
+
+  // Inicializa com o modo diário
+  const hoje = new Date();
+  const dataAtual = formatarData(hoje); // Data atual no formato YYYY-MM-DD
+  const primeiroDiaMes = formatarData(
+    new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  ); // Dia 1 do mês corrente
+
+  const apiDiaria =
+    "{{=URL('dashboard', 'api_pedidos_por_setor_dia_corrente')}}";
+  const apiMensal =
+    "{{=URL('dashboard', 'api_pedidos_por_setor_mes_corrente')}}";
+
+  // Carrega os dados iniciais
+  carregarPedidosPorSetor(apiDiaria, dataAtual, dataAtual);
+
+  // Alterna entre as APIs com base no toggle
+  toggleDiario.addEventListener("click", () => {
+    toggleDiario.classList.add("btn-primary");
+    toggleDiario.classList.remove("btn-secondary");
+    toggleMensal.classList.add("btn-secondary");
+    toggleMensal.classList.remove("btn-primary");
+
+    // Carrega dados do dia corrente
+    carregarPedidosPorSetor(apiDiaria, dataAtual, dataAtual);
+  });
+
+  toggleMensal.addEventListener("click", () => {
+    toggleMensal.classList.add("btn-primary");
+    toggleMensal.classList.remove("btn-secondary");
+    toggleDiario.classList.add("btn-secondary");
+    toggleDiario.classList.remove("btn-primary");
+
+    // Carrega dados do mês corrente
+    carregarPedidosPorSetor(apiMensal, primeiroDiaMes, dataAtual);
+  });
+</script>
+
+{{include 'dashboard/logicas.html'}}
+
+<style>
+  .customTooltip {
+    --intro-tooltip-bg: white;
+    --intro-tooltip-text: #333;
+    --intro-tooltip-border: rgba(0, 0, 0, 0.1);
+
+    background-color: var(--intro-tooltip-bg) !important;
+    color: var(--intro-tooltip-text) !important;
+    border-color: var(--intro-tooltip-border) !important;
+  }
+
+  .dark .customTooltip {
+    --intro-tooltip-bg: #374151;
+    --intro-tooltip-text: #f3f4f6;
+    --intro-tooltip-border: rgba(255, 255, 255, 0.1);
+  }
+
+  .customHighlight {
+    z-index: 9999 !important;
+  }
+
+  .introjs-button {
+    background-color: #f3f4f6 !important;
+    color: #374151 !important;
+  }
+
+  .dark .introjs-button {
+    background-color: #4b5563 !important;
+    color: #f3f4f6 !important;
+  }
+
+  .introjs-nextbutton,
+  .introjs-donebutton {
+    background-color: #3b82f6 !important;
+    color: white !important;
+  }
+
+  .dark .introjs-nextbutton,
+  .dark .introjs-donebutton {
+    background-color: #2563eb !important;
+  }
+
+  .introjs-tooltipbuttons a {
+    border-radius: 5rem !important;
+  }
+</style>

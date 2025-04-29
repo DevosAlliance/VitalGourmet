@@ -1,0 +1,94 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <h2>Meus Pedidos</h2>
+
+    <!-- Filtro por Status -->
+    <div class="form-group">
+        <label for="filtroStatus">Filtrar por Status:</label>
+        <select id="filtroStatus" class="form-control">
+            <option value="">Todos</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Em Preparação">Em Preparação</option>
+            <option value="Finalizado">Finalizado</option>
+        </select>
+    </div>
+
+    <!-- Verifica se há pedidos -->
+    {{if not pedidos:}}
+        <p>Nenhuma solicitação encontrada.</p>
+    {{else:}}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nome do Prato</th>
+                        <th class="d-none d-md-table-cell">Quantidade Solicitada</th>
+                        <th class="d-none d-md-table-cell">Preço</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="pedidoTabela">
+                    {{for pedido in pedidos:}}
+                        <tr class="pedido-row" data-status="{{=pedido.solicitacao_refeicao.status}}" data-quantidade="{{=pedido.solicitacao_refeicao.quantidade_solicitada}}" data-preco="{{=pedido.solicitacao_refeicao.preco}}" data-prato="{{=pedido.cardapio.nome}}">
+                            <td>{{=pedido.cardapio.nome}}</td>
+                            <td class="d-none d-md-table-cell">{{=pedido.solicitacao_refeicao.quantidade_solicitada}}</td>
+                            <td class="d-none d-md-table-cell">R$ {{=pedido.solicitacao_refeicao.preco}}</td>
+                            <td>{{=pedido.solicitacao_refeicao.status}}</td>
+                        </tr>
+                    {{pass}}
+                </tbody>
+            </table>
+        </div>
+    {{pass}}
+</div>
+
+<!-- Modal para detalhes do pedido -->
+<div class="modal fade" id="pedidoModal" tabindex="-1" role="dialog" aria-labelledby="pedidoModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pedidoModalLabel">Detalhes do Pedido</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Nome do Prato:</strong> <span id="modalPratoNome"></span></p>
+        <p><strong>Quantidade Solicitada:</strong> <span id="modalQuantidade"></span></p>
+        <p><strong>Preço:</strong> R$ <span id="modalPreco"></span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Filtro de status
+        $('#filtroStatus').change(function() {
+            var selectedStatus = $(this).val().toLowerCase();
+
+            $('.pedido-row').each(function() {
+                var status = $(this).data('status').toLowerCase();
+
+                if (selectedStatus === '' || status === selectedStatus) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        $('.pedido-row').click(function() {
+            var prato = $(this).data('prato');
+            var quantidade = $(this).data('quantidade');
+            var preco = parseFloat($(this).data('preco'));  // Converte o valor de preco para número
+
+            $('#modalPratoNome').text(prato);
+            $('#modalQuantidade').text(quantidade);
+            $('#modalPreco').text(preco.toFixed(2));  // Usa toFixed corretamente após conversão para número
+
+            $('#pedidoModal').modal('show');
+        });
+    });
+</script>

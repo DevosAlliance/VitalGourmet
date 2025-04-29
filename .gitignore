@@ -1,0 +1,21 @@
+# Ignore HTML1 files
+*.html1
+.env
+
+# Ignore .back files
+*.back
+
+# Common backup patterns
+*~
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*.temp
+.*.swp
+.DS_Store
+**/__pycache__
+errors
+sessions
+*.log

@@ -1,0 +1,240 @@
+{{extend 'layout.html'}}
+
+<h2>Pedidos Pendentes</h2>
+<div id="loading" style="display: none;">Carregando...</div>
+<button id="imprimir" class="btn btn-primary mb-3">Imprimir PDF</button>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Solicitante</th>
+      <th>Setor</th>
+      <th>Prato</th>
+      <th>Foto</th>
+      <th>Quantidade</th>
+      <th>Quarto</th>
+      <th>Observações</th>
+      <th>Status</th>
+      <th>Ações</th>
+      <th>Cancelar</th>
+    </tr>
+  </thead>
+  <tbody id="tabela-pedidos">
+    <!-- Os dados serão preenchidos via Ajax -->
+  </tbody>
+</table>
+
+<!-- Modal para ampliar a imagem -->
+<div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="imageModalLabel">Visualizar Imagem</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="modalImage" class="img-fluid" src="" alt="Imagem Ampliada" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    // Função para imprimir pedidos
+    function imprimirPedidos() {
+      fetch("{{=URL('cozinha', 'api_gerenciar_pedidos')}}")
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "success" || data.pedidos) {
+            const pedidos = data.pedidos;
+
+            // Carregar o HTML do template de impressão
+            fetch("{{=URL('static', 'print_template.html')}}")
+              .then((response) => response.text())
+              .then((templateHtml) => {
+                const printIframe = document.createElement("iframe");
+                printIframe.style.display = "none";
+                document.body.appendChild(printIframe);
+
+                const iframeDoc = printIframe.contentDocument || printIframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(templateHtml);
+                iframeDoc.close();
+
+                // Preencher os dados no template
+                const tabelaBody = iframeDoc.querySelector("#tabela-pedidos tbody");
+                pedidos.forEach((pedido) => {
+                  const linha = `
+                    <tr>
+                      <td>${pedido["Solicitante"]}</td>
+                      <td>${pedido["Setor"] || "-"}</td>
+                      <td>${pedido["Prato"]}</td>
+                      <td>${pedido["Quantidade"]}</td>
+                    </tr>
+                  `;
+                  tabelaBody.insertAdjacentHTML("beforeend", linha);
+                });
+
+                printIframe.onload = () => {
+                  printIframe.contentWindow.print();
+                  printIframe.remove();
+                };
+              });
+          } else {
+            const errorMessage = data.message || "Erro inesperado ao carregar pedidos.";
+            alert("Erro ao carregar pedidos para impressão: " + errorMessage);
+          }
+        })
+        .catch((error) => {
+          console.error("Erro ao carregar pedidos:", error);
+          alert("Erro ao carregar pedidos para impressão.");
+        });
+    }
+
+    // Função para carregar pedidos via Ajax
+    function carregarPedidos() {
+      $("#loading").show();
+      $.ajax({
+        url: "{{=URL('api_listar_pedidos')}}",
+        method: "GET",
+        success: function (response) {
+          $("#loading").hide();
+          if (response.status === "success") {
+            const pedidos = response.pedidos;
+            const tabelaBody = $("#tabela-pedidos");
+            tabelaBody.empty();
+
+            pedidos.forEach((pedido) => {
+              const row = `
+                <tr id="pedido_${pedido.id}" class="${pedido.status === 'Em Preparação' ? 'preparacao' : ''}">
+                  <td>${pedido.solicitante}</td>
+                  <td>${pedido.setor}</td>
+                  <td>${pedido.prato}</td>
+                  <td>
+                    ${
+                      pedido.foto
+                        ? `<img src="${pedido.foto}" class="img-thumbnail small-image" alt="Foto do Prato" />`
+                        : ""
+                    }
+                  </td>
+                  <td>${pedido.quantidade}</td>
+                  <td>${pedido.quarto}</td>
+                  <td>${pedido.observacoes}</td>
+                  <td class="status">${pedido.status}</td>
+                  <td>
+                    <button class="btn ${
+                      pedido.status === "Pendente" ? "btn-danger" : "btn-warning"
+                    } atualizar-status" data-id="${pedido.id}">
+                      Confirmar
+                    </button>
+                  </td>
+                  <td>
+                    <button class="btn btn-danger cancelar-pedido" data-id="${pedido.id}">X</button>
+                  </td>
+                </tr>
+              `;
+              tabelaBody.append(row);
+            });
+
+            associarEventos();
+          } else {
+            alert("Erro ao carregar pedidos: " + response.message);
+          }
+        },
+        error: function () {
+          $("#loading").text("Erro ao carregar pedidos.").show();
+        },
+      });
+    }
+
+    // Associar eventos aos botões
+    function associarEventos() {
+      $(".atualizar-status").off("click").on("click", function () {
+        const pedidoId = $(this).data("id");
+        const row = $(`#pedido_${pedidoId}`);
+        const button = $(this);
+        button.prop("disabled", true).text("Atualizando...");
+
+        $.post(
+          "{{=URL('atualizar_status')}}",
+          { pedido_id: pedidoId },
+          function (response) {
+            button.prop("disabled", false).text("Confirmar");
+            if (response.status === "success") {
+              row.find(".status").text(response.novo_status);
+              if (response.novo_status === "Em Preparação") {
+                row.addClass("preparacao").removeClass("pendente");
+              } else {
+                row.removeClass("preparacao").addClass("pendente");
+              }
+            } else {
+              alert("Erro ao atualizar status: " + response.message);
+            }
+          }
+        );
+      });
+
+      $(".cancelar-pedido").off("click").on("click", function () {
+        const pedidoId = $(this).data("id");
+        const row = $(`#pedido_${pedidoId}`);
+        if (confirm("Tem certeza de que deseja cancelar este pedido?")) {
+          $.post(
+            "{{=URL('cancelar_pedido')}}",
+            { pedido_id: pedidoId },
+            function (response) {
+              if (response.status === "success") {
+                row.remove();
+              } else {
+                alert("Erro ao cancelar pedido: " + response.message);
+              }
+            }
+          );
+        }
+      });
+
+      $(".small-image").off("click").on("click", function () {
+        const imgSrc = $(this).attr("src");
+        $("#modalImage").attr("src", imgSrc);
+        $("#imageModal").modal("show");
+      });
+    }
+
+    // Inicialização
+    $("#imprimir").on("click", imprimirPedidos);
+    carregarPedidos();
+    setInterval(carregarPedidos, 15000);
+  });
+</script>
+
+<style>
+  .preparacao {
+    background-color: orange;
+  }
+
+  .small-image {
+    width: 100px;
+    cursor: pointer;
+  }
+
+  th,
+  td {
+    text-align: center;
+  }
+
+  .linha-azul {
+    color: #1750cc !important;
+    font-weight: 800;
+  }
+
+  #loading {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>

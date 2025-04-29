@@ -1,0 +1,40 @@
+{{extend 'layout.html'}}
+
+<style>
+  th {
+    color: #ffffff !important;
+  }
+</style>
+
+<div class="container mt-5">
+  <h2 class="mb-4">Serviços Vigentes</h2>
+
+  <table class="table table-striped table-bordered">
+    <thead class="table-dark">
+      <tr>
+        <th>Serviço</th>
+        <th>Descrição</th>
+        <th>Valor (R$)</th>
+        <th>Início</th>
+        <th>Fim</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{if not servicos:}}
+      <tr>
+        <td colspan="5" class="text-center">
+          Nenhum serviço vigente encontrado.
+        </td>
+      </tr>
+      {{else:}} {{for servico in servicos:}}
+      <tr>
+        <td>{{=servico.nome}}</td>
+        <td>{{=servico.descricao}}</td>
+        <td>{{='%.2f' % servico.valor}}</td>
+        <td>{{=servico.inicio}}</td>
+        <td>{{=servico.fim or 'Indeterminado'}}</td>
+      </tr>
+      {{pass}} {{pass}}
+    </tbody>
+  </table>
+</div>

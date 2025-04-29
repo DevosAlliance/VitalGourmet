@@ -1,0 +1,205 @@
+{{extend 'layout.html'}}
+
+<style>
+  /* Skeleton styles */
+  .skeleton {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    display: inline-block;
+    height: 20px;
+    width: 100%;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton-large {
+    height: 150px;
+  }
+
+  .skeleton::after {
+    content: "";
+    display: block;
+    position: absolute;
+    left: -100%;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    animation: loading 1.5s infinite;
+  }
+
+  @keyframes loading {
+    0% {
+      left: -100%;
+    }
+    50% {
+      left: 100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+</style>
+
+<h2 id="prato-nome" class="skeleton"></h2>
+
+<div class="row mt-3">
+  <div class="col-md-6">
+    <h4>Descrição</h4>
+    <p id="prato-descricao" class="skeleton"></p>
+
+    <h4>Tipo de Refeição</h4>
+    <p id="prato-tipo" class="skeleton"></p>
+
+    <h4>Tipos de Usuário</h4>
+    <ul id="prato-tipos-usuario">
+      <li class="skeleton"></li>
+      <li class="skeleton"></li>
+    </ul>
+
+    <h4>Dias da Semana</h4>
+    <ul id="prato-dias-semana">
+      <li class="skeleton"></li>
+      <li class="skeleton"></li>
+    </ul>
+
+    <h4>Preço do prato</h4>
+    <p id="preco" class="skeleton"></p>
+  </div>
+  <div class="col-md-6">
+    <h4>Ingredientes</h4>
+    <ul id="prato-ingredientes">
+      <li class="skeleton"></li>
+      <li class="skeleton"></li>
+    </ul>
+
+    <h4>Foto do Prato</h4>
+    <div class="skeleton skeleton-large" id="prato-foto-skeleton"></div>
+    <img
+      id="prato-foto"
+      class="img-fluid"
+      style="max-height: 200px; display: none"
+      alt="Foto do Prato"
+    />
+  </div>
+</div>
+
+<!-- Botão para voltar à lista de cardápios -->
+<a href="{{=URL('index')}}" class="btn btn-secondary mt-4">Voltar</a>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const cardapioId = "{{=request.args(0)}}";
+
+    fetch(`{{=URL('visualizar_cardapio_api', args=[request.args(0)])}}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "success") {
+          const prato = data.prato;
+
+          document.getElementById(
+            "prato-nome"
+          ).textContent = `Detalhes do Prato: ${prato.nome}`;
+          document.getElementById("prato-nome").classList.remove("skeleton");
+
+          document.getElementById("prato-descricao").textContent =
+            prato.descricao;
+          document
+            .getElementById("prato-descricao")
+            .classList.remove("skeleton");
+
+          document.getElementById("preco").textContent = `R$ ${prato.preco}`;
+          document.getElementById("preco").classList.remove("skeleton");
+
+          document.getElementById("prato-tipo").textContent = prato.tipo;
+          document.getElementById("prato-tipo").classList.remove("skeleton");
+
+          const tiposUsuarioList = document.getElementById(
+            "prato-tipos-usuario"
+          );
+          tiposUsuarioList.innerHTML = "";
+          prato.tipos_usuario.forEach((tipo) => {
+            const li = document.createElement("li");
+            li.textContent = tipo;
+            tiposUsuarioList.appendChild(li);
+          });
+
+          const diasSemanaList = document.getElementById("prato-dias-semana");
+          diasSemanaList.innerHTML = "";
+          prato.dias_semana.forEach((dia) => {
+            const li = document.createElement("li");
+            li.textContent = dia;
+            diasSemanaList.appendChild(li);
+          });
+
+          const ingredientesList =
+            document.getElementById("prato-ingredientes");
+          ingredientesList.innerHTML = "";
+          prato.ingredientes.forEach((ingrediente) => {
+            const li = document.createElement("li");
+            li.textContent = `${ingrediente.nome} - ${ingrediente.gramatura}g`;
+            li.setAttribute("data-nome", ingrediente.nome.toLowerCase());
+            li.setAttribute("data-necessario", ingrediente.gramatura);
+            ingredientesList.appendChild(li);
+          });
+
+          if (prato.foto_do_prato) {
+            document.getElementById(
+              "prato-foto"
+            ).src = `data:image/png;base64,${prato.foto_do_prato}`;
+            document.getElementById("prato-foto").style.display = "block";
+            document.getElementById("prato-foto-skeleton").style.display =
+              "none";
+          } else {
+            document.getElementById("prato-foto").style.display = "none";
+          }
+
+          carregarEstoque();
+        } else {
+          alert(data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar o cardápio:", error);
+      });
+  });
+
+  async function carregarEstoque() {
+    try {
+      const response = await fetch("{{=URL('verificar_estoque')}}");
+      const data = await response.json();
+
+      if (data.status === "success") {
+        const ingredientesEstoque = data.ingredientes;
+        const ingredientesLista = document.querySelectorAll(
+          "#prato-ingredientes li"
+        );
+
+        ingredientesLista.forEach((item) => {
+          const nomeIngrediente = item.getAttribute("data-nome");
+          const quantidadeNecessaria = parseInt(
+            item.getAttribute("data-necessario"),
+            10
+          );
+          const quantidadeDisponivel =
+            ingredientesEstoque[nomeIngrediente] || 0;
+
+          if (quantidadeDisponivel < quantidadeNecessaria) {
+            item.style.color = "red"; // Destaca em vermelho se a quantidade for insuficiente
+            item.style.fontWeight = "bold";
+            item.title = "Quantidade insuficiente no estoque";
+          }
+        });
+      } else {
+        console.error("Erro na resposta da API:", data.message);
+      }
+    } catch (error) {
+      console.error("Erro ao verificar estoque:", error);
+    }
+  }
+</script>

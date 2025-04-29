@@ -1,0 +1,9 @@
+{{extend 'layout.html'}}
+
+<h2>Saldo Devedor de {{=paciente.first_name}}</h2>
+
+<p><strong>Saldo Devedor:</strong> R$ {{=saldo_devedor}}</p>
+
+<div class="mt-3">
+    <a href="{{=URL('default', 'listar_pacientes')}}" class="btn btn-secondary">Voltar à Lista de Pacientes</a>
+</div>

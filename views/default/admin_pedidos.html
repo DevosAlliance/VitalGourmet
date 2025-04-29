@@ -1,0 +1,282 @@
+{{extend 'layout.html'}}
+
+<style>
+  .pagination .btn {
+    margin-right: 5px;
+    color: #ffffff;
+  }
+
+  .pagination .btn.active {
+    background-color: #007bff !important;
+    color: #fff;
+    border-color: #007bff !important;
+  }
+
+  .pagination .btn.active:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  .form-inline .form-group {
+    display: flex;
+    flex: 0 0 auto;
+    flex-flow: row wrap;
+    margin-bottom: 0;
+    flex-direction: column;
+  }
+</style>
+
+<h2>Pedidos de Refeição</h2>
+
+<!-- Formulário de Filtros -->
+<form
+  method="GET"
+  action="{{=URL('default', 'admin_pedidos')}}"
+  class="form-inline mb-3"
+>
+  <!-- Nome do Usuário -->
+  <div class="form-group mr-2">
+    <label for="nome">Nome do Usuário</label>
+    <input
+      type="text"
+      name="nome"
+      id="nome"
+      class="form-control ml-2"
+      placeholder="Nome"
+      value="{{=request.vars.nome or ''}}"
+    />
+  </div>
+
+  <!-- Nome do Prato (Novo) -->
+  <div class="form-group mr-2">
+    <label for="nome_prato">Nome do Prato</label>
+    <input
+      type="text"
+      name="nome_prato"
+      id="nome_prato"
+      class="form-control ml-2"
+      placeholder="Nome do Prato"
+      value="{{=request.vars.nome_prato or ''}}"
+    />
+  </div>
+
+  <!-- Tipo de Usuário -->
+  <div class="form-group mr-2">
+    <label for="tipo_usuario">Tipo de Usuário</label>
+    <select name="tipo_usuario" id="tipo_usuario" class="form-control ml-2">
+      <option value="">Todos</option>
+      {{for tipo in tipos_usuario:}}
+      <option value="{{=tipo}}" {{='selected' if request.vars.tipo_usuario == tipo else ''}}>
+        {{=tipo}}
+      </option>
+      {{pass}}
+    </select>
+  </div>
+
+  <!-- Setor -->
+  <div class="form-group mr-2">
+    <label for="setor">Setor</label>
+    <select name="setor" id="setor" class="form-control ml-2">
+      <option value="">Todos</option>
+      {{for setor in setores:}}
+      <option value="{{=setor.id}}" {{='selected' if request.vars.setor == str(setor.id) else ''}}>
+        {{=setor.name}}
+      </option>
+      {{pass}}
+    </select>
+  </div>
+
+  <!-- Data Início -->
+  <div class="form-group mr-2">
+    <label for="data_inicio">Data Início</label>
+    <input
+      type="date"
+      name="data_inicio"
+      id="data_inicio"
+      class="form-control ml-2"
+      value="{{=request.vars.data_inicio or ''}}"
+    />
+  </div>
+
+  <!-- Data Fim -->
+  <div class="form-group mr-2">
+    <label for="data_fim">Data Fim</label>
+    <input
+      type="date"
+      name="data_fim"
+      id="data_fim"
+      class="form-control ml-2"
+      value="{{=request.vars.data_fim or ''}}"
+    />
+  </div>
+
+  <!-- Tipo de Refeição -->
+  <div class="form-group mr-2">
+    <label for="tipo_refeicao">Tipo de Refeição</label>
+    <select name="tipo_refeicao" id="tipo_refeicao" class="form-control ml-2">
+      <option value="">Todos</option>
+      <option value="especial" {{='selected' if request.vars.tipo_refeicao == "especial" else ''}}>
+        A la carte
+      </option>
+      <option value="comum" {{='selected' if request.vars.tipo_refeicao == "comum" else ''}}>
+        Comum
+      </option>
+    </select>
+  </div>
+
+  <button type="submit" class="btn btn-primary" style="position: relative; bottom: -10px;">Filtrar</button>
+</form>
+
+<h5><b>Pedidos totais:</b> {{=total_pedidos}}</h5>
+<h5><b>Pratos totais:</b> {{=total_pratos}}</h5>
+<h5><b>Preço total:</b> <span id="precoTotal" data-valor="{{=preco_total}}"></span></h5>
+
+<!-- Tabela de Pedidos -->
+{{if not pedidos:}}
+<p>Nenhuma solicitação encontrada.</p>
+{{else:}}
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Nome do Usuário</th>
+        <th>Setor</th>
+        <th>Nome do Prato</th>
+        <th>Quantidade</th>
+        <th>Data</th>
+        <th>Preço</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{for pedido in pedidos:}}
+      <tr
+        class="pedido-row"
+        data-prato="{{=pedido.cardapio.nome}}"
+        data-quantidade="{{=pedido.solicitacao_refeicao.quantidade_solicitada}}"
+        data-preco="{{=pedido.solicitacao_refeicao.preco}}"
+        data-descricao="{{=pedido.solicitacao_refeicao.descricao or ''}}"
+        data-tipo-refeicao="{{=pedido.cardapio.tipo}}"
+      >
+        <td>{{=pedido.auth_user.first_name}}</td>
+        <td>{{=pedido.auth_user.setor_id.name if pedido.auth_user.setor_id else ''}}</td>
+        <td>{{=pedido.cardapio.nome}}</td>
+        <td>{{=pedido.solicitacao_refeicao.quantidade_solicitada}}</td>
+        <td>{{=pedido.solicitacao_refeicao.data_solicitacao.strftime('%d/%m/%Y') if pedido.solicitacao_refeicao.data_solicitacao else ''}}</td>
+        <td data-valor="{{=pedido.solicitacao_refeicao.preco}}"></td>
+        <td>{{=pedido.solicitacao_refeicao.status}}</td>
+      </tr>
+      {{pass}}
+    </tbody>
+  </table>
+</div>
+
+<div class="pagination">
+  {{if pagina > 1:}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=pagina-1))}}" class="btn btn-secondary">Anterior</a>
+  {{pass}}
+
+  <!-- Sempre exibe 1, 2, 3 e 4 -->
+  {{for i in range(1, min(5, total_paginas + 1)):}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=i))}}" class="btn btn-secondary {{='active' if i == pagina else ''}}">
+      {{=i}}
+    </a>
+  {{pass}}
+
+  <!-- Adiciona reticências se houver mais páginas -->
+  {{if total_paginas > 4 and pagina < total_paginas:}}
+    <span class="btn btn-secondary disabled">...</span>
+    <a href="{{=URL(vars=dict(request.vars, pagina=pagina+1))}}" class="btn btn-secondary">Próxima</a>
+    <a href="{{=URL(vars=dict(request.vars, pagina=total_paginas))}}" class="btn btn-secondary">Última</a>
+  {{pass}}
+</div>
+
+{{pass}}
+
+<!-- Modal para detalhes do pedido -->
+<div
+  class="modal fade"
+  id="pedidoModal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="pedidoModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pedidoModalLabel">Detalhes do Pedido</h5>
+        <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Nome do Prato:</strong> <span id="modalPratoNome"></span></p>
+        <p>
+          <strong>Quantidade Solicitada:</strong>
+          <span id="modalQuantidade"></span>
+        </p>
+        <p><strong>Preço:</strong> R$ <span id="modalPreco"></span></p>
+        <p><strong>Descrição:</strong> <span id="modalDescricao"></span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Função para formatar valores em BRL
+    function formatarBRL(valor) {
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      }).format(valor);
+    }
+
+    // Seleciona todos os elementos com o atributo data-valor
+    const elementosComValor = document.querySelectorAll("[data-valor]");
+    
+    // Itera sobre os elementos e formata os valores
+    elementosComValor.forEach(function(elemento) {
+      const valorBruto = parseFloat(elemento.getAttribute("data-valor"));
+      elemento.textContent = formatarBRL(valorBruto);
+    });
+  });
+</script>
+
+<script>
+  $(document).ready(function () {
+    // Exibir modal com detalhes do pedido ao clicar na linha
+    $(".pedido-row").click(function () {
+      var prato = $(this).data("prato");
+      var quantidade = $(this).data("quantidade");
+      var preco = parseFloat($(this).data("preco"));
+      var descricao = $(this).data("descricao") || "Nenhuma descrição fornecida.";
+
+      $("#modalPratoNome").text(prato);
+      $("#modalQuantidade").text(quantidade);
+      $("#modalPreco").text(preco.toFixed(2));
+      $("#modalDescricao").text(descricao);
+      $("#pedidoModal").modal("show");
+    });
+
+    // Filtro pelo tipo de refeição
+    $("#tipo_refeicao").change(function() {
+      var selectedTipo = $(this).val();
+
+      $(".pedido-row").each(function() {
+        var tipoRefeicao = $(this).data("tipo-refeicao");
+
+        if (selectedTipo === "" || tipoRefeicao === selectedTipo) {
+          $(this).show();
+        } else {
+          $(this).hide();
+        }
+      });
+    });
+  });
+</script>

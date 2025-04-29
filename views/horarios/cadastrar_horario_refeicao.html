@@ -1,0 +1,47 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <h2>{{=request.function == 'cadastrar_horario_refeicao' and 'Cadastrar Novo Horário de Refeição' or 'Editar Horário de Refeição'}}</h2>
+
+    <form action="" method="post">
+        <div class="form-group">
+            <label for="tipos_usuario">Tipos de Usuário</label>
+            <select multiple class="form-control" id="tipos_usuario" name="tipos_usuario">
+                {{for tipo in tipos_usuario:}}
+                    <option value="{{=tipo}}" {{=horario and tipo in horario.tipo_usuario and 'selected' or ''}}>{{=tipo}}</option>
+                {{pass}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="refeicao">Refeição</label>
+            <select class="form-control" id="refeicao" name="refeicao" required>
+                <option value="Café da Manhã" {{=horario and horario.refeicao == 'Café da Manhã' and 'selected' or ''}}>Café da Manhã</option>
+                <option value="Almoço" {{=horario and horario.refeicao == 'Almoço' and 'selected' or ''}}>Almoço</option>
+                <option value="Jantar" {{=horario and horario.refeicao == 'Jantar' and 'selected' or ''}}>Jantar</option>
+                <option value="Lanche" {{=horario and horario.refeicao == 'Lanche' and 'selected' or ''}}>Lanche</option>
+                <option value="Livre" {{=horario and horario.refeicao == 'Livre' and 'selected' or ''}}>Livre</option>
+                <option value="A la carte" {{=horario and horario.refeicao == 'A la carte' and 'selected' or ''}}>A la carte</option>
+                <option value="Ceia" {{=horario and horario.refeicao == 'Ceia' and 'selected' or ''}}>Ceia</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="pedido_inicio">Pedido Início</label>
+            <input type="time" class="form-control" id="pedido_inicio" name="pedido_inicio" required value="{{=horario and horario.pedido_inicio or ''}}">
+        </div>
+
+        <div class="form-group">
+            <label for="pedido_fim">Pedido Fim</label>
+            <input type="time" class="form-control" id="pedido_fim" name="pedido_fim" required value="{{=horario and horario.pedido_fim or ''}}">
+        </div>
+
+        <div class="form-group">
+            <label for="servido_inicio">Servido Início</label>
+            <input type="time" class="form-control" id="servido_inicio" name="servido_inicio" required value="{{=horario and horario.servido_inicio or ''}}">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="{{=URL('index')}}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>

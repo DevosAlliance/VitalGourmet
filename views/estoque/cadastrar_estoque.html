@@ -1,0 +1,137 @@
+{{extend 'layout.html'}}
+
+<h2>Cadastrar Item no Estoque</h2>
+
+<!-- Exibe a mensagem flash -->
+<div id="flash-message" class="alert" style="display: none"></div>
+
+<!-- Formulário HTML puro -->
+<div class="container">
+  <div class="form-container">
+    <form
+      id="estoque-form"
+      method="post"
+      action="/{{=request.application}}/estoque/cadastrar_estoque"
+    >
+      <!-- Nome -->
+      <div class="mb-3">
+        <label for="nome" class="form-label">Nome do Ingrediente</label>
+        <input
+          type="text"
+          class="form-control"
+          id="nome"
+          name="nome"
+          required
+        />
+        <small class="text-danger" id="nome-erro"></small>
+      </div>
+
+      <!-- Gramatura -->
+      <div class="mb-3">
+        <label for="gramatura" class="form-label">Gramatura (em gramas)</label>
+        <input
+          type="text"
+          class="form-control"
+          id="gramatura"
+          name="gramatura"
+          required
+        />
+        <small class="text-danger" id="gramatura-erro"></small>
+      </div>
+
+      <!-- Botão de envio -->
+      <button type="submit" class="btn btn-primary">Cadastrar Item</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  $(document).ready(function () {
+    // Permitir apenas números no campo de gramatura
+    $("#gramatura").on("input", function () {
+      this.value = this.value.replace(/\D/g, "");
+    });
+
+    // Função para validar CPF (não aplicável aqui, apenas número para gramatura)
+
+    // Verificar se o nome já existe no banco
+    async function verificarNome(nome, idAtual) {
+      const response = await fetch(
+        `/{{=request.application}}/estoque/verificar_nome?nome=${encodeURIComponent(
+          nome
+        )}&id=${idAtual}`
+      );
+      const data = await response.json();
+      return data.exists;
+    }
+
+    // Carregar dados no modal ao clicar no botão de edição
+    $(".editar-estoque").click(function () {
+      var id = $(this).data("id");
+      var nome = $(this).data("nome");
+      var gramatura = $(this).data("gramatura");
+
+      $("#estoqueId").val(id);
+      $("#nome_estoque_modal").val(nome);
+      $("#gramatura").val(gramatura);
+      $("#editarEstoqueModal").modal("show");
+    });
+
+    // Salvar os dados editados via AJAX com validações
+    $("#salvarEdicao").click(async function () {
+      const nome = $("#nome_estoque_modal").val().trim();
+      const gramatura = $("#gramatura").val().trim();
+      const id = $("#estoqueId").val();
+
+      // Limpar mensagens anteriores
+      $("#nome_erro").remove();
+      $("#gramatura_erro").remove();
+
+      let valid = true;
+
+      // Validação do nome
+      if (!nome) {
+        $("#nome_estoque_modal").after(
+          '<div id="nome_erro" class="text-danger">O nome é obrigatório.</div>'
+        );
+        valid = false;
+      } else {
+        const nomeExiste = await verificarNome(nome, id);
+        if (nomeExiste) {
+          $("#nome_estoque_modal").after(
+            '<div id="nome_erro" class="text-danger">Este nome já está cadastrado no estoque.</div>'
+          );
+          valid = false;
+        }
+      }
+
+      // Validação da gramatura
+      if (!gramatura || !/^\d+$/.test(gramatura)) {
+        $("#gramatura").after(
+          '<div id="gramatura_erro" class="text-danger">A gramatura deve conter apenas números.</div>'
+        );
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      // Se tudo estiver correto, enviar o formulário via AJAX
+      const formData = $("#editarEstoqueForm").serialize();
+      $.ajax({
+        url: "{{=URL('editar_estoque')}}",
+        method: "POST",
+        data: formData,
+        success: function (response) {
+          if (response.status === "success") {
+            location.reload();
+          } else {
+            alert("Erro ao atualizar o item: " + response.message);
+          }
+        },
+        error: function () {
+          alert("Erro ao processar a solicitação.");
+        },
+      });
+    });
+  });
+</script>

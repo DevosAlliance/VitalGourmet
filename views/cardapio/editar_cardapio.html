@@ -1,0 +1,276 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <h2>Editar Item no Cardápio</h2>
+
+    <!-- Formulário para edição de item -->
+    <form id="formEditarCardapio" enctype="multipart/form-data">
+        <!-- Campo oculto para armazenar o ID do item -->
+        <input type="hidden" id="id" name="id" value="{{=cardapio.id}}">
+
+        <div class="form-group">
+            <label for="nome">Nome do Prato</label>
+            <input type="text" class="form-control" id="nome" name="nome" value="{{=cardapio.nome}}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="descricao">Descrição</label>
+            <textarea class="form-control" id="descricao" name="descricao" rows="3" required>{{=cardapio.descricao}}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="preco">Preço</label>
+            <input type="number" step="0.01" class="form-control" id="preco" name="preco" value="{{=cardapio.preco}}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="tipo">Tipo de Refeição</label>
+            <select class="form-control" id="tipo" name="tipo" required>
+                {{for tipo_refeicao in tipos_refeicoes:}}
+                <option value="{{=tipo_refeicao.refeicao}}" {{='selected' if tipo_refeicao.refeicao == cardapio.tipo else ''}}>
+                    {{=tipo_refeicao.refeicao}}
+                </option>
+                {{pass}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="tipos_usuario">Tipos de Usuário</label>
+            <select multiple class="form-control" id="tipos_usuario" name="tipos_usuario">
+                {{for user_tipo in tipos_usuario:}}
+                    <option value="{{=user_tipo.name}}" {{= 'selected' if user_tipo.name in cardapio.tipos_usuario else ''}}>{{=user_tipo.name}}</option>
+                {{pass}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="dias_semana">Dias da Semana</label>
+            <select multiple class="form-control" id="dias_semana" name="dias_semana">
+                {{for dia in ['Segunda-feira', 'Terca-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sabado', 'Domingo']:}}
+                    <option value="{{=dia}}" {{= 'selected' if dia in cardapio.dias_semana else ''}}>{{=dia}}</option>
+                {{pass}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="foto_do_prato">Foto do Prato</label>
+            <input type="file" class="form-control-file" id="foto_do_prato" name="foto_do_prato" accept=".png,.jpg,.jpeg">
+            <small class="form-text text-muted">Se quiser manter a imagem atual, não selecione uma nova.</small>
+        </div>
+
+        <!-- Campos para adicionar novos ingredientes -->
+        <div class="form-group">
+            <label>Adicionar Novo Ingrediente</label>
+            <div class="ingrediente-row">
+                <select class="form-control d-inline-block mb-2" style="width: 45%;" id="novo_ingrediente_nome">
+                    {{for ing in ingredientes_disponiveis:}}
+                        <option value="{{=ing.nome}}">{{=ing.nome}}</option>
+                    {{pass}}
+                </select>
+                <input type="number" class="form-control d-inline-block mb-2" style="width: 45%;" id="novo_ingrediente_quantidade" placeholder="Quantidade (g)" />
+                <button type="button" class="btn btn-success btn-sm mb-2" id="add_ingrediente">Adicionar Ingrediente</button>
+            </div>
+        </div>
+
+        <!-- Campo oculto para armazenar os dados dos ingredientes -->
+        <input type="hidden" name="ingredientes" id="ingredientes" value="{{=cardapio.ingredientes}}" />
+
+        <!-- Lista para mostrar os ingredientes adicionados -->
+        <ul id="ingredientesList" class="list-group"></ul>
+
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ingredientesList = document.getElementById('ingredientesList');
+    const ingredientesInput = document.getElementById('ingredientes');
+    const fotoInput = document.getElementById('foto_do_prato');
+    const formEditarCardapio = document.getElementById('formEditarCardapio');
+    const tiposUsuarioSelect = document.getElementById('tipos_usuario');
+    const diasSemanaSelect = document.getElementById('dias_semana');
+
+    // Verifica e converte o campo ingredientes para um JSON válido
+    let ingredientesArray = [];
+    try {
+        ingredientesArray = JSON.parse(ingredientesInput.value);
+    } catch (e) {
+        console.error('Formato inválido para JSON. Tentando converter.', e);
+        try {
+            ingredientesArray = JSON.parse(ingredientesInput.value.replace(/'/g, '"'));
+        } catch (e2) {
+            console.error('Segunda tentativa falhou. Iniciando com array vazio.', e2);
+            ingredientesArray = [];
+        }
+    }
+
+    // Função para atualizar o campo oculto com o array de ingredientes
+    function atualizarCampoIngredientes() {
+        ingredientesInput.value = JSON.stringify(ingredientesArray);
+    }
+
+    // Função para adicionar ingrediente à lista HTML
+    function adicionarIngredienteAoHTML(nome, quantidade) {
+        const listItem = document.createElement('li');
+        listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+        listItem.textContent = `${nome} - ${quantidade}g`;
+
+        const removeButton = document.createElement('button');
+        removeButton.className = 'btn btn-danger btn-sm';
+        removeButton.textContent = 'Remover';
+        removeButton.addEventListener('click', function() {
+            const index = ingredientesArray.findIndex(ing => ing.nome === nome && ing.gramatura === quantidade);
+            if (index > -1) {
+                ingredientesArray.splice(index, 1);
+            }
+            ingredientesList.removeChild(listItem);
+            atualizarCampoIngredientes();
+        });
+
+        listItem.appendChild(removeButton);
+        ingredientesList.appendChild(listItem);
+    }
+
+    // Inicializa os ingredientes existentes
+    if (Array.isArray(ingredientesArray)) {
+        ingredientesArray.forEach(ingrediente => {
+            adicionarIngredienteAoHTML(ingrediente.nome, ingrediente.gramatura);
+        });
+    }
+
+    // Event listener para o botão de adicionar ingrediente
+    document.getElementById('add_ingrediente').addEventListener('click', function() {
+        const nome = document.getElementById('novo_ingrediente_nome').value;
+        const quantidade = document.getElementById('novo_ingrediente_quantidade').value;
+
+        if (nome && quantidade) {
+            ingredientesArray.push({ nome: nome, gramatura: quantidade });
+            adicionarIngredienteAoHTML(nome, quantidade);
+            atualizarCampoIngredientes();
+
+            // Limpar campo de quantidade
+            document.getElementById('novo_ingrediente_quantidade').value = '';
+        } else {
+            alert('Por favor, preencha o nome e a quantidade do ingrediente.');
+        }
+    });
+
+    // Função para redimensionar a imagem para 300x300 e converter para base64 com fundo branco
+    function resizeAndConvertToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const img = new Image();
+                img.src = reader.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Definindo o tamanho para 300x300
+                    canvas.width = 300;
+                    canvas.height = 300;
+
+                    // Preenchendo o fundo com branco antes de desenhar a imagem
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Desenhando a imagem no canvas
+                    ctx.drawImage(img, 0, 0, 300, 300);
+
+                    // Convertendo para base64 com qualidade ajustada
+                    const resizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(resizedBase64.split(',')[1]);
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    }
+
+    // Função para obter valores de um elemento select múltiplo
+    function getSelectedValues(selectElement) {
+        return Array.from(selectElement.selectedOptions).map(option => option.value);
+    }
+
+    // Event listener para o formulário
+    formEditarCardapio.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        
+        try {
+            // Exibir loading ou desabilitar botão aqui se necessário
+            document.querySelector('button[type="submit"]').disabled = true;
+            
+            // Obter todos os valores necessários
+            const id = document.getElementById('id').value;
+            const nome = document.getElementById('nome').value;
+            const descricao = document.getElementById('descricao').value;
+            const tipo = document.getElementById('tipo').value;
+            const preco = document.getElementById('preco').value;
+            
+            // Obter valores dos selects múltiplos
+            const tiposUsuario = getSelectedValues(tiposUsuarioSelect);
+            const diasSemana = getSelectedValues(diasSemanaSelect);
+            
+            // Debug para verificar valores
+            console.log('Tipos de usuário selecionados:', tiposUsuario);
+            console.log('Dias selecionados:', diasSemana);
+            
+            // Processar a foto
+            const fotoFile = fotoInput.files[0];
+            let fotoBase64 = '';
+            if (fotoFile) {
+                fotoBase64 = await resizeAndConvertToBase64(fotoFile);
+            }
+            
+            // Criar objeto de dados
+            const formData = {
+                id: id,
+                nome: nome,
+                descricao: descricao,
+                tipo: tipo,
+                preco: preco,
+                ingredientes: JSON.stringify(ingredientesArray),
+                tipos_usuario: JSON.stringify(tiposUsuario),
+                dias_semana: JSON.stringify(diasSemana),
+                foto_do_prato: fotoBase64
+            };
+            
+            console.log('Enviando dados:', formData);
+            
+            // Enviar requisição usando fetch API
+            const response = await fetch('{{=URL('api_editar_cardapio')}}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            // Verificar se a resposta foi bem-sucedida
+            if (!response.ok) {
+                throw new Error(`Erro HTTP: ${response.status}`);
+            }
+            
+            const responseData = await response.json();
+            console.log('Resposta do servidor:', responseData);
+            
+            if (responseData.status === 'success') {
+                // Exibir mensagem de sucesso
+                alert('Cardápio atualizado com sucesso!');
+                // Redirecionar para a página de listagem
+                window.location.href = '{{=URL("cardapio", "index")}}';
+            } else {
+                // Exibir mensagem de erro
+                alert('Erro ao editar o cardápio: ' + responseData.message);
+                document.querySelector('button[type="submit"]').disabled = false;
+            }
+        } catch (error) {
+            console.error('Erro durante a submissão do formulário:', error);
+            alert('Erro ao editar o cardápio: ' + error.message);
+            document.querySelector('button[type="submit"]').disabled = false;
+        }
+    });
+});
+</script>

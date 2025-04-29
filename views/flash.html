@@ -1,0 +1,138 @@
+<!-- Flash Message Personalizado -->
+<div
+  id="customFlash"
+  class="alert alert-dismissible fade show"
+  style="display: {{='block' if response.flash else 'none'}};"
+  role="alert"
+>
+  <div class="d-flex align-items-center">
+    <div class="alert-icon me-3">
+      <i class="fas fa-info-circle"></i>
+    </div>
+    <div class="alert-content flex-grow-1">
+      <div class="alert-text">{{=response.flash}}</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #customFlash {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    max-width: 350px;
+    z-index: 9999;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background-color: #ffffff;
+    padding: 16px;
+    transform: translateX(400px);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  #customFlash.show {
+    transform: translateX(0);
+  }
+
+  #customFlash .alert-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(78, 115, 223, 0.1);
+  }
+
+  #customFlash .alert-icon i {
+    color: var(--primary-color, #4e73df);
+    font-size: 18px;
+  }
+
+  #customFlash .alert-content {
+    font-size: 14px;
+    color: #5a5c69;
+  }
+
+  #customFlash.alert-success .alert-icon {
+    background-color: rgba(28, 200, 138, 0.1);
+  }
+
+  #customFlash.alert-success .alert-icon i {
+    color: #1cc88a;
+  }
+
+  #customFlash.alert-danger .alert-icon {
+    background-color: rgba(231, 74, 59, 0.1);
+  }
+
+  #customFlash.alert-danger .alert-icon i {
+    color: #e74a3b;
+  }
+
+  #customFlash.alert-warning .alert-icon {
+    background-color: rgba(246, 194, 62, 0.1);
+  }
+
+  #customFlash.alert-warning .alert-icon i {
+    color: #f6c23e;
+  }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const flashMessage = document.getElementById("customFlash");
+
+    if (
+      flashMessage &&
+      flashMessage.querySelector(".alert-text").innerText.trim() !== ""
+    ) {
+      // Determinar o tipo de mensagem e definir o ícone e classe correspondentes
+      const messageText = flashMessage
+        .querySelector(".alert-text")
+        .innerText.toLowerCase();
+      let messageType = "info";
+      let icon = "info-circle";
+
+      if (
+        messageText.includes("sucesso") ||
+        messageText.includes("salvo") ||
+        messageText.includes("atualizado")
+      ) {
+        messageType = "success";
+        icon = "check-circle";
+      } else if (
+        messageText.includes("erro") ||
+        messageText.includes("falha") ||
+        messageText.includes("inválido")
+      ) {
+        messageType = "danger";
+        icon = "exclamation-circle";
+      } else if (
+        messageText.includes("atenção") ||
+        messageText.includes("aviso")
+      ) {
+        messageType = "warning";
+        icon = "exclamation-triangle";
+      }
+
+      // Aplicar classe e ícone correspondentes
+      flashMessage.classList.add(`alert-${messageType}`);
+      flashMessage.querySelector(".alert-icon i").className = `fas fa-${icon}`;
+
+      // Mostrar mensagem com animação
+      setTimeout(() => {
+        flashMessage.classList.add("show");
+      }, 100);
+
+      // Ocultar automaticamente após 5 segundos
+      setTimeout(() => {
+        flashMessage.classList.remove("show");
+        setTimeout(() => {
+          flashMessage.style.display = "none";
+        }, 300);
+      }, 5000);
+    }
+  });
+</script>

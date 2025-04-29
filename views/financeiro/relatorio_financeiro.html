@@ -1,0 +1,231 @@
+{{extend 'layout.html'}}
+
+<div class="d-flex justify-content-between align-items-center">
+  <h1>Relatório Financeiro</h1>
+  <button id="imprimir" class="btn btn-primary">Imprimir PDF</button>
+</div>
+
+<div>
+  <label for="filtroData">Filtrar por:</label><br />
+  <select id="filtroData" class="form-control d-inline-block w-auto">
+    <option value="dia">Dia Corrente</option>
+    <option value="mes">Mês Corrente</option>
+  </select>
+  <button id="aplicarFiltro" class="btn btn-secondary">Aplicar Filtro</button>
+</div>
+
+<!-- Exibir o Total a Receber -->
+<h3>Total a Receber: R$ <span id="totalReceber">0,00</span></h3>
+
+<!-- Indicador de Carregamento -->
+<div id="loadingIndicator" class="text-center mt-3">
+  <span class="spinner-border text-primary"></span>
+  <p>Carregando dados...</p>
+</div>
+
+<table class="table table-striped mt-3">
+  <thead class="thead-dark">
+    <tr>
+      <th>Data</th>
+      <th>Tipo de Usuário</th>
+      <th>Solicitante</th>
+      <th>Prato</th>
+      <th>Forma de Pagamento</th>
+      <th>Valor</th>
+      <th>Status (Pagamento)</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody id="tabela-relatorio">
+    <!-- Skeleton Loader -->
+    {{for _ in range(5):}}
+    <tr class="skeleton">
+      <td colspan="8"><div class="loading-skeleton"></div></td>
+    </tr>
+    {{pass}}
+  </tbody>
+</table>
+
+<style>
+  /* Skeleton Loader */
+  .skeleton {
+    background-color: #f3f3f3;
+    animation: shimmer 1.5s infinite linear;
+  }
+  .loading-skeleton {
+    width: 100%;
+    height: 20px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    function carregarRelatorio(filtro = "dia") {
+      let url = `{{=URL('api_relatorio_financeiro')}}?filtro=${filtro}`;
+      var tabela = document.querySelector("#tabela-relatorio");
+      var totalReceber = document.querySelector("#totalReceber");
+      var loadingIndicator = document.querySelector("#loadingIndicator");
+
+      // Exibir skeleton loader e indicador de carregamento
+      tabela.innerHTML = "";
+      loadingIndicator.style.display = "block";
+
+      fetch(url)
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("Dados recebidos:", data);
+          tabela.innerHTML = "";
+          totalReceber.textContent = "0,00";
+
+          if (!data.pedidos || data.pedidos.length === 0) {
+            tabela.innerHTML =
+              "<tr><td colspan='8' class='text-center'>Nenhum registro encontrado</td></tr>";
+            return;
+          }
+
+          let total = 0;
+
+          data.pedidos.forEach((pedido) => {
+            let valor = pedido.Valor.toFixed(2);
+            let statusPagamento = pedido.Status;
+            let formaPagamento = pedido["Forma de Pagamento"];
+
+            // Se o valor for <= 0, alterar os campos no front-end
+            if (pedido.Valor <= 0) {
+              statusPagamento = "Pago";
+              formaPagamento = "Gratuidade";
+            } else {
+              total += pedido.Valor; // Soma apenas os valores maiores que zero
+            }
+
+            var urlPagamento = `{{=URL('ver_solicitacoes_e_saldo')}}/${pedido.ID}`;
+
+            var linha = `<tr>
+                        <td>${pedido.Data}</td>
+                        <td>${pedido["Tipo de Usuário"]}</td>
+                        <td>${pedido.Solicitante}</td>
+                        <td>${pedido.Prato}</td>
+                        <td>${formaPagamento}</td>
+                        <td>R$ ${valor}</td>
+                        <td>${statusPagamento}</td>
+                        <td>
+                            <a href="${urlPagamento}" class="btn btn-primary">Efetuar Pagamento</a>
+                        </td>
+                    </tr>`;
+
+            tabela.insertAdjacentHTML("beforeend", linha);
+          });
+
+          // Atualiza o total a receber considerando apenas valores > 0
+          totalReceber.textContent = total.toFixed(2);
+        })
+        .catch((error) => console.error("Erro ao carregar relatório:", error))
+        .finally(() => {
+          // Esconder skeleton loader e indicador de carregamento
+          loadingIndicator.style.display = "none";
+        });
+    }
+
+    carregarRelatorio();
+
+    document
+      .querySelector("#aplicarFiltro")
+      .addEventListener("click", function () {
+        let filtroSelecionado = document.querySelector("#filtroData").value;
+        carregarRelatorio(filtroSelecionado);
+      });
+
+    document.querySelector("#imprimir").addEventListener("click", function () {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      doc.setFontSize(18);
+      doc.text("Relatório Financeiro", 14, 10);
+
+      let totalReceber = document.querySelector("#totalReceber").textContent;
+      doc.setFontSize(14);
+      doc.text(`Total a Receber: R$ ${totalReceber}`, 14, 20);
+
+      const colunas = [
+        "Data",
+        "Tipo de Usuário",
+        "Solicitante",
+        "Prato",
+        "Forma de Pagamento",
+        "Valor",
+        "Status",
+      ];
+      const linhas = [];
+
+      // Corrigido: Agora percorremos as LINHAS e pegamos as CÉLULAS corretamente
+      document
+        .querySelectorAll("#tabela-relatorio tr")
+        .forEach(function (row, index) {
+          if (index === 0) return; // Pular o cabeçalho da tabela
+
+          const cells = row.querySelectorAll("td");
+          if (cells.length > 0) {
+            linhas.push([
+              cells[0].textContent.trim(),
+              cells[1].textContent.trim(),
+              cells[2].textContent.trim(),
+              cells[3].textContent.trim(),
+              cells[4].textContent.trim(),
+              cells[5].textContent.trim(),
+              cells[6].textContent.trim(),
+            ]);
+          }
+        });
+
+      if (linhas.length === 0) {
+        alert("Não há dados para imprimir!");
+        return;
+      }
+
+      doc.autoTable({
+        head: [colunas],
+        body: linhas,
+        startY: 30,
+        styles: {
+          fontSize: 10,
+          halign: "center",
+          valign: "middle",
+          textColor: [0, 0, 0],
+          lineWidth: 0.2,
+          lineColor: [0, 0, 0],
+        },
+        headStyles: {
+          fillColor: [110, 109, 109],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [240, 240, 240],
+        },
+      });
+
+      doc.save("relatorio_financeiro.pdf");
+    });
+  });
+</script>
+
+<!-- Biblioteca jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Plugin autoTable para tabelas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>

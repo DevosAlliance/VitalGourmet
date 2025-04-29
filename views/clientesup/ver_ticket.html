@@ -1,0 +1,139 @@
+{{extend 'layout.html'}}
+
+<style>
+  th {
+    color: #ffffff !important;
+  }
+</style>
+
+<div class="container mt-5">
+  <h2>Detalhes do Ticket</h2>
+  <p><strong>Protocolo:</strong> {{=ticket.protocolo}}</p>
+  <p><strong>Categoria:</strong> {{=ticket.categoria}}</p>
+  <p><strong>Status:</strong> {{=ticket.status}}</p>
+
+  <hr />
+  <h4>Mensagens</h4>
+  <div
+    id="chat-box"
+    class="border p-3 mb-4"
+    style="max-height: 400px; overflow-y: auto"
+  >
+    <!-- Mensagens -->
+    {{for mensagem in mensagens:}}
+    <div class="mb-3">
+      <p>
+        <strong
+          class="{{='text-primary' if mensagem.remetente == 'Suporte' else 'text-success'}}"
+        >
+          {{=mensagem.remetente}}:
+        </strong>
+        {{=mensagem.mensagem}}
+        <small class="text-muted float-end">{{=mensagem.criado_em}}</small>
+      </p>
+    </div>
+    {{pass}}
+  </div>
+  <form method="POST" id="mensagemForm">
+    <div class="mb-3">
+      <textarea
+        class="form-control"
+        name="mensagem"
+        id="mensagemInput"
+        placeholder="Escreva sua mensagem..."
+        {{= 'disabled' if ticket.status == 'Fechado' else '' }}
+        rows="3"
+        required
+      ></textarea>
+    </div>
+    <button type="submit" class="btn btn-success">Enviar</button>
+  </form>
+</div>
+
+<!-- Som de notificação -->
+<audio
+  id="notificationSound"
+  src="{{=URL('static', 'sounds/notification.mp3')}}"
+></audio>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const chatBox = document.getElementById("chat-box");
+    const mensagemForm = document.getElementById("mensagemForm");
+    const mensagemInput = document.getElementById("mensagemInput");
+    const notificationSound = document.getElementById("notificationSound");
+
+    const ticketId = "{{=ticket.id}}";
+    let ultimaMensagemId = null;
+    let somHabilitado = false; // Controle para saber se o som pode ser tocado
+
+    // Habilitar som após interação do usuário
+    document.body.addEventListener("click", () => {
+      somHabilitado = true;
+    });
+
+    // Função para carregar mensagens
+    function carregarMensagens() {
+      fetch("{{=URL('clientesup', 'api_get_mensagens', args=[ticket.id])}}")
+        .then((response) => response.json())
+        .then((mensagens) => {
+          let novaMensagem = false;
+
+          mensagens.forEach((msg) => {
+            // Adiciona apenas mensagens novas ao chatBox
+            if (!document.querySelector(`[data-msg-id="${msg.id}"]`)) {
+              const remetenteClass =
+                msg.remetente === "Suporte" ? "text-primary" : "text-success";
+
+              const mensagemHTML = `
+                <div class="mb-3" data-msg-id="${msg.id}">
+                  <p>
+                    <strong class="${remetenteClass}">${msg.remetente}:</strong> ${msg.mensagem}
+                    <small class="text-muted float-end">${msg.criado_em}</small>
+                  </p>
+                </div>
+              `;
+
+              chatBox.innerHTML += mensagemHTML;
+
+              // Verifica se a mensagem recebida é nova e se não foi enviada pelo próprio usuário
+              if (!ultimaMensagemId || msg.id > ultimaMensagemId) {
+                novaMensagem = msg.remetente !== "Você"; // Ajuste para ignorar mensagens do próprio usuário
+                ultimaMensagemId = msg.id;
+              }
+            }
+          });
+
+          chatBox.scrollTop = chatBox.scrollHeight; // Rola para o final
+
+          // Toca som apenas para novas mensagens de terceiros
+          if (novaMensagem && somHabilitado) {
+            notificationSound
+              .play()
+              .catch((error) => console.error("Erro ao tocar som:", error));
+          }
+        });
+    }
+
+
+    // Enviar nova mensagem
+    mensagemForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      const formData = new FormData(mensagemForm);
+
+      fetch("{{=URL('clientesup', 'ver_ticket', args=[ticket.id])}}", {
+        method: "POST",
+        body: formData,
+      })
+        .then(() => {
+          mensagemInput.value = ""; // Limpa o campo de mensagem
+          carregarMensagens(); // Atualiza mensagens
+        })
+        .catch((error) => console.error("Erro ao enviar mensagem:", error));
+    });
+
+    // Atualiza mensagens a cada 5 segundos
+    setInterval(carregarMensagens, 5000);
+    carregarMensagens(); // Carrega mensagens ao carregar a página
+  });
+</script>

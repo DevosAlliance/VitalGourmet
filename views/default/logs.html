@@ -1,0 +1,222 @@
+{{extend 'layout.html'}}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between" style="background-color: {{=tenant.primary_color}}; color: white;">
+                    <h6 class="m-0 font-weight-bold">Logs de Auditoria do Sistema</h6>
+                    <div>
+                        <a href="#" class="btn btn-light btn-sm" data-toggle="modal" data-target="#filtroModal">
+                            <i class="fas fa-filter"></i> Filtros
+                        </a>
+                        <a href="{{=URL('default', 'exportar_csv', vars=request.vars)}}" class="btn btn-light btn-sm">
+                            <i class="fas fa-file-csv"></i> Exportar CSV
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Resumo dos filtros aplicados -->
+                    <div class="mb-3">
+                        <strong>Filtros aplicados:</strong>
+                        {{if filtro_entidade or filtro_usuario or filtro_acao or filtro_data_inicio or filtro_data_fim:}}
+                            {{if filtro_entidade:}}
+                                <span class="badge badge-info mr-2">Entidade: {{=filtro_entidade}}</span>
+                            {{pass}}
+                            {{if filtro_usuario:}}
+                                <span class="badge badge-info mr-2">Usuário: 
+                                    {{for user in usuarios:}}
+                                        {{if str(user.id) == filtro_usuario:}}
+                                            {{=user.first_name}} {{=user.last_name}}
+                                        {{pass}}
+                                    {{pass}}
+                                </span>
+                            {{pass}}
+                            {{if filtro_acao:}}
+                                <span class="badge badge-info mr-2">Ação: {{=filtro_acao}}</span>
+                            {{pass}}
+                            {{if filtro_data_inicio:}}
+                                <span class="badge badge-info mr-2">Data início: {{=filtro_data_inicio}}</span>
+                            {{pass}}
+                            {{if filtro_data_fim:}}
+                                <span class="badge badge-info mr-2">Data fim: {{=filtro_data_fim}}</span>
+                            {{pass}}
+                            <a href="{{=URL('default', 'logs')}}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-times"></i> Limpar Filtros
+                            </a>
+                        {{else:}}
+                            <span class="text-muted">Nenhum filtro aplicado</span>
+                        {{pass}}
+                    </div>
+                    
+                    <!-- Tabela de logs -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Data/Hora</th>
+                                    <th>Usuário</th>
+                                    <th>Entidade</th>
+                                    <th>Ação</th>
+                                    <th>ID Registro</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{for registro in registros:}}
+                                <tr>
+                                    <td>{{=registro.log_sistema.id}}</td>
+                                    <td>{{=registro.log_sistema.dataH.strftime('%d/%m/%Y %H:%M:%S')}}</td>
+                                    <td>
+                                        {{if registro.auth_user:}}
+                                            {{=registro.auth_user.first_name}} {{=registro.auth_user.last_name}}
+                                        {{else:}}
+                                            <span class="text-muted">N/A</span>
+                                        {{pass}}
+                                    </td>
+                                    <td>{{=registro.log_sistema.entidade}}</td>
+                                    <td>
+                                        {{if registro.log_sistema.acao == 'exclusao':}}
+                                            <span class="badge badge-danger">Exclusão</span>
+                                        {{elif registro.log_sistema.acao == 'edicao':}}
+                                            <span class="badge badge-warning">Edição</span>
+                                        {{else:}}
+                                            <span class="badge badge-secondary">{{=registro.log_sistema.acao}}</span>
+                                        {{pass}}
+                                    </td>
+                                    <td>{{=registro.log_sistema.registro_id}}</td>
+                                    <td>
+                                        <a href="{{=URL('default', 'detalhesLog', args=[registro.log_sistema.id])}}" class="btn btn-info btn-sm">
+                                            <i class="fas fa-eye"></i> Detalhes
+                                        </a>
+                                    </td>
+                                </tr>
+                                {{pass}}
+
+                                {{if not registros:}}
+                                <tr>
+                                    <td colspan="7" class="text-center">Nenhum registro encontrado</td>
+                                </tr>
+                                {{pass}}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Paginação -->
+                    {{if total_paginas > 1:}}
+                    <nav aria-label="Navegação de páginas">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item {{='disabled' if pagina == 1 else ''}}">
+                                <a class="page-link" href="{{=URL('default', 'logs', vars=dict(page=pagina-1, entidade=filtro_entidade, usuario=filtro_usuario, acao=filtro_acao, data_inicio=filtro_data_inicio, data_fim=filtro_data_fim))}}" aria-label="Anterior">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            
+                            {{for p in range(max(1, pagina-2), min(total_paginas+1, pagina+3)):}}
+                            <li class="page-item {{='active' if p == pagina else ''}}">
+                                <a class="page-link" href="{{=URL('default', 'logs', vars=dict(page=p, entidade=filtro_entidade, usuario=filtro_usuario, acao=filtro_acao, data_inicio=filtro_data_inicio, data_fim=filtro_data_fim))}}">{{=p}}</a>
+                            </li>
+                            {{pass}}
+                            
+                            <li class="page-item {{='disabled' if pagina == total_paginas else ''}}">
+                                <a class="page-link" href="{{=URL('default', 'logs', vars=dict(page=pagina+1, entidade=filtro_entidade, usuario=filtro_usuario, acao=filtro_acao, data_inicio=filtro_data_inicio, data_fim=filtro_data_fim))}}" aria-label="Próximo">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {{pass}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Filtros -->
+<div class="modal fade" id="filtroModal" tabindex="-1" role="dialog" aria-labelledby="filtroModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: {{=tenant.primary_color}}; color: white;">
+                <h5 class="modal-title" id="filtroModalLabel">Filtrar Logs de Auditoria</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="filtroForm" action="{{=URL('default', 'logs')}}" method="get">
+                    <div class="form-group">
+                        <label for="entidade">Entidade</label>
+                        <select class="form-control" id="entidade" name="entidade">
+                            <option value="">Todas</option>
+                            {{for entidade in entidades_list:}}
+                                <option value="{{=entidade}}" {{='selected' if filtro_entidade == entidade else ''}}>{{=entidade}}</option>
+                            {{pass}}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="usuario">Usuário</label>
+                        <input type="text" class="form-control" id="usuario" name="usuario" 
+                            placeholder="Digite o nome do usuário" 
+                            value="{{=filtro_usuario or ''}}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="acao">Ação</label>
+                        <select class="form-control" id="acao" name="acao">
+                            <option value="">Todas</option>
+                            {{for acao in acoes:}}
+                                <option value="{{=acao}}" {{='selected' if filtro_acao == acao else ''}}>
+                                    {{='Exclusão' if acao == 'exclusao' else 'Edição'}}
+                                </option>
+                            {{pass}}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="data_inicio">Data Início</label>
+                        <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="{{=filtro_data_inicio or ''}}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="data_fim">Data Fim</label>
+                        <input type="date" class="form-control" id="data_fim" name="data_fim" value="{{=filtro_data_fim or ''}}">
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Aplicar Filtros
+                        </button>
+                        <a href="{{=URL('default', 'logs')}}" class="btn btn-secondary">
+                            <i class="fas fa-broom"></i> Limpar Filtros
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Inicializar o select2 para melhorar a experiência do usuário nos selects
+    if ($.fn.select2) {
+        $('#entidade, #usuario, #acao').select2({
+            dropdownParent: $('#filtroModal')
+        });
+    }
+    
+    // Validação de datas
+    $('#filtroForm').submit(function(e) {
+        var dataInicio = $('#data_inicio').val();
+        var dataFim = $('#data_fim').val();
+        
+        if (dataInicio && dataFim) {
+            if (new Date(dataInicio) > new Date(dataFim)) {
+                e.preventDefault();
+                alert('A data de início não pode ser posterior à data de fim.');
+            }
+        }
+    });
+});
+</script>

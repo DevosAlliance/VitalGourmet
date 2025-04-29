@@ -1,0 +1,201 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-5">
+  <!-- Saudação para todos os usuários -->
+  <div class="alert alert-primary" role="alert">
+    {{if auth.user and hasattr(auth.user, 'first_name') and auth.user.first_name:}}
+      Bem-vindo(a), {{=auth.user.first_name}}!
+    {{else:}}
+      Bem-vindo(a) ao sistema!
+    {{pass}}
+  </div>
+
+  <!-- Conteúdo específico para Gestores e Administradores -->
+  {{if auth.user and (db.user_type[auth.user.user_type].name in ['Gestor', 'Administrador']):}}
+  <div class="card mt-4">
+    <div class="card-header">Painel de Controle - Gestor/Administrador</div>
+    <div class="card-body">
+      <h5 class="card-title">Orientações para Gestores e Administradores</h5>
+      <p class="card-text">
+        Aqui você pode acessar relatórios, gerenciar usuários e configurar o
+        sistema.
+      </p>
+      <a href="{{=URL('default', 'admin_pedidos')}}" class="btn btn-primary"
+        >Acessar Relatórios</a
+      >
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Dashboard</h5>
+      <p class="card-text">
+        Aqui você pode acessar as estatísticas gerais do sistema.
+      </p>
+      <a href="{{=URL('dashboard', 'index')}}" class="btn btn-primary"
+        >Acessar Estatísticas</a
+      >
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Gestão de usuários</h5>
+      <p class="card-text">
+        Gerencie todos os usuários do seu sistema em um só lugar!.
+      </p>
+      <a href="{{=URL('colaboradores', 'index')}}" class="btn btn-primary"
+        >Gerenciar</a
+      >
+    </div>
+  </div>
+  {{pass}}
+
+  <!-- Conteúdo específico para Pacientes -->
+  {{if auth.user and (db.user_type[auth.user.user_type].name in ['Paciente']):}}
+  <div class="card mt-4">
+    <div class="card-header">Área do Paciente</div>
+    <div class="card-body">
+      <h5 class="card-title">Cardápio</h5>
+      <p class="card-text">Aqui você pode solicitar a sua refeição.</p>
+      <a
+        href="{{=URL('cardapio', 'listar_cardapio_mobile')}}"
+        class="btn btn-info"
+        >Ver Cardápio</a
+      >
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Histórico de pedidos</h5>
+      <p class="card-text">
+        Você também pode ver o seu histórico de pedidos de refeições.
+      </p>
+      <a href="{{=URL('usuario', 'meus_pedidos')}}" class="btn btn-info"
+        >Ver Histórico</a
+      >
+    </div>
+  </div>
+  {{pass}}
+
+  <!-- Conteúdo específico para Acompanhantes -->
+  {{if auth.user and (db.user_type[auth.user.user_type].name in
+  ['Acompanhante']):}}
+  <div class="card mt-4">
+    <div class="card-header">Área do Acompanhante</div>
+    <div class="card-body">
+      <h5 class="card-title">Cardápio</h5>
+      <p class="card-text">Aqui você pode solicitar a sua refeição.</p>
+      <a
+        href="{{=URL('cardapio', 'listar_cardapio_mobile')}}"
+        class="btn btn-info"
+        >Ver Cardápio</a
+      >
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Histórico de pedidos</h5>
+      <p class="card-text">
+        Você também pode ver o seu histórico de pedidos de refeições.
+      </p>
+      <a href="{{=URL('usuario', 'meus_pedidos')}}" class="btn btn-info"
+        >Ver Histórico</a
+      >
+    </div>
+  </div>
+  {{pass}}
+
+  <!-- Conteúdo específico para Recepção -->
+  {{if auth.user and db.setor[auth.user.setor_id].name == 'Recepção':}}
+  <div class="card mt-4">
+    <div class="card-header">Área da Recepção</div>
+    <div class="card-body">
+      <h5 class="card-title">Orientações para a Recepção</h5>
+      <p class="card-text">
+        Aqui você pode gerenciar pacientes, acompanhantes, suas solicitações e
+        pendências financeiras.
+      </p>
+      <a href="{{=URL('pacientes', 'index')}}" class="btn btn-warning"
+        >Gerenciar Agendamentos</a
+      >
+    </div>
+  </div>
+  {{pass}}
+
+  <!-- Conteúdo específico para Administração -->
+  {{if auth.user and db.setor[auth.user.setor_id].name == 'Administração':}}
+  <div class="card mt-4">
+    <div class="card-header">Área da Administração</div>
+    <div class="card-body">
+      <h5 class="card-title">Orientações para a Administração</h5>
+      <p class="card-text">
+        Aqui você pode acessar relatórios e gerenciar pagamentos.
+      </p>
+      <a href="{{=URL('financeiro', 'index')}}" class="btn btn-primary"
+        >Acessar Relatórios</a
+      >
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Dashboard</h5>
+      <p class="card-text">
+        Aqui você pode acessar as estatísticas gerais do sistema.
+      </p>
+      <a href="{{=URL('dashboard', 'index')}}" class="btn btn-primary"
+        >Acessar Estatísticas</a
+      >
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Gestão de usuários</h5>
+      <p class="card-text">
+        Gerencie todos os usuários do seu sistema em um só lugar!.
+      </p>
+      <a href="{{=URL('colaboradores', 'index')}}" class="btn btn-primary"
+        >Gerenciar</a
+      >
+    </div>
+  </div>
+  {{pass}}
+
+  <!-- Conteúdo específico para Nutrição -->
+  {{if auth.user and db.setor[auth.user.setor_id].name == 'Nutrição':}}
+  <div class="card mt-4">
+    <div class="card-header">Área da Nutrição</div>
+    <div class="card-body">
+      <h5 class="card-title">Orientações para a Nutrição</h5>
+      <p class="card-text">
+        Aqui você pode gerenciar os cardápios dos pacientes e revisar suas
+        necessidades nutricionais.
+      </p>
+      <a href="{{=URL('cardapio', 'index')}}" class="btn btn-info"
+        >Gerenciar Cardápios</a
+      >
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Estoque</h5>
+      <p class="card-text">
+        Aqui você pode gerenciar o estoque de alimentos e insumos.
+      </p>
+      <a href="{{=URL('estoque', 'index')}}" class="btn btn-info"
+        >Gerenciar Estoque</a
+      >
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">Horários de Refeições</h5>
+      <p class="card-text">
+        Aqui você pode gerenciar os horários de refeições dos pacientes.
+      </p>
+      <a href="{{=URL('horarios', 'index')}}" class="btn btn-info"
+        >Gerenciar Horários</a
+      >
+    </div>
+  </div>
+  {{pass}}
+
+  <!-- Conteúdo específico para Cozinha -->
+  {{if auth.user and db.setor[auth.user.setor_id].name == 'Cozinha':}}
+  <div class="card mt-4">
+    <div class="card-header">Área da Cozinha</div>
+    <div class="card-body">
+      <h5 class="card-title">Gestão de solicitações</h5>
+      <p class="card-text">
+        Aqui você pode ver as solicitações de refeições e preparar os pratos de
+        acordo com os pedidos.
+      </p>
+      <a href="{{=URL('cozinha', 'index')}}" class="btn btn-danger"
+        >Ver Solicitações de Refeições</a
+      >
+    </div>
+  </div>
+  {{pass}}
+</div>

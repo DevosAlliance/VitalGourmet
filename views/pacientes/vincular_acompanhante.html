@@ -1,0 +1,225 @@
+{{extend 'layout.html'}}
+
+<div class="container">
+  <div class="form-container">
+    <h2>Vincular Acompanhante(s) ao Paciente: {{=paciente.first_name}}</h2>
+    <form id="formAcompanhante" action="" method="POST">
+      <!-- Container para adicionar acompanhantes -->
+      <div id="acompanhantesContainer">
+        <div class="form-acompanhante">
+          <h5>Acompanhante 1</h5>
+          <!-- Nome do Acompanhante -->
+          <div class="mb-3">
+            <label for="nomeAcompanhante1" class="form-label"
+              >Nome do Acompanhante</label
+            >
+            <input
+              type="text"
+              class="form-control"
+              id="nomeAcompanhante1"
+              name="nomeAcompanhante[]"
+              placeholder="Digite o nome do acompanhante"
+              required
+            />
+          </div>
+
+          <!-- CPF do Acompanhante -->
+          <div class="mb-3">
+            <label for="cpfAcompanhante1" class="form-label">CPF</label>
+            <input
+              type="text"
+              class="form-control"
+              id="cpfAcompanhante1"
+              name="cpfAcompanhante[]"
+              placeholder="Digite o CPF"
+              maxlength="14"
+              required
+            />
+          </div>
+
+          <!-- Data de Nascimento do Acompanhante -->
+          <div class="mb-3">
+            <label for="dataNascimentoAcompanhante1" class="form-label"
+              >Data de Nascimento</label
+            >
+            <input
+              type="date"
+              class="form-control"
+              id="dataNascimentoAcompanhante1"
+              name="dataNascimentoAcompanhante[]"
+              required
+              min="1900-01-01"
+              max="2099-12-31"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão para adicionar mais acompanhantes -->
+      <button type="button" id="addAcompanhante" class="btn btn-success mb-3">
+        + Adicionar Acompanhante
+      </button>
+
+      <!-- Botão de Submissão -->
+      <button type="submit" class="btn btn-primary">
+        Vincular Acompanhante(s)
+      </button>
+    </form>
+  </div>
+
+  <div class="form-container mt-5">
+    <h3>Vínculos Existentes</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>CPF</th>
+          <th>Data de Nascimento</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{for vinculo in vinculos:}} {{cpf_limpo = ''.join(c for c in
+        str(vinculo.auth_user.cpf) if c.isdigit())}}
+        <tr>
+          <td>{{=vinculo.auth_user.first_name}}</td>
+          <td>
+            {{='{}.{}.{}-{}'.format( vinculo.auth_user.cpf[:3],
+            vinculo.auth_user.cpf[3:6], vinculo.auth_user.cpf[6:9],
+            vinculo.auth_user.cpf[9:] ) if vinculo.auth_user.cpf and
+            len(vinculo.auth_user.cpf) == 11 else vinculo.auth_user.cpf}}
+          </td>
+          <td>{{=vinculo.auth_user.birth_date.strftime('%d/%m/%Y')}}</td>
+          <td>
+            <form
+              action=""
+              method="POST"
+              style="display: inline"
+              onsubmit="return confirmarExclusao();"
+            >
+              <input
+                type="hidden"
+                name="delete_acompanhante_id"
+                value="{{=vinculo.acompanhante_vinculo.acompanhante_id}}"
+              />
+              <button type="submit" class="btn btn-danger">Excluir</button>
+            </form>
+          </td>
+        </tr>
+        {{pass}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Função para exibir alerta ao excluir
+  function confirmarExclusao() {
+    return confirm("Tem certeza que deseja excluir este acompanhante?");
+  }
+</script>
+
+<script>
+  // Validação de CPF com máscara
+  document.addEventListener("input", (event) => {
+    if (event.target.matches('input[name="cpfAcompanhante[]"]')) {
+      let value = event.target.value.replace(/\D/g, "");
+      if (value.length <= 11) {
+        value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      }
+      event.target.value = value;
+    }
+  });
+
+  // Impede datas futuras no campo de nascimento
+  window.addEventListener("DOMContentLoaded", () => {
+    const today = new Date().toISOString().split("T")[0];
+    document.querySelectorAll('input[type="date"]').forEach((field) => {
+      field.max = today;
+    });
+  });
+
+  // Validação ao submeter o formulário principal
+  document
+    .getElementById("formAcompanhante")
+    .addEventListener("submit", function (event) {
+      const cpfFields = document.querySelectorAll(
+        'input[name="cpfAcompanhante[]"]'
+      );
+      let isValid = true;
+
+      cpfFields.forEach((field) => {
+        const cpf = field.value.replace(/\D/g, "");
+        if (!validarCPF(cpf)) {
+          field.classList.add("is-invalid");
+          alert(`CPF inválido: ${cpf}`);
+          isValid = false;
+        } else {
+          field.classList.remove("is-invalid");
+        }
+      });
+
+      if (!isValid) event.preventDefault();
+    });
+
+  // Função de validação de CPF
+  function validarCPF(cpf) {
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+
+    let soma = 0,
+      resto;
+    for (let i = 1; i <= 9; i++) soma += parseInt(cpf[i - 1]) * (11 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf[9])) return false;
+
+    soma = 0;
+    for (let i = 1; i <= 10; i++) soma += parseInt(cpf[i - 1]) * (12 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    return resto === parseInt(cpf[10]);
+  }
+
+  // Adicionar acompanhantes dinamicamente
+  let acompanhanteCount = 1;
+  document.getElementById("addAcompanhante").addEventListener("click", () => {
+    acompanhanteCount++;
+    const container = document.getElementById("acompanhantesContainer");
+
+    const acompanhanteTemplate = `
+      <div class="form-acompanhante">
+          <h5>Acompanhante ${acompanhanteCount}</h5>
+          <div class="mb-3">
+            <label class="form-label">Nome</label>
+            <input type="text" class="form-control" name="nomeAcompanhante[]" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">CPF</label>
+            <input type="text" class="form-control" name="cpfAcompanhante[]" maxlength="14" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Data de Nascimento</label>
+            <input type="date" class="form-control" name="dataNascimentoAcompanhante[]" required>
+          </div>
+          <button type="button" class="btn btn-danger removeAcompanhante">Remover</button>
+      </div>
+    `;
+    container.insertAdjacentHTML("beforeend", acompanhanteTemplate);
+  });
+
+  // Remover acompanhante dinamicamente
+  document.addEventListener("click", (e) => {
+    if (e.target.classList.contains("removeAcompanhante")) {
+      e.target.closest(".form-acompanhante").remove();
+    }
+  });
+
+  // Adicionar alerta de confirmação para exclusão
+  document.addEventListener("submit", (e) => {
+    if (e.target.classList.contains("form-excluir")) {
+      if (!confirm("Tem certeza que deseja excluir este acompanhante?")) {
+        e.preventDefault();
+      }
+    }
+  });
+</script>

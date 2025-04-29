@@ -1,0 +1,114 @@
+{{extend 'layout.html'}}
+
+<style>
+    .pagination .btn {
+        margin-right: 5px;
+        color: #ffffff;
+    }
+
+    .pagination .btn.active {
+        background-color: #007bff !important;
+        color: #fff;
+        border-color: #007bff !important;
+    }
+
+    .pagination .btn.active:focus {
+        outline: none;
+        box-shadow: none;
+    }
+</style>
+
+
+<h2>Lista de Colaboradores</h2>
+
+<!-- Filtros -->
+<div class="mb-3">
+  <form action="" method="GET" class="form-inline">
+    <div class="form-group mr-2">
+      <label for="nome">Nome:</label>
+      <input type="text" id="nome" name="nome" class="form-control" value="{{=nome_filtro}}" placeholder="Filtrar por Nome">
+    </div>
+    <div class="form-group mr-2">
+      <label for="cpf">CPF:</label>
+      <input type="text" id="cpf" name="cpf" class="form-control" value="{{=cpf_filtro}}" placeholder="Filtrar por CPF">
+    </div>
+    <div class="form-group mr-2">
+      <label for="setor_id">Setor:</label>
+      <select id="setor_id" name="setor_id" class="form-control">
+        <option value="">Todos os Setores</option>
+        {{for setor in setores:}}
+          <option value="{{=setor.id}}" {{='selected' if str(setor.id) == setor_filtro else ''}}>{{=setor.name}}</option>
+        {{pass}}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+  </form>
+</div>
+
+<div class="mb-3">
+  <a href="{{=URL('cadastrar_colaborador')}}" class="btn btn-primary"
+    >+ Adicionar Colaborador</a
+  >
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>CPF</th>
+      <th>Setor</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{for colaborador in colaboradores:}}
+    <tr>
+      <td>{{=colaborador.first_name.upper() if colaborador.first_name else ''}}</td>
+      <td>{{='{}.{}.{}-{}'.format(colaborador.cpf[:3], colaborador.cpf[3:6], colaborador.cpf[6:9], colaborador.cpf[9:]) if colaborador.cpf and len(colaborador.cpf) == 11 else colaborador.cpf}}</td>
+      <td>{{=colaborador.setor_id.name.upper() if colaborador.setor_id and colaborador.setor_id.name else 'SEM SETOR'}}</td>
+      <td>
+        <a href="{{=URL('editar_colaborador', args=[colaborador.id])}}" class="btn btn-primary">Editar</a>
+        <a href="{{=URL('excluir_colaborador', args=[colaborador.id])}}" class="btn btn-danger">Excluir</a>
+        <a href="{{=URL('financeiro', 'ver_solicitacoes_e_saldo', args=[colaborador.id])}}" class="btn btn-info">Ver Solicitações</a>
+      </td>
+    </tr>
+    {{pass}}
+  </tbody>
+</table>
+
+<!-- Controle de Paginação -->
+<div class="pagination">
+  {{if pagina > 1:}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=pagina-1))}}" class="btn btn-secondary">Anterior</a>
+  {{pass}}
+
+  <!-- Sempre exibir a primeira página -->
+  <a href="{{=URL(vars=dict(request.vars, pagina=1))}}" class="btn btn-secondary {{='active' if pagina == 1 else ''}}">1</a>
+
+  <!-- Exibir "..." se a página atual estiver distante das primeiras páginas -->
+  {{if pagina > 4:}}
+    <span class="btn btn-secondary disabled">...</span>
+  {{pass}}
+
+  <!-- Exibir as páginas próximas à atual (2 antes e 2 depois) -->
+  {{for i in range(max(2, pagina - 2), min((total_colaboradores // registros_por_pagina) + 1, pagina + 3)):}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=i))}}" class="btn btn-secondary {{='active' if i == pagina else ''}}">{{=i}}</a>
+  {{pass}}
+
+  <!-- Exibir "..." se a página atual estiver distante das últimas páginas -->
+  {{if pagina < (total_colaboradores // registros_por_pagina) - 2:}}
+    <span class="btn btn-secondary disabled">...</span>
+  {{pass}}
+
+  <!-- Sempre exibir a última página se houver mais de uma página -->
+  {{if total_colaboradores // registros_por_pagina > 1:}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=(total_colaboradores // registros_por_pagina)))}}" 
+       class="btn btn-secondary {{='active' if pagina == (total_colaboradores // registros_por_pagina) else ''}}">
+      {{=(total_colaboradores // registros_por_pagina)}}
+    </a>
+  {{pass}}
+
+  {{if pagina < (total_colaboradores // registros_por_pagina):}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=pagina+1))}}" class="btn btn-secondary">Próxima</a>
+  {{pass}}
+</div>

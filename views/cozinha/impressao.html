@@ -1,0 +1,118 @@
+{{extend 'layout.html'}}
+
+<div class="d-flex justify-content-between align-items-center">
+  <h1>Pedidos de Refeições</h1>
+  <button id="imprimir" class="btn btn-primary">Imprimir PDF</button>
+</div>
+
+<table class="table table-striped mt-3" id="tabela-pedidos">
+  <thead class="thead-dark">
+    <tr>
+      <th scope="col">Solicitante</th>
+      <th scope="col">Setor</th>
+      <th scope="col">Prato</th>
+      <th scope="col">Quantidade</th>
+      <th scope="col">Preço</th>
+      <th scope="col">Status</th>
+      <th scope="col">Tipo de Usuário</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<!-- Script para buscar dados da API e popular a tabela -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Função para buscar dados da API e popular a tabela
+    function carregarPedidos() {
+      fetch("{{=URL('default','api_gerenciar_pedidos')}}")
+        .then((response) => response.json())
+        .then((data) => {
+          var pedidos = data.pedidos;
+          var tabela = document.querySelector("#tabela-pedidos tbody");
+
+          // Limpar tabela antes de adicionar novos dados
+          tabela.innerHTML = "";
+
+          // Preencher a tabela com os dados da API
+          pedidos.forEach((pedido) => {
+            var linha = `<tr>
+              <td>${pedido.Solicitante}</td>
+              <td>${pedido.Setor ? pedido.Setor : "-"}</td>
+              <td>${pedido.Prato}</td>
+              <td>${pedido.Quantidade}</td>
+              <td>${pedido.Preco}</td>
+              <td>${pedido.Status}</td>
+              <td>${pedido["Tipo de Usuario"]}</td>
+            </tr>`;
+            tabela.insertAdjacentHTML("beforeend", linha);
+          });
+        })
+        .catch((error) => console.error("Erro ao carregar pedidos:", error));
+    }
+
+    // Chamar a função ao carregar o conteúdo
+    carregarPedidos();
+
+    // Função para imprimir o PDF
+    document.querySelector("#imprimir").addEventListener("click", function () {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      // Título do PDF
+      doc.setFontSize(18);
+      doc.text("Pedidos de Refeições", 10, 10);
+
+      // Definir as posições x de cada coluna dinamicamente
+      const colunasConfig = [
+        { header: "Solicitante", posX: 10 },
+        { header: "Setor", posX: 40 },
+        { header: "Prato", posX: 70 },
+        { header: "Quantidade", posX: 100 },
+        { header: "Preço", posX: 130 },
+        { header: "Status", posX: 160 },
+        { header: "Tipo de Usuário", posX: 190 },
+      ];
+
+      // Definir altura inicial para as linhas
+      let y = 20;
+
+      // Adicionar cabeçalhos da tabela
+      doc.setFontSize(12);
+      colunasConfig.forEach((coluna) => {
+        doc.text(coluna.header, coluna.posX, y);
+      });
+
+      // Adicionar os dados da tabela ao PDF
+      document
+        .querySelectorAll("#tabela-pedidos tbody tr")
+        .forEach(function (row) {
+          y += 10;
+          var colunas = row.querySelectorAll("td");
+
+          // Percorrer dinamicamente as colunas e posicionar o texto de acordo com a configuração
+          colunasConfig.forEach((coluna, index) => {
+            if (colunas[index]) {
+              doc.text(colunas[index].textContent, coluna.posX, y);
+            }
+          });
+
+          // Verifica se a página está cheia e cria uma nova se necessário
+          if (y > 280) {
+            doc.addPage();
+            y = 20;
+          }
+        });
+
+      // Salvar o PDF
+      doc.save("pedidos_refeicoes.pdf");
+    });
+  });
+</script>
+
+<!-- Bootstrap JS e dependências -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>

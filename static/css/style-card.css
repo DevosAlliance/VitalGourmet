@@ -1,0 +1,247 @@
+main {
+  width: auto;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  margin-bottom: 50px;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+.slectImagem {
+  color: #ffff;
+  width: 98% !important;
+  display: flex;
+  align-items: center;
+  transition: all 0.5s;
+  justify-content: center;
+  bottom: 0 !important;
+  position: absolute !important;
+  margin: 0 !important;
+}
+
+button,
+#voltar {
+  background-color: #4d72df;
+  color: #ffff;
+  height: 40px;
+  width: 100%;
+  border-radius: 8px;
+  transition: all 0.5s;
+  border: none;
+}
+
+button:hover,
+.slectImagem:hover,
+#voltar:hover {
+  scale: 1.05;
+  background-color: #404dff;
+  color: #ffff;
+  cursor: pointer;
+}
+
+/* layout1 */
+
+#cardPreview {
+  font-family: Verdana, Geneva, sans-serif;
+  border-radius: 15px;
+  width: 460px;
+  height: 110px;
+  padding: 0;
+  margin: 0 auto;
+  margin-bottom: 10px;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+#statusArquivo {
+  justify-content: center;
+  display: flex;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 12px;
+}
+
+#cardPreviewIMG {
+  /* background-image: url('../card/promo.png'); */
+  height: 90%;
+  width: 462px;
+  background-repeat: no-repeat;
+  position: absolute;
+  background-size: cover;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+#tituloPreview {
+  font-size: 15px;
+  margin-bottom: 1.5px;
+  margin-left: 125px;
+  font-weight: 600;
+  margin-top: -10px;
+  color: black;
+}
+
+#subtituloPreview {
+  font-size: 12px;
+  margin-bottom: 3px;
+  margin-left: 125px;
+  color: black;
+}
+
+#textoCTAPreview {
+  font-size: 15px;
+  text-align: center;
+  display: inline-block;
+  padding: 1px 4%;
+  margin-left: 120px;
+  border-radius: 5px;
+  margin-bottom: 0px;
+  background-color: white;
+  color: black;
+}
+
+/* layout 2 */
+
+#cardPreview2 {
+  font-family: Verdana, Geneva, sans-serif;
+  border-radius: 15px;
+  width: 460px;
+  height: 110px;
+  padding: 0;
+  margin: 0 auto;
+  margin-bottom: 10px;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+#cardPreviewIMG2 {
+  /* background-image: url('../card/promoD.png'); */
+  height: 90%;
+  width: 462px;
+  right: 20px;
+  background-repeat: no-repeat;
+  position: absolute;
+  background-size: cover;
+  top: 50%;
+  transform: translateY(-50%);
+  background-position: top right;
+}
+
+.titulo {
+  width: 75%;
+  text-align: end;
+}
+
+#tituloPreview2 {
+  font-size: 15px;
+  margin-bottom: 1.5px;
+  font-weight: 600;
+  margin-top: -10px;
+  text-align: end;
+  color: black;
+}
+
+#subtituloPreview2 {
+  font-size: 12px;
+  margin-bottom: 3px;
+  text-align: end;
+  color: black;
+}
+
+#textoCTAPreview2 {
+  font-size: 15px;
+  text-align: center;
+  display: inline-block;
+  padding: 2px 4%;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: end;
+  color: black;
+  background-color: white;
+}
+
+::placeholder {
+  color: rgb(204, 204, 204);
+}
+
+section {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* Duas colunas com larguras iguais */
+  gap: 20px;
+  /* Espaço entre as colunas */
+  padding: 20px;
+}
+
+#formulario {
+  background-color: #f0f0f0;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#cardPreview,
+#cardPreview2 {
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+#formulario {
+  padding: 15px;
+}
+
+#cardPreview,
+#cardPreview2 {
+  grid-column: 2 / 3;
+  /* Ocupa a segunda coluna do grid */
+  display: none;
+}
+
+.titPrev {
+  text-align: center;
+}
+
+.AIGenerative {
+  text-align: center;
+}
+
+.text_info {
+  text-align: center;
+  font-size: 12px;
+  margin-bottom: 0px;
+}
+
+.tittleia {
+  margin-top: 10px;
+  margin-bottom: 0px;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #4d72df;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+textarea::placeholder {
+  color: #cccccc;
+}
+
+#idDiv,
+#linkDiv {
+  display: block;
+  flex-direction: column;
+}
+label {
+  text-align: center;
+  display: block;
+  margin-bottom: 0.5px;
+  margin-top: 1px;
+  color: black;
+}

@@ -1,0 +1,15 @@
+<!-- views/default/message.load -->
+{{if request.vars.message:}}
+<div class="alert alert-{{=request.vars.category or 'info'}} alert-dismissible fade show" role="alert">
+  {{=request.vars.message}}
+  <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<script>
+  // Auto-dismiss após 5 segundos
+  setTimeout(function() {
+    $('.alert').alert('close');
+  }, 5000);
+</script>
+{{pass}}

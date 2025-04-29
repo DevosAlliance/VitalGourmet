@@ -1,0 +1,185 @@
+{{extend 'layout.html'}}
+
+<style>
+    .pagination .btn {
+        margin-right: 5px;
+        color: #ffffff;
+    }
+
+    .pagination .btn.active {
+        background-color: #007bff !important;
+        color: #fff;
+        border-color: #007bff !important;
+    }
+
+    .pagination .btn.active:focus {
+        outline: none;
+        box-shadow: none;
+    }
+</style>
+
+<h2>Visualizar Estoque</h2>
+
+<!-- Filtros -->
+<div class="mb-3">
+    <form action="" method="GET" class="form-inline">
+        <div class="form-group mr-2">
+            <label for="nome">Nome:</label>
+            <input type="text" id="nome" name="nome" class="form-control" value="{{=nome_filtro}}" placeholder="Filtrar por Nome">
+        </div>
+        <div class="form-group mr-2">
+            <label for="ordem">Ordem:</label>
+            <select id="ordem" name="ordem" class="form-control" onchange="this.form.submit()">
+                <option value="asc" {{='selected' if ordem == 'asc' else ''}}>Crescente</option>
+                <option value="desc" {{='selected' if ordem == 'desc' else ''}}>Decrescente</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </form>
+</div>
+
+<div class="mb-3">
+    <a href="{{=URL('cadastrar_estoque')}}" class="btn btn-primary">+ Adicionar Item ao Estoque</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Gramatura/Unidade</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{for item in estoque_items:}}
+        <tr>
+            <td>{{=item.nome}}</td>
+            <td>{{=item.gramatura}}</td>
+            <td>
+                <!-- Botões de ação para editar ou deletar o item -->
+                <button class="btn btn-warning btn-sm editar-estoque" data-id="{{=item.id}}" data-nome="{{=item.nome}}" data-gramatura="{{=item.gramatura}}">Editar</button>
+                <a href="{{=URL('deletar_estoque', args=[item.id])}}" class="btn btn-danger btn-sm">Deletar</a>
+            </td>
+        </tr>
+        {{pass}}
+    </tbody>
+</table>
+
+<!-- Controle de Paginação -->
+<div class="pagination">
+  {{if pagina > 1:}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=pagina-1))}}" class="btn btn-secondary">Anterior</a>
+  {{pass}}
+
+  {{# Exibe o primeiro número de página sempre}}
+  <a href="{{=URL(vars=dict(request.vars, pagina=1))}}" class="btn btn-secondary {{='active' if pagina == 1 else ''}}">1</a>
+
+  {{# Exibe "..." se a página atual estiver distante das primeiras páginas}}
+  {{if pagina > 4:}}
+    <span class="btn btn-secondary disabled">...</span>
+  {{pass}}
+
+  {{# Exibe as páginas próximas à atual (2 páginas antes e 2 depois)}}
+  {{for i in range(max(2, pagina - 2), min((total_items // registros_por_pagina) + 1, pagina + 3)):}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=i))}}" class="btn btn-secondary {{='active' if i == pagina else ''}}">{{=i}}</a>
+  {{pass}}
+
+  {{# Exibe "..." se a página atual estiver distante das últimas páginas}}
+  {{if pagina < (total_items // registros_por_pagina) - 2:}}
+    <span class="btn btn-secondary disabled">...</span>
+  {{pass}}
+
+  {{# Exibe o último número de página sempre, se não for a primeira página}}
+  {{if total_items // registros_por_pagina > 1:}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=(total_items // registros_por_pagina)))}}" 
+       class="btn btn-secondary {{='active' if pagina == (total_items // registros_por_pagina) else ''}}">
+      {{=(total_items // registros_por_pagina)}}
+    </a>
+  {{pass}}
+
+  {{if pagina < (total_items // registros_por_pagina):}}
+    <a href="{{=URL(vars=dict(request.vars, pagina=pagina+1))}}" class="btn btn-secondary">Próxima</a>
+  {{pass}}
+</div>
+
+
+<!-- Modal de Edição -->
+<div class="modal fade" id="editarEstoqueModal" tabindex="-1" aria-labelledby="editarEstoqueModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editarEstoqueModalLabel">Editar Item do Estoque</h5>
+         <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
+      </div>
+      <div class="modal-body">
+        <form id="editarEstoqueForm">
+          <input type="hidden" id="estoqueId" name="id">
+          <div class="mb-3">
+            <label for="nome_estoque_modal" class="form-label">Nome</label>
+            <input type="text" class="form-control" id="nome_estoque_modal" name="nome" required>
+          </div>
+          <div class="mb-3">
+            <label for="gramatura" class="form-label">Gramatura</label>
+            <input type="number" class="form-control" id="gramatura" name="gramatura" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <button type="button" class="btn btn-primary" id="salvarEdicao">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(document).ready(function() {
+    // Carregar dados no modal ao clicar no botão de edição
+    $('.editar-estoque').click(function() {
+      var id = $(this).data('id');
+      var nome = $(this).data('nome');
+      var gramatura = $(this).data('gramatura');
+
+      $('#estoqueId').val(id);
+      $('#nome_estoque_modal').val(nome);
+      $('#gramatura').val(gramatura);
+
+      $('#editarEstoqueModal').modal('show');
+    });
+
+    // Salvar os dados editados via AJAX
+    $('#salvarEdicao').click(function() {
+      var formData = $('#editarEstoqueForm').serialize();
+      
+      $.ajax({
+        url: "{{=URL('editar_estoque')}}",
+        method: 'POST',
+        data: formData,
+        dataType: 'json',  // Especifica que espera uma resposta JSON
+        success: function(response) {
+          if (response && response.status === 'success') {
+            // Mostra mensagem de sucesso
+            alert('Item atualizado com sucesso!');
+            location.reload();
+          } else {
+            // Mostra mensagem de erro específica
+            var errorMsg = response && response.message ? response.message : 'Erro desconhecido';
+            alert('Erro ao atualizar o item: ' + errorMsg);
+            console.error('Detalhes do erro:', response);
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error('Erro AJAX:', xhr.responseText);
+          alert('Erro ao processar a solicitação: ' + error);
+        }
+      });
+    });
+  });
+</script>

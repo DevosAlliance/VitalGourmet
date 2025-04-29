@@ -1,0 +1,66 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+  <h2>Inicialização de Categorias</h2>
+
+  <div
+    class="alert alert-{{='success' if 'inicializadas' in mensagem else 'info'}}"
+  >
+    {{=mensagem}}
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-header">
+      <h5>Categorias Disponíveis</h5>
+    </div>
+    <div class="card-body">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Descrição</th>
+            <th>Cor</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{for cat in categorias:}}
+          <tr>
+            <td>{{=cat.nome if hasattr(cat, 'nome') else cat['nome']}}</td>
+            <td>
+              {{=cat.descricao if hasattr(cat, 'descricao') else
+              cat.get('descricao', '')}}
+            </td>
+            <td>
+              <span
+                class="badge"
+                style="background-color: {{=cat.cor if hasattr(cat, 'cor') else cat.get('cor', '#ccc')}}; width: 50px; height: 20px;"
+                >&nbsp;</span
+              >
+            </td>
+            <td>
+              {{if hasattr(cat, 'id'):}}
+              <a
+                href="{{=URL('gerenciar_tipos_categoria', args=[cat.id])}}"
+                class="btn btn-sm btn-primary"
+              >
+                Gerenciar Tipos
+              </a>
+              {{pass}}
+            </td>
+          </tr>
+          {{pass}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <a href="{{=URL('gerenciar_categorias')}}" class="btn btn-primary">
+      <i class="fa fa-cog"></i> Gerenciar Categorias
+    </a>
+    <a href="{{=URL('gerenciar_setores_por_tipo')}}" class="btn btn-secondary">
+      <i class="fa fa-th-list"></i> Gerenciar Setores por Tipo
+    </a>
+  </div>
+</div>
