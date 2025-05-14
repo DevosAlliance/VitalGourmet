@@ -1,23 +1,192 @@
 {{extend 'layout.html'}}
 
 <style>
-  /* Skeleton styles */
-  .container {
-    padding: 0 !important;
+  /* Estilos base */
+  :root {
+    --success-color: #50a773;
+    --border-radius: 8px;
   }
+  /* Header e navegação */
+  .menu-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: white;
+    box-shadow: var(--box-shadow);
+    padding: 12px 0;
+    border-radius: 15px;
+  }
+
+  .page-title {
+    font-weight: 700;
+    margin-bottom: 5px;
+    font-size: 1.5rem;
+  }
+
+  .category-nav {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px 0;
+    gap: 10px;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .category-nav::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  .category-button {
+    white-space: nowrap;
+    padding: 10px 20px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .category-button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+
+  /* Seções de cardápio */
+  .menu-section {
+    margin: 20px 0;
+    display: none;
+  }
+
+  .menu-section.active {
+    display: block;
+  }
+
+  .section-title {
+    font-weight: 700;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+    padding-left: 10px;
+    border-left: 4px solid var(--primary-color);
+  }
+
+  /* Cards de produtos */
+  .menu-items {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
+  }
+
+  /* Responsividade para diferentes tamanhos de tela */
+  @media (min-width: 576px) {
+    .menu-items {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 992px) {
+    .menu-items {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .menu-items {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .menu-item {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .menu-item:hover {
+    transform: translateY(-3px);
+  }
+
+  .menu-item.single-item {
+    grid-column: 1 / -1; /* Ocupa todas as colunas disponíveis quando é único item */
+  }
+
+  @media (min-width: 768px) {
+    .menu-item.single-item {
+      display: flex;
+      flex-direction: row;
+      max-height: 250px;
+    }
+
+    .menu-item.single-item .item-image {
+      width: 40%;
+      height: 100%;
+    }
+
+    .menu-item.single-item .item-content {
+      width: 60%;
+    }
+  }
+
+  .item-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+  }
+
+  .item-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .item-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .item-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .item-price {
+    font-weight: 700;
+    margin-top: auto;
+    font-size: 1.1rem;
+  }
+
+  .price-free {
+    color: var(--success-color);
+  }
+
+  /* Skeleton loader */
   .skeleton {
     background-color: #e0e0e0;
     border-radius: 4px;
-    display: inline-block;
     height: 20px;
     width: 100%;
     margin-bottom: 10px;
     position: relative;
     overflow: hidden;
   }
+
   .skeleton-image {
-    height: 150px;
+    height: 180px;
   }
+
   .skeleton::after {
     content: "";
     display: block;
@@ -33,6 +202,7 @@
     );
     animation: loading 1.5s infinite;
   }
+
   @keyframes loading {
     0% {
       left: -100%;
@@ -45,140 +215,319 @@
     }
   }
 
+  /* Esqueleto para layout responsivo */
+  .skeleton-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 20px;
+  }
+
+  @media (min-width: 576px) {
+    .skeleton-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 992px) {
+    .skeleton-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* Modal customizado */
+  .modal-content {
+    border-radius: 12px;
+    border: none;
+  }
+
+  .modal-header {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .modal-title {
+    font-weight: 700;
+  }
+
+  .modal-footer {
+    border-top: none;
+    justify-content: space-between;
+  }
+
+  .quantity-control {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+  }
+
+  .btn-quantity {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--gray-light);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+
+  .quantity-value {
+    margin: 0 15px;
+    font-weight: 600;
+  }
+
+  .btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    padding: 10px 20px;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover {
+    background-color: #c9151f;
+    border-color: #c9151f;
+  }
+
+  /* Notifications */
   .custom-popup {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     background-color: white;
     padding: 15px 20px;
     border-radius: 8px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.15);
     z-index: 9999;
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 16px;
-    font-weight: bold;
+    gap: 15px;
+    font-size: 14px;
     min-width: 250px;
-    animation: fadeIn 0.5s;
+    max-width: 90%;
+    animation: slideUp 0.3s ease;
   }
 
   .custom-popup.success {
-    border-left: 5px solid green;
+    border-left: 4px solid var(--success-color);
   }
 
   .custom-popup.error {
-    border-left: 5px solid red;
+    border-left: 4px solid var(--primary-color);
   }
 
   .custom-popup .close-popup {
     margin-left: auto;
     cursor: pointer;
     font-size: 18px;
-    font-weight: bold;
-    color: #555;
+    color: #999;
   }
 
-  @keyframes fadeIn {
+  @keyframes slideUp {
     from {
       opacity: 0;
-      transform: translateY(-10px);
+      transform: translate(-50%, 20px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate(-50%, 0);
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  .fade-out {
+    animation: fadeOut 0.3s ease forwards;
+  }
+
+  /* Modal imagem e informações - melhorias para desktop */
+  @media (min-width: 768px) {
+    .modal-dialog {
+      max-width: 600px;
+    }
+
+    .modal-content {
+      overflow: hidden;
+    }
+
+    .modal-body-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-image-container {
+      margin: -1px -1px 15px -1px;
+      overflow: hidden;
+      position: relative;
+      height: 200px;
+    }
+
+    .modal-image-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Informações do prato */
+    .prato-info {
+      padding: 0 10px;
+    }
+
+    /* Estilo para ingredientes */
+    .ingredientes-lista {
+      list-style-type: none;
+      padding-left: 5px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+
+    .ingredientes-lista li {
+      padding: 5px 10px;
+      background-color: #f7f7f7;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    /* Efeito hover mais suave em desktop */
+    .menu-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     }
   }
 </style>
 
-<div class="container mt-4">
-  <h2 class="text-center">Cardápio</h2>
-  <div id="cardapio-container">
-    <!-- Skeleton loader -->
-    <div class="skeleton-row row">
-      <div class="col-6 mb-4 skeleton-container">
-        <div class="card">
-          <div class="skeleton skeleton-image"></div>
-          <div class="card-body text-center">
-            <div class="skeleton skeleton-text"></div>
-            <div class="skeleton skeleton-text"></div>
-          </div>
+<div class="menu-header">
+  <div class="container-fluid px-3">
+    <h2 class="page-title">Cardápio</h2>
+
+    <div class="category-nav">
+      <div class="category-button active" data-category="todos">Todos</div>
+      <div class="category-button" data-category="cafe-da-manha">
+        Café da Manhã
+      </div>
+      <div class="category-button" data-category="Almoco">Almoço</div>
+      <div class="category-button" data-category="Lanche">Lanche</div>
+      <div class="category-button" data-category="Jantar">Jantar</div>
+      <div class="category-button" data-category="Ceia">Ceia</div>
+      <div class="category-button" data-category="Bebidas">Bebidas</div>
+      <div class="category-button" data-category="A la carte">A La Carte</div>
+    </div>
+  </div>
+</div>
+
+<div class="container px-3 pb-5" id="cardapio-container">
+  <!-- Skeleton loader -->
+  <div class="skeleton-section">
+    <div class="section-title skeleton" style="width: 40%"></div>
+    <div class="skeleton-grid">
+      <div class="menu-item-skeleton">
+        <div class="skeleton skeleton-image"></div>
+        <div style="padding: 15px">
+          <div class="skeleton" style="width: 70%"></div>
+          <div class="skeleton" style="width: 90%"></div>
+          <div class="skeleton" style="width: 40%"></div>
         </div>
       </div>
-      <div class="col-6 mb-4 skeleton-container">
-        <div class="card">
-          <div class="skeleton skeleton-image"></div>
-          <div class="card-body text-center">
-            <div class="skeleton skeleton-text"></div>
-            <div class="skeleton skeleton-text"></div>
-          </div>
+      <div class="menu-item-skeleton">
+        <div class="skeleton skeleton-image"></div>
+        <div style="padding: 15px">
+          <div class="skeleton" style="width: 70%"></div>
+          <div class="skeleton" style="width: 90%"></div>
+          <div class="skeleton" style="width: 40%"></div>
+        </div>
+      </div>
+      <div class="menu-item-skeleton d-none d-md-block">
+        <div class="skeleton skeleton-image"></div>
+        <div style="padding: 15px">
+          <div class="skeleton" style="width: 70%"></div>
+          <div class="skeleton" style="width: 90%"></div>
+          <div class="skeleton" style="width: 40%"></div>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Modal para visualizar detalhes do prato e solicitar -->
-  <div
-    class="modal fade"
-    id="modalDetalhesPrato"
-    tabindex="-1"
-    role="dialog"
-    aria-labelledby="exampleModalLabel"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalPratoNome"></h5>
-          <button
-            type="button"
-            class="close"
-            data-dismiss="modal"
-            aria-label="Close"
-          >
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <p id="modalPratoDescricao"></p>
-          <h6>Ingredientes:</h6>
-          <ul id="modalPratoIngredientes"></ul>
-          <div class="form-group">
-            <label for="quantidade">Quantidade:</label>
-            <input
-              type="number"
-              class="form-control"
-              id="quantidade"
-              value="1"
-              min="1"
-            />
+<!-- Modal para visualizar detalhes do prato e solicitar -->
+<div
+  class="modal fade"
+  id="modalDetalhesPrato"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="modalPratoLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalPratoNome"></h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-body-content">
+          <div class="modal-image-container">
+            <img id="modalPratoImagem" src="" alt="" class="img-fluid" />
           </div>
-          <!-- Campo de Descrição (Oculto por padrão) -->
-          <div
-            class="form-group"
-            id="descricao-container"
-            style="display: none"
-          >
-            <label for="descricao">Descrição (opcional):</label>
-            <textarea
-              class="form-control"
-              id="descricao"
-              placeholder="Adicionar uma descrição"
-            ></textarea>
+
+          <div class="prato-info">
+            <p id="modalPratoDescricao" class="mb-3"></p>
+
+            <h6>Ingredientes:</h6>
+            <ul
+              id="modalPratoIngredientes"
+              class="ingredientes-lista mb-4"
+            ></ul>
+
+            <div class="row align-items-center">
+              <div class="col-6">
+                <h6 class="mb-0">Quantidade:</h6>
+              </div>
+              <div class="col-6">
+                <div class="quantity-control">
+                  <button class="btn-quantity" id="btnDiminuir">-</button>
+                  <span class="quantity-value" id="quantidade">1</span>
+                  <button class="btn-quantity" id="btnAumentar">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Campo de Descrição (Oculto por padrão) -->
+            <div
+              class="form-group mt-3"
+              id="descricao-container"
+              style="display: none"
+            >
+              <label for="descricao">Descrição (opcional):</label>
+              <textarea
+                class="form-control"
+                id="descricao"
+                placeholder="Adicionar uma descrição"
+              ></textarea>
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            id="confirmarSolicitacao"
-          >
-            Confirmar Solicitação
-          </button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <div id="modalPratoPreco" class="h5 mb-0"></div>
+        <button type="button" class="btn btn-primary" id="confirmarSolicitacao">
+          Confirmar Solicitação
+        </button>
       </div>
     </div>
   </div>
@@ -186,129 +535,381 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    // Objeto para armazenar todos os pratos
+    const todosPratos = {};
+
     const container = document.getElementById("cardapio-container");
-    const skeletons = document.querySelectorAll(".skeleton-container");
     const horarioAtual = new Date();
-    console.log("Horário atual:", horarioAtual);
+    let pratosPorCategoria = {};
 
     // Verifica o setor do usuário logado
     const id_user = "{{=auth.user.id}}";
     const userSetor =
       '{{=db.setor[auth.user.setor_id].name if auth.user.setor_id else "Sem setor"}}';
-    console.log("Setor do usuário:", userSetor);
-    console.log("ID do usuário:", id_user);
-
-    const descricaoContainer = document.getElementById("descricao-container");
 
     fetch('{{=URL("usuario", "api_listar_pratos_para_usuario")}}')
       .then((response) => response.json())
       .then((data) => {
         if (data.status === "success") {
-          skeletons.forEach((skeleton) => skeleton.remove());
+          // Remover esqueletos
+          const skeletonSection = document.querySelector(".skeleton-section");
+          if (skeletonSection) {
+            skeletonSection.remove();
+          }
 
-          for (let tipo_prato in data.pratos) {
-            let container_cardapio = document.getElementById(`cardapio-${tipo_prato}`);
-            if (!container_cardapio) {
-              container_cardapio = document.createElement("div");
-              container_cardapio.id = `cardapio-${tipo_prato}`;
-              container_cardapio.className = 'row';
+          // Organizar pratos por tipo e também armazenar por ID para referência rápida
+          pratosPorCategoria = data.pratos;
 
-              let titulo_tipo_cardapio = document.createElement('h3');
-              titulo_tipo_cardapio.textContent = tipo_prato;
-              titulo_tipo_cardapio.className = 'text-center mt-3';
-
-              container.appendChild(titulo_tipo_cardapio);
-              container.appendChild(container_cardapio);
-            }
-            data.pratos[tipo_prato].forEach((prato) => {
-              const col = document.createElement("div");
-              col.className = "col-6 mb-4";
-
-              const card = document.createElement("div");
-              card.className = "card";
-              card.style.cursor = "pointer";
-
-              const img = document.createElement("img");
-              img.className = "card-img-top";
-              img.src = `data:image/png;base64,${prato.foto_do_prato}`;
-              img.alt = prato.nome;
-
-              const cardBody = document.createElement("div");
-              cardBody.className = "card-body text-center";
-
-              const title = document.createElement("h5");
-              title.className = "card-title";
-              title.textContent = prato.nome;
-
-              const price = document.createElement("p");
-              price.className = "card-text";
-              price.textContent =
-                prato.preco === 0
-                  ? "Gratuito"
-                  : `R$ ${prato.preco.toFixed(2)}`;
-
-              cardBody.appendChild(title);
-              cardBody.appendChild(price);
-              card.appendChild(img);
-              card.appendChild(cardBody);
-              col.appendChild(card);
-              container_cardapio.appendChild(col);
-
-              card.addEventListener("click", function () {
-                abrirModalDetalhes(prato);
-              });
+          // Criar índice de todos os pratos por ID para facilitar a busca
+          for (const categoria in pratosPorCategoria) {
+            const pratos = pratosPorCategoria[categoria];
+            pratos.forEach((prato) => {
+              todosPratos[prato.id] = {
+                ...prato,
+                categoria: categoria,
+              };
             });
           }
+
+          // Criar as seções de cardápio
+          renderizarCardapio(pratosPorCategoria);
+
+          // Mostrar a primeira categoria (ou 'todos')
+          const todosSection = document.querySelector(
+            '.menu-section[data-category="todos"]'
+          );
+          if (todosSection) {
+            todosSection.classList.add("active");
+          }
         } else {
-          alert("Erro ao carregar o cardápio: " + data.message);
+          showErrorPopup("Erro ao carregar o cardápio: " + data.message);
         }
       })
       .catch((error) => {
         console.error("Erro ao carregar o cardápio:", error);
-        alert("Erro ao carregar o cardápio.");
+        showErrorPopup("Erro ao carregar o cardápio.");
       });
+
+    // Mapeamento de tipos para categorias no menu
+    const mapaTipoParaCategoria = {
+      "Café da Manhã": "cafe-da-manha",
+      "Almoço": "Almoco",
+      "Jantar": "Jantar",
+      "lanche": "Lanche",
+      "Ceia": "Ceia",
+      "A la carte": "A la carte",
+      "Livre": "Livre",
+      "Bebidas": "Bebidas",
+    };
+
+    function renderizarCardapio(pratosPorCategoria) {
+      // Primeiramente, criar a seção "Todos"
+      const sectionTodos = document.createElement("div");
+      sectionTodos.className = "menu-section";
+      sectionTodos.dataset.category = "todos";
+      container.appendChild(sectionTodos);
+
+      // Para cada tipo de prato no cardápio
+      for (let tipo in pratosPorCategoria) {
+        const categoriaNome = tipo;
+        const categoriaSlug =
+          mapaTipoParaCategoria[tipo] ||
+          tipo.toLowerCase().replace(/\s+/g, "-");
+        const pratos = pratosPorCategoria[tipo];
+
+        // 1. Criar seção para a categoria específica
+        let sectionCategoria = document.createElement("div");
+        sectionCategoria.className = "menu-section";
+        sectionCategoria.dataset.category = categoriaSlug;
+
+        let tituloCategoria = document.createElement("h3");
+        tituloCategoria.className = "section-title";
+        tituloCategoria.textContent = categoriaNome;
+        sectionCategoria.appendChild(tituloCategoria);
+
+        // Criar container para os itens
+        let itemsContainer = document.createElement("div");
+        itemsContainer.className = "menu-items";
+        sectionCategoria.appendChild(itemsContainer);
+
+        container.appendChild(sectionCategoria);
+
+        // 2. Adicionar itens a ambas as seções (específica e todos)
+        const todosItemsContainer = document.createElement("div");
+        todosItemsContainer.className = "menu-section-group";
+
+        let todosTitulo = document.createElement("h3");
+        todosTitulo.className = "section-title";
+        todosTitulo.textContent = categoriaNome;
+        todosItemsContainer.appendChild(todosTitulo);
+
+        let todosItems = document.createElement("div");
+        todosItems.className = "menu-items";
+        todosItemsContainer.appendChild(todosItems);
+
+        sectionTodos.appendChild(todosItemsContainer);
+
+        // Classes adicionais se houver apenas um item
+        const singleItemClass = pratos.length === 1 ? "single-item" : "";
+
+        // Renderizar cada prato da categoria
+        pratos.forEach((prato) => {
+          // Criar o card do item
+          const itemCard = criarItemCard(prato, singleItemClass);
+
+          // Adicionar à categoria específica
+          itemsContainer.appendChild(itemCard.cloneNode(true));
+
+          // Adicionar à categoria "Todos"
+          todosItems.appendChild(itemCard);
+        });
+      }
+
+      // Adicionar event listeners para todos os cards criados
+      document.querySelectorAll(".menu-item").forEach((card) => {
+        card.addEventListener("click", function () {
+          try {
+            const pratoId = parseInt(this.dataset.id);
+
+            // Buscar o prato diretamente no objeto todosPratos
+            const prato = todosPratos[pratoId];
+
+            if (!prato) {
+              console.error(`Prato com ID ${pratoId} não encontrado`);
+              showErrorPopup(
+                "Erro ao abrir detalhes do prato: item não encontrado"
+              );
+              return;
+            }
+
+            // Se chegou aqui, o prato foi encontrado corretamente
+            abrirModalDetalhes(prato);
+          } catch (error) {
+            console.error("Erro ao processar clique no item:", error);
+            showErrorPopup("Erro ao abrir detalhes do prato");
+          }
+        });
+      });
+
+      // Adicionar event listeners para a navegação de categorias
+      // Adicionar event listeners para a navegação de categorias
+      document.querySelectorAll(".category-button").forEach((button) => {
+        button.addEventListener("click", function () {
+          // Remover class active de todos os botões
+          document
+            .querySelectorAll(".category-button")
+            .forEach((btn) => btn.classList.remove("active"));
+
+          // Adicionar class active ao botão clicado
+          this.classList.add("active");
+
+          // Esconder todas as seções
+          document
+            .querySelectorAll(".menu-section")
+            .forEach((section) => section.classList.remove("active"));
+
+          // Obter a categoria
+          const category = this.dataset.category;
+
+          // Caso especial para A la carte - mostra tanto A la carte quanto Livre
+          if (category === "A la carte") {
+            // Mostrar a seção A la carte
+            const alacarteSection = document.querySelector(
+              '.menu-section[data-category="A la carte"]'
+            );
+            if (alacarteSection) {
+              alacarteSection.classList.add("active");
+            }
+
+            // Também mostrar a seção Livre
+            const livreSection = document.querySelector(
+              '.menu-section[data-category="Livre"]'
+            );
+            if (livreSection) {
+              livreSection.classList.add("active");
+            }
+          }
+          // Para todas outras categorias, comportamento normal
+          else {
+            const targetSection = document.querySelector(
+              `.menu-section[data-category="${category}"]`
+            );
+            if (targetSection) {
+              targetSection.classList.add("active");
+            }
+          }
+        });
+      });
+    }
+
+    function criarItemCard(prato, extraClass = "") {
+      const card = document.createElement("div");
+      card.className = `menu-item ${extraClass}`;
+      card.dataset.id = prato.id;
+      card.dataset.tipo = prato.tipo || "";
+
+      const img = document.createElement("img");
+      img.className = "item-image";
+      img.src = prato.foto_do_prato
+        ? `data:image/png;base64,${prato.foto_do_prato}`
+        : '{{=URL("static", "images/no-image.png")}}';
+      img.alt = prato.nome;
+
+      // Tratamento para imagem não disponível
+      img.onerror = function () {
+        this.src = '{{=URL("static", "images/no-image.png")}}';
+        this.alt = "Imagem não disponível";
+      };
+
+      card.appendChild(img);
+
+      const content = document.createElement("div");
+      content.className = "item-content";
+
+      const title = document.createElement("h5");
+      title.className = "item-title";
+      title.textContent = prato.nome;
+      content.appendChild(title);
+
+      if (prato.descricao) {
+        const desc = document.createElement("p");
+        desc.className = "item-description";
+        desc.textContent = prato.descricao.split("\n")[0]; // Apenas a primeira linha
+        content.appendChild(desc);
+      }
+
+      const price = document.createElement("div");
+      price.className =
+        prato.gratuidade || prato.preco === 0
+          ? "item-price price-free"
+          : "item-price";
+      price.textContent =
+        prato.gratuidade || prato.preco === 0
+          ? "Gratuito"
+          : `R$ ${prato.preco.toFixed(2)}`;
+      content.appendChild(price);
+
+      card.appendChild(content);
+
+      return card;
+    }
 
     function abrirModalDetalhes(prato) {
-      document.getElementById("modalPratoNome").textContent = prato.nome;
-      document.getElementById("modalPratoDescricao").textContent =
-        prato.descricao;
+      if (!prato) {
+        console.error("Tentativa de abrir modal com prato indefinido");
+        showErrorPopup("Erro ao carregar detalhes do prato");
+        return;
+      }
 
-      const ingredientesList = document.getElementById(
+      const modal = document.getElementById("modalDetalhesPrato");
+      const modalNome = document.getElementById("modalPratoNome");
+      const modalDescricao = document.getElementById("modalPratoDescricao");
+      const modalIngredientes = document.getElementById(
         "modalPratoIngredientes"
       );
-      ingredientesList.innerHTML = "";
-      prato.ingredientes.forEach((ing) => {
-        const li = document.createElement("li");
-        li.textContent = `${ing.nome} - ${ing.gramatura}g`;
-        ingredientesList.appendChild(li);
-      });
+      const modalImagem = document.getElementById("modalPratoImagem");
+      const modalPreco = document.getElementById("modalPratoPreco");
+      const quantidadeEl = document.getElementById("quantidade");
+      const descricaoContainer = document.getElementById("descricao-container");
 
-      const quantidadeInput = document.getElementById("quantidade");
+      // Preencher os dados do modal
+      modalNome.textContent = prato.nome;
+      modalDescricao.textContent = prato.descricao;
+      modalImagem.src = `data:image/png;base64,${prato.foto_do_prato}`;
 
-      if (userSetor === "Hemodialise" || userSetor === "Instrumentador") {
-        quantidadeInput.value = 1;
-        quantidadeInput.disabled = false;
+      // Tratamento para imagem não disponível no modal
+      modalImagem.onerror = function () {
+        this.src = '{{=URL("static", "images/no-image.png")}}';
+        this.alt = "Imagem não disponível";
+      };
+
+      // Garantir que pratos com preço zero sejam exibidos como gratuitos
+      modalPreco.textContent =
+        prato.gratuidade || prato.preco === 0
+          ? "Gratuito"
+          : `R$ ${prato.preco.toFixed(2)}`;
+
+      // Destacar visualmente o preço gratuito
+      modalPreco.classList.remove("price-free");
+      if (prato.gratuidade || prato.preco === 0) {
+        modalPreco.classList.add("price-free");
+      }
+
+      // Limpar e preencher a lista de ingredientes
+      modalIngredientes.innerHTML = "";
+      if (prato.ingredientes && Array.isArray(prato.ingredientes)) {
+        prato.ingredientes.forEach((ing) => {
+          const li = document.createElement("li");
+          li.textContent = `${ing.nome} - ${ing.gramatura}g`;
+          modalIngredientes.appendChild(li);
+        });
+      }
+
+      // Reset quantidade
+      quantidadeEl.textContent = "1";
+
+      // Habilitar/desabilitar edição de quantidade conforme setor
+      const btnDiminuir = document.getElementById("btnDiminuir");
+      const btnAumentar = document.getElementById("btnAumentar");
+
+      if (
+        userSetor === "Hemodialise" ||
+        userSetor === "Instrumentador" ||
+        userSetor === "Urgencia" ||
+        userSetor === "Centro Cirurgico"
+      ) {
+        btnDiminuir.disabled = false;
+        btnAumentar.disabled = false;
         descricaoContainer.style.display = "block";
       } else {
-        quantidadeInput.value = 1;
-        quantidadeInput.disabled = true;
+        btnDiminuir.disabled = true;
+        btnAumentar.disabled = true;
         descricaoContainer.style.display = "none";
       }
 
-      $("#modalDetalhesPrato").modal("show");
+      // Configurar botões de quantidade
+      btnDiminuir.onclick = function () {
+        let qtd = parseInt(quantidadeEl.textContent);
+        if (qtd > 1) {
+          quantidadeEl.textContent = qtd - 1;
+          atualizarPrecoTotal(prato);
+        }
+      };
 
-      document.getElementById("confirmarSolicitacao").onclick = function () {
+      btnAumentar.onclick = function () {
+        let qtd = parseInt(quantidadeEl.textContent);
+        quantidadeEl.textContent = qtd + 1;
+        atualizarPrecoTotal(prato);
+      };
+
+      function atualizarPrecoTotal(prato) {
+        if (!prato.gratuidade && prato.preco !== 0) {
+          const qtd = parseInt(quantidadeEl.textContent);
+          const total = prato.preco * qtd;
+          modalPreco.textContent = `R$ ${total.toFixed(2)}`;
+        }
+      }
+
+      // Configurar botão de confirmação
+      const confirmarBtn = document.getElementById("confirmarSolicitacao");
+      confirmarBtn.onclick = function () {
         confirmarSolicitacao(prato.id);
       };
+
+      // Abrir o modal
+      const modalEl = document.getElementById("modalDetalhesPrato");
+      const modalInstance = new bootstrap.Modal(modalEl);
+      modalInstance.show();
     }
 
     function confirmarSolicitacao(prato_id) {
-      const quantidade = document.getElementById("quantidade").value;
-      const descricao = document.getElementById("descricao").value;
+      const quantidade = document.getElementById("quantidade").textContent;
+      const descricao = document.getElementById("descricao")?.value || "";
       const confirmarButton = document.getElementById("confirmarSolicitacao");
 
       confirmarButton.disabled = true;
-      confirmarButton.textContent = "Processando...";
+      confirmarButton.innerHTML =
+        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
 
       fetch('{{=URL("usuario", "api_registrar_solicitacao_refeicao")}}', {
         method: "POST",
@@ -316,7 +917,7 @@
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          solicitante_id: id_user, // ID do usuário logado
+          solicitante_id: id_user,
           pratoid: prato_id,
           quantidade: quantidade,
           descricao: descricao,
@@ -326,9 +927,15 @@
         .then((response) => response.json())
         .then((data) => {
           if (data.status === "success") {
-            showSuccessPopup("Refeição Solicitada com sucesso!");
+            // Fechar modal
+            const modalEl = document.getElementById("modalDetalhesPrato");
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) {
+              modalInstance.hide();
+            }
 
-            $("#modalDetalhesPrato").modal("hide");
+            // Mostrar notificação
+            showSuccessPopup("Refeição solicitada com sucesso!");
           } else {
             showErrorPopup("Erro ao registrar solicitação: " + data.message);
           }
@@ -343,75 +950,57 @@
         });
     }
 
+    // Funções de notificação
     function showSuccessPopup(message) {
       const popup = document.createElement("div");
       popup.className = "custom-popup success";
       popup.innerHTML = `
-        <div class="popup-content">
-            <span class="close-popup">&times;</span>
-            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="green" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 13l4 4L19 7"/>
-            </svg>
-            <p>${message}</p>
-        </div>
+      <div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="green" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <p class="mb-0">${message}</p>
+      <span class="close-popup">&times;</span>
     `;
+
       document.body.appendChild(popup);
 
       popup.querySelector(".close-popup").addEventListener("click", () => {
         popup.remove();
       });
 
-      setTimeout(() => popup.remove(), 3000);
+      setTimeout(() => {
+        popup.classList.add("fade-out");
+        setTimeout(() => popup.remove(), 300);
+      }, 3000);
     }
 
     function showErrorPopup(message) {
       const popup = document.createElement("div");
       popup.className = "custom-popup error";
       popup.innerHTML = `
-        <div class="popup-content">
-            <span class="close-popup">&times;</span>
-            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="16"/>
-                <line x1="8" y1="12" x2="16" y2="12"/>
-            </svg>
-            <p>${message}</p>
-        </div>
+      <div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+      </div>
+      <p class="mb-0">${message}</p>
+      <span class="close-popup">&times;</span>
     `;
+
       document.body.appendChild(popup);
 
       popup.querySelector(".close-popup").addEventListener("click", () => {
         popup.remove();
       });
 
-      setTimeout(() => popup.remove(), 3000);
+      setTimeout(() => {
+        popup.classList.add("fade-out");
+        setTimeout(() => popup.remove(), 300);
+      }, 3000);
     }
-
-    function medirTempoExibicaoPratos(callback) {
-      const inicio = performance.now();
-
-      const observer = new MutationObserver(() => {
-        const skeletons = document.querySelectorAll(".skeleton-container");
-        if (skeletons.length === 0) {
-          observer.disconnect();
-          const fim = performance.now();
-          console.log(
-            `Tempo para exibição completa dos pratos: ${(fim - inicio).toFixed(
-              2
-            )}ms`
-          );
-          if (callback) callback(fim - inicio);
-        }
-      });
-
-      const container = document.getElementById("cardapio-container");
-      if (container) {
-        observer.observe(container, { childList: true, subtree: true });
-      } else {
-        console.error("Contêiner de cardápio não encontrado!");
-      }
-    }
-
-    medirTempoExibicaoPratos();
   });
 </script>

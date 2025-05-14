@@ -330,6 +330,19 @@ def _atualizar_saldo_usuario(usuario_id, valor_adicional):
     else:
         db.user_balance.insert(user_id=usuario_id, saldo_devedor=valor_adicional)
 
+def _converter_dia_semana(dia_ingles):
+    """Função auxiliar para converter o dia da semana para português"""
+    dias_semana = {
+        'Monday': 'Segunda-feira',
+        'Tuesday': 'Terca-feira',
+        'Wednesday': 'Quarta-feira',
+        'Thursday': 'Quinta-feira',
+        'Friday': 'Sexta-feira',
+        'Saturday': 'Sabado',
+        'Sunday': 'Domingo'
+    }
+    return dias_semana.get(dia_ingles, dia_ingles)
+
 
 def api_listar_pratos_para_usuario():
     try:
@@ -345,18 +358,15 @@ def api_listar_pratos_para_usuario():
         # classes de validação
         validador = ValidadorUsuario(solicitante_id, db)
         gerenciador = GerenciadorGratuidade(validador, db)
-
         hoje = datetime.now()
         amanha = _converter_dia_semana((hoje + timedelta(days=1)).strftime('%A'))
         dia_semana = _converter_dia_semana(hoje.strftime('%A'))
-
         # pratos permitidos para o usuário
         pratos_permitidos = db(
             (db.cardapio.tipos_usuario.contains(validador.user_type_name)) &
             (db.cardapio.dias_semana.contains(dia_semana)) &
             (db.cardapio.tipo == db.horario_refeicoes.refeicao)
         ).select(orderby=db.horario_refeicoes.pedido_fim)
-
         hora_fim_cafe_manha = db(db.horario_refeicoes.refeicao == 'Café da Manhã').select()[0].pedido_fim
         if hora_fim_cafe_manha <= hoje.time():
             cafe_manha_dia_seguinte = db(
@@ -365,10 +375,11 @@ def api_listar_pratos_para_usuario():
                 (db.cardapio.tipo == 'Café da Manhã') &
                 (db.cardapio.tipo == db.horario_refeicoes.refeicao)
             ).select()
-
             pratos_permitidos = cafe_manha_dia_seguinte | pratos_permitidos
-
         pratos_json = {}
+        
+        # Dicionário para rastrear pratos já processados por tipo
+        pratos_processados = {}
         
         for prato in pratos_permitidos:
             # filtra por horario apenas os items do dia atual(Café da manhã pode incluir items do dia seguinte)
@@ -380,13 +391,22 @@ def api_listar_pratos_para_usuario():
                         amanha not in prato.cardapio.dias_semana
                     )
                 ):
-                    hora_fim =  prato.horario_refeicoes.pedido_fim
+                    hora_fim = prato.horario_refeicoes.pedido_fim
                     if hora_fim <= hoje.time():
                         continue
-
+                        
+            # Inicializa a lista para o tipo se não existir
             if not pratos_json.get(prato.cardapio.tipo):
                 pratos_json[prato.cardapio.tipo] = []
-
+                pratos_processados[prato.cardapio.tipo] = set()
+                
+            # Verifica se este prato já foi processado (evitar repetições)
+            if prato.cardapio.id in pratos_processados[prato.cardapio.tipo]:
+                continue
+                
+            # Marca como processado
+            pratos_processados[prato.cardapio.tipo].add(prato.cardapio.id)
+            
             # Calcula a gratuidade e preço para o prato
             resultado_gratuidade = gerenciador.calcular_gratuidade(prato.cardapio)
             
@@ -403,29 +423,36 @@ def api_listar_pratos_para_usuario():
                 'motivo_gratuidade': resultado_gratuidade['motivo_gratuidade']
             })
         
+        # Ordena cada categoria de prato por gratuidade (gratuitos primeiro)
+        for tipo_refeicao in pratos_json:
+            pratos_json[tipo_refeicao] = sorted(
+                pratos_json[tipo_refeicao],
+                key=lambda x: (0 if x['gratuidade'] else 1, x['nome'])  # Ordena por gratuidade (True primeiro) e depois por nome
+            )
+        
+        # Define a ordem correta das refeições
+        ordem_refeicoes = ['Café da Manhã', 'Almoço', 'Jantar', 'Ceia']
+        
+        # Cria um novo dicionário ordenado com as refeições na ordem correta
+        pratos_ordenados = {}
+        for refeicao in ordem_refeicoes:
+            if refeicao in pratos_json:
+                pratos_ordenados[refeicao] = pratos_json[refeicao]
+        
+        # Adiciona qualquer outra refeição que não esteja na ordem predefinida
+        for refeicao in pratos_json:
+            if refeicao not in pratos_ordenados:
+                pratos_ordenados[refeicao] = pratos_json[refeicao]
+        
         return response.json({
             'status': 'success',
             'tipo_usuario': validador.user_type_name,
-            'pratos': pratos_json
+            'pratos': pratos_ordenados
         })
         
     except Exception as e:
         print(f"Erro na API listar pratos: {str(e)}")
         return response.json({'status': 'error', 'message': str(e)})
-
-
-def _converter_dia_semana(dia_ingles):
-    """Função auxiliar para converter o dia da semana para português"""
-    dias_semana = {
-        'Monday': 'Segunda-feira',
-        'Tuesday': 'Terca-feira',
-        'Wednesday': 'Quarta-feira',
-        'Thursday': 'Quinta-feira',
-        'Friday': 'Sexta-feira',
-        'Saturday': 'Sabado',
-        'Sunday': 'Domingo'
-    }
-    return dias_semana.get(dia_ingles, dia_ingles)
 
 
 def _obter_horarios_prato(tipo_refeicao, tipo_usuario):
@@ -495,8 +522,8 @@ def inicializar_configuracoes_padrao():
 
 #  meus pedidos
 @auth.requires_login()
-@cache.action(time_expire=300, cache_model=cache.ram, session=True, vars=False, lang=False, user_agent=False, public=False)
 def meus_pedidos():
+
     """
     Exibe as solicitações de refeições feitas pelo usuário logado.
     """
@@ -511,3 +538,32 @@ def meus_pedidos():
     )
 
     return dict(pedidos=pedidos)
+
+
+@auth.requires_login()
+def perfil():
+    """
+    Permite que o usuário visualize e altere seus detalhes de perfil
+    """
+    # Obter o usuário logado
+    user = db.auth_user(auth.user.id)
+
+    # Formulário para edição dos dados do usuário
+    form = SQLFORM(db.auth_user, user,
+                   fields=['first_name', 'last_name', 'email', 'password'],
+                   showid=False)
+
+    # Processar o formulário
+    if form.process(onvalidation=valida_perfil).accepted:
+        response.flash = 'Perfil atualizado com sucesso!'
+    elif form.errors:
+        response.flash = 'Erro ao atualizar o perfil. Verifique os dados.'
+
+    return dict(form=form)
+
+def valida_perfil(form):
+    """
+    Validação adicional para garantir consistência nos campos (ex. força da senha)
+    """
+    if form.vars.password and len(form.vars.password) < 6:
+        form.errors.password = 'A senha deve ter pelo menos 6 caracteres.'

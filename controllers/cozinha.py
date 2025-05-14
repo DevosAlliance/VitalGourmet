@@ -6,6 +6,25 @@ from decimal import Decimal
 from io import StringIO
 from gluon.contrib.pymysql.err import IntegrityError
 
+def registrar_log(entidade, registro_id, acao, estado_anterior=None):
+    """Registra uma ação no log geral do sistema.
+
+    Args:
+        entidade (str): Nome da entidade afetada (ex: 'estoque', 'auth_user').
+        registro_id (int): ID do registro afetado na entidade.
+        acao (str): Tipo de ação ('exclusao' ou 'alteracao').
+        estado_anterior (dict, opcional): Estado anterior do registro, caso seja uma alteração.
+    """
+    db.log_sistema.insert(
+        user_id=auth.user_id,
+        entidade=entidade,
+        acao=acao,
+        registro_id=registro_id,
+        observacao=estado_anterior,
+        timestamp=request.now
+    )
+    db.commit()
+
 # cozinha
 @auth.requires(lambda: any(auth.has_membership(role) for role in ['Gestor', 'Colaborador', 'Administrador']))
 def index():

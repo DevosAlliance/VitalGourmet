@@ -147,6 +147,7 @@
 <table class="table table-striped">
     <thead>
         <tr>
+          <th>ID</th>
           <th>Prato</th>
           <th>Quantidade</th>
           <th>Preço</th>
@@ -160,6 +161,7 @@
     <tbody id="tabelaSolicitacoes">
         {{for solicitacao in sorted(solicitacoes, key=lambda s: s.foi_pago):}}
         <tr class="linha-solicitacao" data-foi-pago="{{=1 if solicitacao.foi_pago else 0}}">
+            <td>{{=solicitacao.id}}</td>
             <td>{{=solicitacao.prato_id.nome}}</td>
             <td>{{=solicitacao.quantidade_solicitada}}</td>
             <td data-valor="{{=solicitacao.preco}}"></td>

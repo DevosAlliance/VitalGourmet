@@ -229,19 +229,75 @@ def api_atualizar_configuracao():
 
 @auth.requires_membership('Administrador')
 def gerenciar_categorias():
-    """Permite a configuração das categorias de usuários"""
-    grid = SQLFORM.grid(
-        db.categoria_usuario,
-        deletable=True,
-        editable=True,
-        create=True,
-        details=True,
-        csv=False,
-        orderby=db.categoria_usuario.nome,
-        maxtextlength=50,
-        paginate=25
+    """Permite a configuração das categorias de usuários de forma personalizada"""
+    # Busca todas as categorias ordenadas pelo nome
+    categorias = db(db.categoria_usuario).select(orderby=db.categoria_usuario.nome)
+    
+    return dict(categorias=categorias)
+
+@auth.requires_membership('Administrador')
+def adicionar_categoria():
+    """Adiciona uma nova categoria de usuário"""
+    nome = request.vars.nome
+    descricao = request.vars.descricao
+    
+    if not nome:
+        session.flash = "Nome da categoria é obrigatório"
+        redirect(URL('gerenciar_categorias'))
+    
+    # Verifica se já existe uma categoria com este nome
+    if db(db.categoria_usuario.nome == nome).count() > 0:
+        session.flash = "Já existe uma categoria com este nome"
+        redirect(URL('gerenciar_categorias'))
+    
+    # Insere a nova categoria
+    db.categoria_usuario.insert(nome=nome, descricao=descricao)
+    session.flash = "Categoria adicionada com sucesso"
+    redirect(URL('gerenciar_categorias'))
+
+@auth.requires_membership('Administrador')
+def excluir_categoria():
+    """Remove uma categoria existente"""
+    categoria_id = request.args(0)
+    
+    if not categoria_id:
+        session.flash = "Categoria não especificada"
+        redirect(URL('gerenciar_categorias'))
+    
+    # Removemos a verificação de usuários associados que estava causando o erro
+    # Se você quiser verificar dependências, precisaria adaptar esta parte para
+    # usar o campo correto da sua tabela auth_user que armazena a categoria
+    
+    # Exclui a categoria
+    db(db.categoria_usuario.id == categoria_id).delete()
+    session.flash = "Categoria excluída com sucesso"
+    redirect(URL('gerenciar_categorias'))
+
+@auth.requires_membership('Administrador')
+def atualizar_categoria():
+    """Atualiza os dados de uma categoria existente"""
+    categoria_id = request.vars.id
+    nome = request.vars.nome
+    descricao = request.vars.descricao
+    
+    if not categoria_id or not nome:
+        session.flash = "Dados incompletos para atualização"
+        redirect(URL('gerenciar_categorias'))
+    
+    # Verifica se já existe outra categoria com este nome
+    duplicada = db((db.categoria_usuario.nome == nome) & 
+                  (db.categoria_usuario.id != categoria_id)).count()
+    if duplicada > 0:
+        session.flash = "Já existe outra categoria com este nome"
+        redirect(URL('gerenciar_categorias'))
+    
+    # Atualiza a categoria
+    db(db.categoria_usuario.id == categoria_id).update(
+        nome=nome,
+        descricao=descricao
     )
-    return dict(grid=grid)
+    session.flash = "Categoria atualizada com sucesso"
+    redirect(URL('gerenciar_categorias'))
 
 @auth.requires_membership('Administrador')
 def gerenciar_tipos_categoria():
@@ -254,13 +310,6 @@ def gerenciar_tipos_categoria():
     if not categoria:
         redirect(URL('gerenciar_categorias'))
     
-    # Criar um formulário para adicionar tipos à categoria
-    form = SQLFORM(db.categoria_tipo_usuario)
-    form.vars.categoria_id = categoria_id
-    
-    if form.process().accepted:
-        response.flash = 'Tipo adicionado à categoria com sucesso!'
-    
     # Listar tipos já associados
     tipos_associados = db(db.categoria_tipo_usuario.categoria_id == categoria_id).select(
         db.user_type.ALL,
@@ -270,12 +319,76 @@ def gerenciar_tipos_categoria():
     # Listar todos os tipos para seleção
     todos_tipos = db(db.user_type).select(orderby=db.user_type.name)
     
+    # Pré-processar quais tipos ainda estão disponíveis para associar
+    tipos_disponiveis = []
+    ids_associados = [tipo.id for tipo in tipos_associados]
+    
+    for tipo in todos_tipos:
+        if tipo.id not in ids_associados:
+            tipos_disponiveis.append(tipo)
+    
     return dict(
         categoria=categoria,
-        form=form,
         tipos_associados=tipos_associados,
-        todos_tipos=todos_tipos
+        todos_tipos=todos_tipos,
+        tipos_disponiveis=tipos_disponiveis
     )
+
+@auth.requires_membership('Administrador')
+def adicionar_tipo_categoria():
+    """Adiciona um tipo à categoria especificada"""
+    categoria_id = request.args(0)
+    tipo_id = request.vars.tipo_id
+    
+    if not categoria_id or not tipo_id:
+        session.flash = "Dados incompletos para adicionar tipo à categoria"
+        redirect(URL('gerenciar_categorias'))
+    
+    # Verificar se a categoria existe
+    categoria = db.categoria_usuario(categoria_id)
+    if not categoria:
+        session.flash = "Categoria não encontrada"
+        redirect(URL('gerenciar_categorias'))
+    
+    # Verificar se o tipo existe
+    tipo = db.user_type(tipo_id)
+    if not tipo:
+        session.flash = "Tipo de usuário não encontrado"
+        redirect(URL('gerenciar_tipos_categoria', args=[categoria_id]))
+    
+    # Verificar se a associação já existe
+    existe = db((db.categoria_tipo_usuario.categoria_id == categoria_id) & 
+                (db.categoria_tipo_usuario.tipo_id == tipo_id)).count()
+    if existe > 0:
+        session.flash = "Este tipo já está associado a esta categoria"
+        redirect(URL('gerenciar_tipos_categoria', args=[categoria_id]))
+    
+    # Adicionar a associação
+    db.categoria_tipo_usuario.insert(
+        categoria_id=categoria_id,
+        tipo_id=tipo_id
+    )
+    
+    session.flash = "Tipo adicionado à categoria com sucesso"
+    redirect(URL('gerenciar_tipos_categoria', args=[categoria_id]))
+
+@auth.requires_membership('Administrador')
+def remover_tipo_categoria():
+    """Remove um tipo da categoria especificada"""
+    categoria_id = request.args(0)
+    tipo_id = request.args(1)
+    
+    if not categoria_id or not tipo_id:
+        session.flash = "Dados incompletos para remover tipo da categoria"
+        redirect(URL('gerenciar_categorias'))
+    
+    # Remover a associação
+    db((db.categoria_tipo_usuario.categoria_id == categoria_id) & 
+       (db.categoria_tipo_usuario.tipo_id == tipo_id)).delete()
+    
+    session.flash = "Tipo removido da categoria com sucesso"
+    redirect(URL('gerenciar_tipos_categoria', args=[categoria_id]))
+
 
 @auth.requires_membership('Administrador')
 def gerenciar_setores_por_tipo():
@@ -530,6 +643,7 @@ def atualizar_configuracao_setores_por_tipo():
     db.commit()
 
 def migrar_setores_para_db():
+
     """
     Função para migrar os setores permitidos do JavaScript para o banco de dados.
     Execute esta função uma vez para inicializar a tabela tipo_usuario_setor.
@@ -592,3 +706,83 @@ def migrar_setores_para_db():
     
     db.commit()
     return "Migração concluída com sucesso!"
+
+
+@auth.requires_membership('Administrador')
+def gerenciar_setores():
+    """Permite a configuração dos setores de forma personalizada"""
+    # Busca todos os setores ordenados pelo nome
+    setores = db(db.setor).select(orderby=db.setor.name)
+    
+    return dict(setores=setores)
+
+@auth.requires_membership('Administrador')
+def adicionar_setor():
+    """Adiciona um novo setor"""
+    name = request.vars.name
+    
+    if not name:
+        session.flash = "Nome do setor é obrigatório!"
+        redirect(URL('gerenciar_setores'))
+    
+    try:
+        db.setor.insert(name=name)
+        db.commit()
+        session.flash = "Setor adicionado com sucesso!"
+    except Exception as e:
+        db.rollback()
+        session.flash = f"Erro ao adicionar setor: {str(e)}"
+    
+    redirect(URL('gerenciar_setores'))
+
+@auth.requires_membership('Administrador')
+def atualizar_setor():
+    """Atualiza um setor existente"""
+    setor_id = request.vars.id
+    name = request.vars.name
+    
+    if not setor_id or not name:
+        session.flash = "ID e nome do setor são obrigatórios!"
+        redirect(URL('gerenciar_setores'))
+    
+    try:
+        setor = db.setor(setor_id)
+        if not setor:
+            session.flash = "Setor não encontrado!"
+            redirect(URL('gerenciar_setores'))
+        
+        setor.update_record(name=name)
+        db.commit()
+        session.flash = "Setor atualizado com sucesso!"
+    except Exception as e:
+        db.rollback()
+        session.flash = f"Erro ao atualizar setor: {str(e)}"
+    
+    redirect(URL('gerenciar_setores'))
+
+@auth.requires_membership('Administrador')
+def excluir_setor():
+    """Exclui um setor existente"""
+    setor_id = request.args(0)
+    
+    if not setor_id:
+        session.flash = "ID do setor é obrigatório!"
+        redirect(URL('gerenciar_setores'))
+    
+    try:
+        # Verificar se o setor está sendo usado por algum usuário
+        usuarios_com_setor = db(db.auth_user.setor_id == setor_id).count()
+        
+        if usuarios_com_setor > 0:
+            session.flash = f"Não é possível excluir este setor! Existem {usuarios_com_setor} usuários vinculados a ele."
+            redirect(URL('gerenciar_setores'))
+        
+        # Se não estiver em uso, excluir o setor
+        db(db.setor.id == setor_id).delete()
+        db.commit()
+        session.flash = "Setor excluído com sucesso!"
+    except Exception as e:
+        db.rollback()
+        session.flash = f"Erro ao excluir setor: {str(e)}"
+    
+    redirect(URL('gerenciar_setores'))

@@ -3,8 +3,8 @@
 <!-- Botão para abrir o modal de solicitação excepcional -->
 <button
   class="btn btn-warning mb-3"
-  data-toggle="modal"
-  data-target="#modalExcecao"
+  data-bs-toggle="modal"
+  data-bs-target="#modalExcecao"
 >
   Solicitação Excepcional
 </button>
@@ -14,11 +14,10 @@
   class="modal fade"
   id="modalExcecao"
   tabindex="-1"
-  role="dialog"
   aria-labelledby="tituloExcecao"
   aria-hidden="true"
 >
-  <div class="modal-dialog" role="document">
+  <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header bg-warning text-dark">
         <h5 class="modal-title" id="tituloExcecao">
@@ -26,25 +25,54 @@
         </h5>
         <button
           type="button"
-          class="close"
-          data-dismiss="modal"
+          class="btn-close"
+          data-bs-dismiss="modal"
           aria-label="Fechar"
-        >
-          <span aria-hidden="true">&times;</span>
-        </button>
+        ></button>
       </div>
       <div class="modal-body">
-        <label for="usuarioDestino">Destinatário:</label>
-        <select class="form-control" id="usuarioDestino">
-          <option disabled selected>Carregando usuários...</option>
-        </select>
+        <label for="usuarioPesquisa" class="form-label">Pesquisar Destinatário:</label>
+        <div class="input-group mb-3">
+          <input 
+            type="text" 
+            class="form-control" 
+            id="usuarioPesquisa" 
+            placeholder="Digite pelo menos 3 caracteres..."
+            autocomplete="off"
+          >
+          <button class="btn btn-outline-secondary" type="button" id="btnPesquisarUsuario">
+            <i class="fas fa-search"></i> Buscar
+          </button>
+        </div>
+        
+        <!-- Mensagem de ajuda -->
+        <div class="mb-3 small text-muted">
+          Digite pelo menos 3 caracteres para iniciar a pesquisa de usuários
+        </div>
+        
+        <!-- Resultados da pesquisa -->
+        <div id="resultadosPesquisa" class="list-group mb-3" style="max-height: 200px; overflow-y: auto; display: none;"></div>
+        
+        <!-- Usuário selecionado -->
+        <div id="usuarioSelecionadoContainer" class="mb-3 p-2 border rounded bg-light d-none">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong id="nomeUsuarioSelecionado"></strong>
+              <div class="text-muted small" id="tipoUsuarioSelecionado"></div>
+              <input type="hidden" id="usuarioDestino" value="">
+            </div>
+            <button class="btn btn-sm btn-outline-danger" id="btnRemoverUsuario">
+              <i class="fas fa-times"></i> Remover
+            </button>
+          </div>
+        </div>
 
-        <label class="mt-3" for="pratoSelecionado">Prato:</label>
-        <select class="form-control" id="pratoSelecionado">
+        <label class="form-label mt-3" for="pratoSelecionado">Prato:</label>
+        <select class="form-select" id="pratoSelecionado">
           <option disabled selected>Carregando pratos...</option>
         </select>
 
-        <label class="mt-3" for="quantidadeExcecao">Quantidade:</label>
+        <label class="form-label mt-3" for="quantidadeExcecao">Quantidade:</label>
         <input
           type="number"
           class="form-control"
@@ -53,7 +81,7 @@
           min="1"
         />
 
-        <label class="mt-3" for="precoPersonalizado">Preço (R$):</label>
+        <label class="form-label mt-3" for="precoPersonalizado">Preço (R$):</label>
         <input
           type="number"
           class="form-control"
@@ -62,7 +90,7 @@
           min="0"
         />
 
-        <label class="mt-3" for="descricaoExcecao">Descrição adicional:</label>
+        <label class="form-label mt-3" for="descricaoExcecao">Descrição adicional:</label>
         <textarea
           class="form-control"
           id="descricaoExcecao"
@@ -70,8 +98,8 @@
         ></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-        <button class="btn btn-success" onclick="enviarSolicitacaoExcecao()">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" id="btnConfirmarPedido">
           Confirmar Pedido
         </button>
       </div>
@@ -81,7 +109,65 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    carregarUsuariosEDados();
+    carregarPratos();
+    
+    // Configuração de eventos para pesquisa de usuários
+    const pesquisaInput = document.getElementById("usuarioPesquisa");
+    const btnPesquisar = document.getElementById("btnPesquisarUsuario");
+    const resultadosDiv = document.getElementById("resultadosPesquisa");
+    
+    // Pesquisar ao clicar no botão
+    btnPesquisar.addEventListener("click", function() {
+      const query = pesquisaInput.value.trim();
+      if (query.length >= 3) {
+        pesquisarUsuarios(pesquisaInput.value);
+      } else {
+        alert("Digite pelo menos 3 caracteres para pesquisar");
+      }
+    });
+    
+    // Pesquisar ao digitar (com debounce)
+    let timeout = null;
+    pesquisaInput.addEventListener("input", function() {
+      clearTimeout(timeout);
+      const query = this.value.trim();
+      
+      if (query.length >= 3) {
+        resultadosDiv.style.display = "block";
+        timeout = setTimeout(() => pesquisarUsuarios(query), 300);
+      } else {
+        resultadosDiv.style.display = "none";
+      }
+    });
+    
+    // Pesquisar ao pressionar Enter
+    pesquisaInput.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const query = this.value.trim();
+        if (query.length >= 3) {
+          pesquisarUsuarios(query);
+        } else {
+          alert("Digite pelo menos 3 caracteres para pesquisar");
+        }
+      }
+    });
+    
+    // Fechar resultados ao clicar fora
+    document.addEventListener("click", function(e) {
+      if (!pesquisaInput.contains(e.target) && !resultadosDiv.contains(e.target) && !btnPesquisar.contains(e.target)) {
+        resultadosDiv.style.display = "none";
+      }
+    });
+    
+    // Remover usuário selecionado
+    document.getElementById("btnRemoverUsuario").addEventListener("click", function() {
+      document.getElementById("usuarioSelecionadoContainer").classList.add("d-none");
+      document.getElementById("usuarioDestino").value = "";
+      document.getElementById("usuarioPesquisa").value = "";
+      document.getElementById("usuarioPesquisa").disabled = false;
+      document.getElementById("btnPesquisarUsuario").disabled = false;
+    });
 
     // Preenche o preço automaticamente ao trocar o prato
     document
@@ -91,36 +177,65 @@
         const preco = selectedOption.dataset.preco;
         document.getElementById("precoPersonalizado").value = preco;
       });
+      
+    // Adicionar evento de click ao botão Confirmar Pedido
+    document
+      .getElementById("btnConfirmarPedido")
+      .addEventListener("click", enviarSolicitacaoExcecao);
   });
 
-  function carregarUsuariosEDados() {
-    // 🔄 Carregar usuários
-    fetch('{{=URL("cardapio", "api_listar_usuarios_para_excecao")}}')
-      .then((response) => response.json())
-      .then((data) => {
-        const select = document.getElementById("usuarioDestino");
-        select.innerHTML = ""; // Limpa o placeholder
-
-        if (data.status === "success") {
-          data.usuarios.forEach((u) => {
-            const opt = document.createElement("option");
-            opt.value = u.id;
-            opt.textContent = `${u.first_name} ${u.last_name} (${u.user_type})`;
-            select.appendChild(opt);
+  function pesquisarUsuarios(query) {
+    if (!query || query.length < 3) return;
+    
+    const resultadosDiv = document.getElementById("resultadosPesquisa");
+    resultadosDiv.innerHTML = '<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Pesquisando...</div>';
+    resultadosDiv.style.display = "block";
+    
+    // Usar a função do controlador via URL com parâmetros GET
+    fetch(`{{=URL("cardapio", "pesquisar_usuarios")}}?termo=${encodeURIComponent(query)}&limite=20`)
+    .then(response => response.json())
+    .then(data => {
+      resultadosDiv.innerHTML = '';
+      
+      if (data.status === "success" && data.usuarios && data.usuarios.length > 0) {
+        data.usuarios.forEach(usuario => {
+          const itemUsuario = document.createElement("button");
+          itemUsuario.className = "list-group-item list-group-item-action";
+          itemUsuario.type = "button";
+          itemUsuario.innerHTML = `
+            <div class="d-flex justify-content-between">
+              <div>
+                <strong>${usuario.first_name} ${usuario.last_name}</strong>
+                <div class="text-muted small">${usuario.user_type}</div>
+              </div>
+            </div>
+          `;
+          
+          itemUsuario.addEventListener("click", function() {
+            // Salvar o usuário selecionado
+            document.getElementById("usuarioDestino").value = usuario.id;
+            document.getElementById("nomeUsuarioSelecionado").textContent = `${usuario.first_name} ${usuario.last_name}`;
+            document.getElementById("tipoUsuarioSelecionado").textContent = usuario.user_type;
+            document.getElementById("usuarioSelecionadoContainer").classList.remove("d-none");
+            document.getElementById("usuarioPesquisa").value = "";
+            document.getElementById("usuarioPesquisa").disabled = true;
+            document.getElementById("btnPesquisarUsuario").disabled = true;
+            resultadosDiv.style.display = "none";
           });
-        } else {
-          const opt = document.createElement("option");
-          opt.disabled = true;
-          opt.textContent = "Erro ao carregar usuários.";
-          select.appendChild(opt);
-        }
-      })
-      .catch(() => {
-        const select = document.getElementById("usuarioDestino");
-        select.innerHTML =
-          "<option disabled>Erro ao carregar usuários</option>";
-      });
+          
+          resultadosDiv.appendChild(itemUsuario);
+        });
+      } else {
+        resultadosDiv.innerHTML = '<div class="list-group-item text-center text-muted">Nenhum usuário encontrado</div>';
+      }
+    })
+    .catch(error => {
+      console.error("Erro ao pesquisar usuários:", error);
+      resultadosDiv.innerHTML = '<div class="list-group-item text-center text-danger">Erro ao buscar usuários</div>';
+    });
+  }
 
+  function carregarPratos() {
     // 🍽 Carregar pratos (sem restrição para o admin)
     fetch('{{=URL("cardapio", "api_listar_pratos_excessao")}}')
       .then((response) => response.json())
@@ -157,6 +272,11 @@
 
   function enviarSolicitacaoExcecao() {
     const userId = document.getElementById("usuarioDestino").value;
+    if (!userId) {
+      alert("Por favor, selecione um usuário!");
+      return;
+    }
+    
     const pratoId = document.getElementById("pratoSelecionado").value;
     const quantidade = parseInt(
       document.getElementById("quantidadeExcecao").value
@@ -182,7 +302,10 @@
       .then((data) => {
         if (data.status === "success") {
           alert("✅ Solicitação registrada com sucesso!");
-          $("#modalExcecao").modal("hide");
+          // Usar a instância do modal do Bootstrap 5 para fechar
+          const modalElement = document.getElementById('modalExcecao');
+          const modalInstance = bootstrap.Modal.getInstance(modalElement);
+          modalInstance.hide();
         } else {
           alert("Erro: " + (data.message || "Falha ao registrar solicitação."));
         }

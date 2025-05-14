@@ -437,44 +437,65 @@ def admin_cardapio():
         total_paginas=total_paginas
     )
 
+@auth.requires_login()
+def pesquisar_usuarios():
+    """
+    Endpoint para pesquisar usuários por nome.
+    Aceita parâmetros via GET para facilitar o cache e recarregamento.
+    """
+    termo = request.vars.termo or ''
+    limite = int(request.vars.limite or 20)
+    
+    if not termo or len(termo.strip()) < 3:
+        return response.json({'status': 'error', 'message': 'Digite pelo menos 3 caracteres para pesquisar'})
+    
+    # Recupera os IDs dos tipos permitidos (mesma lógica que já usava)
+    tipos_permitidos = ['Paciente', 'Paciente Convenio', 'Colaborador']
+    tipos_ids = db(db.user_type.name.belongs(tipos_permitidos)).select(db.user_type.id)
+    tipos_ids = [tipo.id for tipo in tipos_ids]
+    
+    # Consulta com filtro de nome e tipo de usuário
+    query = db.auth_user.user_type.belongs(tipos_ids)
+    termo = termo.strip().lower()
+    
+    # Filtro para buscar por nome ou sobrenome que contém o termo
+    query &= ((db.auth_user.first_name.lower().contains(termo)) | 
+              (db.auth_user.last_name.lower().contains(termo)))
+    
+    # Execute a consulta com limite para melhor performance
+    usuarios = db(query).select(
+        db.auth_user.id,
+        db.auth_user.first_name,
+        db.auth_user.last_name,
+        db.auth_user.user_type,
+        limitby=(0, limite),
+        orderby=db.auth_user.first_name
+    )
+    
+    # Formata o resultado para retorno
+    resultado = []
+    for u in usuarios:
+        tipo = db.user_type(u.user_type)
+        resultado.append({
+            'id': u.id,
+            'first_name': u.first_name,
+            'last_name': u.last_name,
+            'user_type': tipo.name if tipo else "Desconhecido",
+            'nome_completo': f"{u.first_name} {u.last_name}"
+        })
+    
+    return response.json({
+        'status': 'success',
+        'usuarios': resultado,
+        'total': len(resultado)
+    })
+
 
 @auth.requires_login()
 def api_listar_pratos_para_usuario():
-    try:
-        hoje = request.now.date()
-        pratos = db(db.cardapio).select()
-
-        pratos_formatados = []
-        for prato in pratos:
-            # Converte os tipos de usuário (em string JSON) para lista
-            tipos_usuario = (
-                json.loads(prato.tipos_usuario)
-                if isinstance(prato.tipos_usuario, str)
-                else prato.tipos_usuario
-            )
-
-            # Busca ingredientes relacionados
-            ingredientes = db(db.ingredientes.prato_id == prato.id).select()
-            ingredientes_formatados = [
-                {'nome': ing.nome, 'gramatura': ing.gramatura} for ing in ingredientes
-            ]
-
-            pratos_formatados.append({
-                'id': prato.id,
-                'nome': prato.nome,
-                'descricao': prato.descricao,
-                'preco': float(prato.preco),
-                'tipo': prato.tipo,
-                'pedido_inicio': prato.pedido_inicio,
-                'pedido_fim': prato.pedido_fim,
-                'tipos_usuario': tipos_usuario,
-                'ingredientes': ingredientes_formatados,
-                'foto_do_prato': prato.foto_do_prato.decode('utf-8') if prato.foto_do_prato else '',
-            })
-
-        return response.json({'status': 'success', 'pratos': pratos_formatados})
-    except Exception as e:
         return response.json({'status': 'error', 'message': str(e)})
+
+
 
 
 def api_listar_usuarios_para_excecao():
@@ -578,4 +599,6 @@ def api_registrar_solicitacao_excecao():
             return response.json({'status': 'error', 'message': str(e)})
     else:
         return response.json({'status': 'error', 'message': 'Método inválido. Use POST.'})
+
+
 

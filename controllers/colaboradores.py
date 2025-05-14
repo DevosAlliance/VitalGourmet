@@ -7,17 +7,17 @@ import datetime
 from io import StringIO
 from gluon.contrib.pymysql.err import IntegrityError
 
-# Função para listar os colaboradores
 @auth.requires(lambda: any(auth.has_membership(role) for role in ['Administrador', 'Gestor']))
 def index():
     tipos_colaboradores = ['Hemodialise', 'Instrumentador', 'Gestor', 'Colaborador', 'Medico']
     nome_filtro = request.vars.nome or ''
     cpf_filtro = request.vars.cpf or ''
     setor_filtro = request.vars.setor_id or None
-    pagina = int(request.vars.pagina or 1)
-    registros_por_pagina = 10
-    inicio = (pagina - 1) * registros_por_pagina
-    fim = inicio + registros_por_pagina
+    
+    # Parâmetros de paginação
+    page = int(request.vars.page or 1)
+    items_per_page = 10
+    start = (page - 1) * items_per_page
 
     # Cache da lista de IDs dos tipos de colaboradores
     tipos_ids = cache.ram(
@@ -38,11 +38,17 @@ def index():
     if setor_filtro:
         query &= (db.auth_user.setor_id == int(setor_filtro))
 
+    # Contagem total para paginação
+    total_items = db(query).count()
+    total_pages = (total_items + items_per_page - 1) // items_per_page
+
     # Aplicação da paginação
-    total_colaboradores = db(query).count()
     colaboradores = db(query).select(
-        db.auth_user.id, db.auth_user.first_name, db.auth_user.cpf, db.auth_user.setor_id,
-        limitby=(inicio, fim)
+        db.auth_user.id, 
+        db.auth_user.first_name, 
+        db.auth_user.cpf, 
+        db.auth_user.setor_id,
+        limitby=(start, start + items_per_page)
     )
 
     # Cache da lista de setores
@@ -54,10 +60,18 @@ def index():
         nome_filtro=nome_filtro,
         cpf_filtro=cpf_filtro,
         setor_filtro=setor_filtro,
-        pagina=pagina,
-        total_colaboradores=total_colaboradores,
-        registros_por_pagina=registros_por_pagina
+        page=page,
+        total_pages=total_pages,
+        total_items=total_items,
+        items_per_page=items_per_page
     )
+
+
+
+
+
+
+
 
 def diagnosticar_problema():
     resultados = {}

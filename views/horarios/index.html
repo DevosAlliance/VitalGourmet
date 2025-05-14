@@ -10,7 +10,7 @@
             <select id="setor" name="setor" class="form-control" onchange="this.form.submit()">
                 <option value="">Todos os Setores</option>
                 {{for setor in setores:}}
-                    <option value="{{=setor}}" {{='selected' if setor == setor_filtro else ''}}>{{=setor}}</option>
+                    <option value="{{=setor.name}}" {{='selected' if setor == setor_filtro else ''}}>{{=setor.name}}</option>
                 {{pass}}
             </select>
         </div>

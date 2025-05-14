@@ -141,6 +141,7 @@
 'Enter date as %(format)s': 'Enter date as %(format)s',
 'Enter from %(min)g to %(max)g characters': 'Enter from %(min)g to %(max)g characters',
 'Errors': 'Erros',
+'Errors in form, please check it out.': 'Errors in form, please check it out.',
 'Especialidade': 'Especialidade',
 'export as csv file': 'exportar como um arquivo csv',
 'Export:': 'Export:',
