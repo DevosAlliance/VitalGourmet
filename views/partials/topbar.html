@@ -1,0 +1,60 @@
+<nav id="topbar" class="navbar navbar-expand topbar mb-4 static-top shadow">
+  <!-- Sidebar Toggle (Topbar) -->
+  <button
+    id="sidebarToggleTop"
+    class="btn btn-link d-md-none rounded-circle me-3"
+  >
+    <i class="fa fa-bars"></i>
+  </button>
+  <!-- Topbar Navbar -->
+  <ul class="navbar-nav ms-auto">
+    <!-- Nav Item - Informações do usuário -->
+    <li class="nav-item dropdown">
+      {{ if user: }}
+      <a
+        class="nav-link dropdown-toggle"
+        href="#"
+        id="userDropdown"
+        role="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        <span class="me-2 d-none d-lg-inline text-gray-600 small nome-usuario"
+          >{{=user.first_name or 'Usuário'}}</span
+        >
+        <img
+          class="img-profile rounded-circle"
+          src="https://gravatar.com/userimage/54089794/0f13107468255e6632a2c8a205b1cb29.jpeg?size=256"
+        />
+      </a>
+      <!-- Dropdown - informações do usuário -->
+      <ul
+        class="dropdown-menu dropdown-menu-end shadow animated--grow-in"
+        aria-labelledby="userDropdown"
+      >
+        <li>
+          <a class="dropdown-item" href="{{=URL('usuario', 'perfil')}}">
+            <i class="fas fa-user fa-sm fa-fw me-2 text-gray-400"></i>
+            Perfil
+          </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <a
+            class="dropdown-item"
+            href="{{=URL('default', 'user', args=['logout'])}}"
+          >
+            <i class="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400"></i>
+            Sair
+          </a>
+        </li>
+      </ul>
+      {{ else: }}
+      <a class="nav-link" href="{{=URL('default', 'user', args=['login'])}}">
+        <span class="me-2 d-none d-lg-inline text-gray-600 small">Entrar</span>
+        <!-- <img class="img-profile rounded-circle" src="img/undraw_profile.svg"> -->
+      </a>
+      {{ pass }}
+    </li>
+  </ul>
+</nav>

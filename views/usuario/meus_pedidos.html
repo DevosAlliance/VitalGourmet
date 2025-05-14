@@ -1,0 +1,164 @@
+{{extend 'layout.html'}}
+
+<div class="container mt-4">
+    <h2>Meus Pedidos</h2>
+
+    <!-- Filtro por Status -->
+    <div class="form-group mb-4">
+        <label for="filtroStatus">Filtrar por Status:</label>
+        <select id="filtroStatus" class="form-control">
+            <option value="">Todos</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Em Preparação">Em Preparação</option>
+            <option value="Finalizado">Finalizado</option>
+        </select>
+    </div>
+
+    <!-- Verifica se há pedidos -->
+    {{if not pedidos:}}
+        <p>Nenhuma solicitação encontrada.</p>
+    {{else:}}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nome do Prato</th>
+                        <th class="d-none d-md-table-cell">Quantidade Solicitada</th>
+                        <th class="d-none d-md-table-cell">Preço</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="pedidoTabela">
+                    {{for pedido in pedidos:}}
+                        <tr class="pedido-row" 
+                            data-id="{{=pedido.solicitacao_refeicao.id}}"
+                            data-status="{{=pedido.solicitacao_refeicao.status}}" 
+                            data-quantidade="{{=pedido.solicitacao_refeicao.quantidade_solicitada}}" 
+                            data-preco="{{=pedido.solicitacao_refeicao.preco}}" 
+                            data-prato="{{=pedido.cardapio.nome}}">
+                            <td>{{=pedido.cardapio.nome}}</td>
+                            <td class="d-none d-md-table-cell">{{=pedido.solicitacao_refeicao.quantidade_solicitada}}</td>
+                            <td class="d-none d-md-table-cell">R$ {{=pedido.solicitacao_refeicao.preco}}</td>
+                            <td>{{=pedido.solicitacao_refeicao.status}}</td>
+                            <td>
+                                <button class="btn btn-info btn-sm btn-detalhes">Detalhes</button>
+                                {{if pedido.solicitacao_refeicao.status == 'Pendente':}}
+                                    <button class="btn btn-danger btn-sm btn-cancelar" data-id="{{=pedido.solicitacao_refeicao.id}}">Cancelar</button>
+                                {{pass}}
+                            </td>
+                        </tr>
+                    {{pass}}
+                </tbody>
+            </table>
+        </div>
+    {{pass}}
+</div>
+
+<!-- Modal para detalhes do pedido -->
+<div class="modal fade" id="pedidoModal" tabindex="-1" role="dialog" aria-labelledby="pedidoModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pedidoModalLabel">Detalhes do Pedido</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Nome do Prato:</strong> <span id="modalPratoNome"></span></p>
+        <p><strong>Quantidade Solicitada:</strong> <span id="modalQuantidade"></span></p>
+        <p><strong>Preço:</strong> R$ <span id="modalPreco"></span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmação de cancelamento -->
+<div class="modal fade" id="cancelarModal" tabindex="-1" role="dialog" aria-labelledby="cancelarModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cancelarModalLabel">Confirmar Cancelamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Tem certeza que deseja cancelar este pedido?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Não</button>
+        <button type="button" class="btn btn-danger" id="confirmarCancelamento">Sim, cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Filtro de status
+        $('#filtroStatus').change(function() {
+            var selectedStatus = $(this).val().toLowerCase();
+
+            $('.pedido-row').each(function() {
+                var status = $(this).data('status').toLowerCase();
+
+                if (selectedStatus === '' || status === selectedStatus) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Botão de detalhes do pedido
+        $('.btn-detalhes').click(function() {
+            var row = $(this).closest('.pedido-row');
+            var prato = row.data('prato');
+            var quantidade = row.data('quantidade');
+            var preco = parseFloat(row.data('preco'));
+
+            $('#modalPratoNome').text(prato);
+            $('#modalQuantidade').text(quantidade);
+            $('#modalPreco').text(preco.toFixed(2));
+
+            $('#pedidoModal').modal('show');
+        });
+
+        // Variável para armazenar o ID do pedido a ser cancelado
+        var pedidoIdParaCancelar;
+
+        // Botão de cancelar pedido
+        $('.btn-cancelar').click(function() {
+            pedidoIdParaCancelar = $(this).data('id');
+            $('#cancelarModal').modal('show');
+        });
+
+        // Confirmar cancelamento
+        $('#confirmarCancelamento').click(function() {
+            // Fazer uma chamada AJAX para o controlador de cancelamento
+            $.ajax({
+                url: "{{=URL('cozinha', 'cancelar_pedido')}}",
+                method: "POST",
+                data: {
+                    pedido_id: pedidoIdParaCancelar
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Fechar o modal
+                        $('#cancelarModal').modal('hide');
+                        
+                        // Exibir mensagem de sucesso
+                        alert('Pedido cancelado com sucesso!');
+                        
+                        // Recarregar a página para atualizar a lista
+                        location.reload();
+                    } else {
+                        // Exibir mensagem de erro
+                        alert('Erro ao cancelar o pedido: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Erro ao comunicar com o servidor. Tente novamente.');
+                }
+            });
+        });
+    });
+</script>

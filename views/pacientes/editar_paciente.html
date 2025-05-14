@@ -1,0 +1,144 @@
+{{extend 'layout.html'}}
+
+<h2>Editar Paciente</h2>
+
+<!-- Formulário para editar paciente -->
+<form action="{{=URL('editar_paciente', args=[paciente_id])}}" method="post">
+    <div class="form-group">
+        <label for="first_name">Nome</label>
+        <input type="text" class="form-control" id="first_name" name="first_name" value="{{=paciente.first_name}}" required>
+    </div>
+
+    <div class="form-group">
+        <label for="cpf">CPF</label>
+        <input type="text" class="form-control" id="cpf" name="cpf" value="{{=paciente.cpf}}" maxlength="14" required>
+        <small id="cpf-message" class="text-danger"></small>
+    </div>
+
+    <div class="form-group">
+        <label for="birth_date">Data de Nascimento</label>
+        <input type="date" class="form-control" id="birth_date" name="birth_date" value="{{=paciente.birth_date}}" required>
+        <small id="birth-date-message" class="text-danger"></small>
+    </div>
+
+    <div class="form-group">
+        <label for="user_type">Tipo de Paciente</label>
+        <select class="form-control" id="user_type" name="user_type" required>
+            <option value="">Selecione</option>
+            {{for tipo in user_type_options:}}
+            <option value="{{=tipo.id}}" {{='selected' if tipo.id == paciente.user_type else ''}}>{{=tipo.name}}</option>
+            {{pass}}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="room">Quarto</label>
+        <input type="text" class="form-control" id="room" name="room" value="{{=paciente.room}}" placeholder="Opcional">
+    </div>
+
+    <div class="form-group">
+        <label for="observations">Observações</label>
+        <textarea class="form-control" id="observations" name="observations" placeholder="Opcional">{{=paciente.observations}}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+</form>
+
+<script>
+    // Impede datas futuras no campo de nascimento
+    window.addEventListener("DOMContentLoaded", () => {
+        const birthDateField = document.getElementById("birth_date");
+        const today = new Date();
+        const maxDate = today.toISOString().split("T")[0];
+        birthDateField.max = maxDate;
+    });
+
+    document.getElementById("first_name").addEventListener("input", function (e) {
+      this.value = this.value.replace(/[0-9]/g, '');
+    });
+
+    // Função para validar CPF
+    function validarCPF(cpf) {
+        cpf = cpf.replace(/\D/g, "");
+        if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+
+        let soma = 0;
+        let resto;
+
+        for (let i = 1; i <= 9; i++) soma += parseInt(cpf[i - 1]) * (11 - i);
+        resto = (soma * 10) % 11;
+        if (resto === 10 || resto === 11) resto = 0;
+        if (resto !== parseInt(cpf[9])) return false;
+
+        soma = 0;
+        for (let i = 1; i <= 10; i++) soma += parseInt(cpf[i - 1]) * (12 - i);
+        resto = (soma * 10) % 11;
+        if (resto === 10 || resto === 11) resto = 0;
+        if (resto !== parseInt(cpf[10])) return false;
+
+        return true;
+    }
+
+    // Validação de CPF ao perder o foco
+    document.getElementById("cpf").addEventListener("blur", function () {
+        const cpfField = document.getElementById("cpf");
+        const cpfMessage = document.getElementById("cpf-message");
+        const cpfValue = cpfField.value.replace(/\D/g, "");
+
+        if (!validarCPF(cpfValue)) {
+        cpfMessage.textContent = "CPF inválido! Verifique o número digitado.";
+        cpfField.classList.add("is-invalid");
+        return;
+        } else {
+        cpfMessage.textContent = "";
+        cpfField.classList.remove("is-invalid");
+        }
+
+        // Verificação de CPF duplicado no sistema
+        fetch(`/{{=app_name}}/pacientes/api_verificar_cpf?cpf=${cpfValue}`)
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.exists) {
+            cpfMessage.textContent = "Este CPF já está cadastrado.";
+            cpfField.classList.add("is-invalid");
+            } else {
+            cpfMessage.textContent = "";
+            cpfField.classList.remove("is-invalid");
+            }
+        })
+        .catch((error) => {
+            console.error("Erro ao verificar CPF:", error);
+        });
+    });
+
+    // Validação da Data de Nascimento
+    document.getElementById("birth_date").addEventListener("input", function () {
+        const birthDateField = document.getElementById("birth_date");
+        const birthDateMessage = document.getElementById("birth-date-message");
+        const birthDateValue = new Date(birthDateField.value);
+        const today = new Date();
+        const maxAgeDate = new Date();
+        maxAgeDate.setFullYear(today.getFullYear() - 120);
+
+        if (birthDateValue > today) {
+        birthDateMessage.textContent =
+            "A data de nascimento não pode ser futura.";
+        birthDateField.classList.add("is-invalid");
+        } else if (birthDateValue < maxAgeDate) {
+        birthDateMessage.textContent = "A idade máxima permitida é de 120 anos.";
+        birthDateField.classList.add("is-invalid");
+        } else {
+        birthDateMessage.textContent = "";
+        birthDateField.classList.remove("is-invalid");
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const flashMessage = document.getElementById('flash-message');
+        
+        // Se houver uma mensagem flash, exiba-a
+        if (flashMessage.textContent.trim() !== '') {
+            setTimeout(() => flashMessage.style.display = 'none', 5000);
+        }
+    });
+</script>
