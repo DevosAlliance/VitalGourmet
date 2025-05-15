@@ -593,13 +593,13 @@
     // Mapeamento de tipos para categorias no menu
     const mapaTipoParaCategoria = {
       "Café da Manhã": "cafe-da-manha",
-      "Almoço": "Almoco",
-      "Jantar": "Jantar",
-      "lanche": "Lanche",
-      "Ceia": "Ceia",
+      Almoço: "Almoco",
+      Jantar: "Jantar",
+      lanche: "Lanche",
+      Ceia: "Ceia",
       "A la carte": "A la carte",
-      "Livre": "Livre",
-      "Bebidas": "Bebidas",
+      Livre: "Livre",
+      Bebidas: "Bebidas",
     };
 
     function renderizarCardapio(pratosPorCategoria) {
@@ -936,6 +936,9 @@
 
             // Mostrar notificação
             showSuccessPopup("Refeição solicitada com sucesso!");
+            setTimeout(() => {
+              window.location.href = '{{=URL("usuario", "meus_pedidos")}}';
+            }, 1500);
           } else {
             showErrorPopup("Erro ao registrar solicitação: " + data.message);
           }
