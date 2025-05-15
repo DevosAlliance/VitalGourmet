@@ -112,7 +112,7 @@ def api_listar_pedidos():
             (~db.solicitacao_refeicao.status.belongs(['Finalizado', 'Pago']))&
             (db.cardapio.tipo.belongs(['A La Carte', 'Livre', 'Bebidas'])) &
             (
-                (db.solicitacao_refeicao.data_solicitacao < hoje.date) |
+                (db.solicitacao_refeicao.data_solicitacao < hoje.date()) |  # Correção: date() como método
                 (
                     (db.horario_refeicoes.servido_inicio <= hoje.time()) &
                     (db.solicitacao_refeicao.data_solicitacao == hoje.date())
@@ -140,7 +140,7 @@ def api_listar_pedidos():
             (~db.solicitacao_refeicao.status.belongs(['Finalizado', 'Pago'])) &
             (db.auth_user.user_type.belongs(tipos_normais_ids)) &
             (
-                (db.solicitacao_refeicao.data_solicitacao < hoje.date) |
+                (db.solicitacao_refeicao.data_solicitacao < hoje.date()) |  # Correção: date() como método
                 (
                     (db.horario_refeicoes.servido_inicio <= hoje.time()) &
                     (db.solicitacao_refeicao.data_solicitacao == hoje.date())
@@ -165,12 +165,12 @@ def api_listar_pedidos():
             ]
         )
 
-        # # 3. Pedidos para tipos filtrados (somente A La Carte, Livre e Bebidas ou Hemodialise do setor correto)
+        # 3. Pedidos para tipos filtrados (somente A La Carte, Livre e Bebidas ou Hemodialise do setor correto)
         pedidos_filtrados = db(
             (~db.solicitacao_refeicao.status.belongs(['Finalizado', 'Pago'])) &
             (db.auth_user.user_type.belongs(tipos_filtrados_ids)) &
             (
-                (db.solicitacao_refeicao.data_solicitacao < hoje.date) |
+                (db.solicitacao_refeicao.data_solicitacao < hoje.date()) |  # Correção: date() como método
                 (
                     (db.horario_refeicoes.servido_inicio <= hoje.time()) &
                     (db.solicitacao_refeicao.data_solicitacao == hoje.date())
@@ -198,8 +198,25 @@ def api_listar_pedidos():
             ]
         )
 
-        # Combinar todas as listas de pedidos
-        todos_pedidos = pedidos_livres | pedidos_normais | pedidos_filtrados
+        # Eliminar duplicatas antes de combinar os resultados
+        pedidos_unicos = {}
+        
+        # Adicionar pedidos livres
+        for pedido in pedidos_livres:
+            pedidos_unicos[pedido.solicitacao_refeicao.id] = pedido
+            
+        # Adicionar pedidos normais (sem duplicar)
+        for pedido in pedidos_normais:
+            if pedido.solicitacao_refeicao.id not in pedidos_unicos:
+                pedidos_unicos[pedido.solicitacao_refeicao.id] = pedido
+                
+        # Adicionar pedidos filtrados (sem duplicar)
+        for pedido in pedidos_filtrados:
+            if pedido.solicitacao_refeicao.id not in pedidos_unicos:
+                pedidos_unicos[pedido.solicitacao_refeicao.id] = pedido
+        
+        # Converter o dicionário para lista
+        todos_pedidos = list(pedidos_unicos.values())
 
         # Acessar `user_type.name` para cada pedido e definir uma prioridade
         for pedido in todos_pedidos:
@@ -245,7 +262,6 @@ def api_listar_pedidos():
         error_message = f"Erro ao processar a API: {str(e)}\n{traceback.format_exc()}"
         print(error_message)  # Log para depuração
         return response.json({'status': 'error', 'message': error_message})
-
 
 @auth.requires_login()
 def cancelar_pedido():
