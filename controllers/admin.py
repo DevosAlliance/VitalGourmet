@@ -167,3 +167,95 @@ def finalizar():
     
     # Redireciona para a página inicial
     redirect(URL('default', 'index'))
+
+
+@auth.requires(lambda: any(auth.has_membership(role) for role in ['Administrador', 'Gestor']))
+def gerenciar_pedidos():
+    """
+    Tela administrativa para gerenciar todos os pedidos (sem limitação de horário)
+    """
+    # Buscar tipos de usuário para o filtro
+    tipos_usuario = db(db.user_type).select(db.user_type.id, db.user_type.name, orderby=db.user_type.name)
+    
+    # Buscar setores para o filtro
+    setores = db(db.setor).select(db.setor.id, db.setor.name, orderby=db.setor.name)
+    
+    return dict(
+        tipos_usuario=tipos_usuario,
+        setores=setores
+    )
+
+def api_admin_listar_pedidos():
+    """
+    API para listar pedidos com filtros (AJAX)
+    """
+    try:
+        # Parâmetros de filtro
+        filtro_nome = request.vars.nome or ""
+        filtro_tipo_usuario = request.vars.tipo_usuario or ""
+        filtro_setor = request.vars.setor or ""
+        
+        # Query base: todos os pedidos não finalizados
+        query = (~db.solicitacao_refeicao.status.belongs(['Finalizado', 'Pago']))
+        
+        # Aplicar filtros
+        if filtro_nome:
+            query &= db.auth_user.first_name.contains(filtro_nome)
+            
+        if filtro_tipo_usuario:
+            query &= (db.auth_user.user_type == int(filtro_tipo_usuario))
+            
+        if filtro_setor:
+            query &= (db.auth_user.setor_id == int(filtro_setor))
+        
+        # Buscar pedidos
+        pedidos = db(query).select(
+            db.solicitacao_refeicao.ALL,
+            db.cardapio.foto_do_prato,
+            db.cardapio.nome,
+            db.cardapio.tipo,
+            db.auth_user.first_name,
+            db.auth_user.room,
+            db.auth_user.observations,
+            db.auth_user.user_type,
+            db.setor.name,
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
+                db.setor.on(db.auth_user.setor_id == db.setor.id)
+            ],
+            orderby=~db.solicitacao_refeicao.data_solicitacao
+        )
+        
+        # Formatar pedidos para JSON
+        pedidos_json = []
+        for pedido in pedidos:
+            user_type_name = pedido.auth_user.user_type.name if pedido.auth_user.user_type else "Sem Tipo"
+            
+            pedidos_json.append({
+                'id': pedido.solicitacao_refeicao.id,
+                'solicitante': pedido.auth_user.first_name,
+                'setor': pedido.setor.name or '-',
+                'prato': pedido.cardapio.nome,
+                'tipo_prato': pedido.cardapio.tipo or '-',
+                'foto': f"data:image/png;base64,{pedido.cardapio.foto_do_prato}" if pedido.cardapio.foto_do_prato else '',
+                'quantidade': pedido.solicitacao_refeicao.quantidade_solicitada,
+                'preco': float(pedido.solicitacao_refeicao.preco or 0),
+                'quarto': pedido.auth_user.room or '',
+                'observacoes': pedido.auth_user.observations or '',
+                'status': pedido.solicitacao_refeicao.status,
+                'data_solicitacao': pedido.solicitacao_refeicao.data_solicitacao.strftime('%d/%m/%Y %H:%M') if pedido.solicitacao_refeicao.data_solicitacao else '',
+                'tipo_usuario': user_type_name
+            })
+        
+        return response.json({
+            'status': 'success', 
+            'pedidos': pedidos_json,
+            'total': len(pedidos_json)
+        })
+        
+    except Exception as e:
+        import traceback
+        error_message = f"Erro ao processar a API: {str(e)}\n{traceback.format_exc()}"
+        print(error_message)
+        return response.json({'status': 'error', 'message': error_message})

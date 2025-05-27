@@ -39,6 +39,12 @@ def api_gerenciar_pedidos():
 
     hoje = datetime.now()
 
+    # Subconsulta para verificar horários de refeição
+    horarios_validos = db(
+        (db.horario_refeicoes.servido_inicio <= hoje.time()) &
+        (db.cardapio.tipo == db.horario_refeicoes.refeicao)
+    ).select(db.cardapio.id)
+
     pedidos = db(
         (~db.solicitacao_refeicao.status.belongs(['Finalizado', 'Pago'])) &
         (~db.cardapio.tipo.belongs(['A La Carte', 'Livre', 'Bebidas'])) &
@@ -46,8 +52,8 @@ def api_gerenciar_pedidos():
         (
             (db.solicitacao_refeicao.data_solicitacao < hoje.date) |
             (
-                (db.horario_refeicoes.servido_inicio <= hoje.time()) &
-                (db.solicitacao_refeicao.data_solicitacao == hoje.date())
+                (db.solicitacao_refeicao.data_solicitacao == hoje.date()) &
+                (db.cardapio.id.belongs([h.id for h in horarios_validos]))
             )
         )
     ).select(
@@ -58,7 +64,6 @@ def api_gerenciar_pedidos():
         db.setor.name,
         left=[
             db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
-            db.horario_refeicoes.on(db.cardapio.tipo == db.horario_refeicoes.refeicao),
             db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
             db.setor.on(db.auth_user.setor_id == db.setor.id)
         ],
@@ -80,7 +85,6 @@ def api_gerenciar_pedidos():
         })
 
     return response.json({'pedidos': resultado})
-
 
 #  meus pedidos
 @auth.requires_login()

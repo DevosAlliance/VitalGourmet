@@ -238,8 +238,8 @@ def admin_pedidos():
     filtro_nome = request.vars.nome or ""
     filtro_tipo_usuario = request.vars.tipo_usuario or ""
     filtro_setor = request.vars.setor or ""
-    filtro_tipo_refeicao = request.vars.tipo_refeicao  # Novo filtro de tipo de refeição
-    filtro_nome_prato = request.vars.nome_prato or ""  # Novo filtro de nome do prato
+    filtro_tipo_refeicao = request.vars.tipo_refeicao
+    filtro_nome_prato = request.vars.nome_prato or ""
     data_inicio = request.vars.data_inicio or None
     data_fim = request.vars.data_fim or None
     pagina = int(request.vars.pagina or 1)
@@ -331,7 +331,7 @@ def admin_pedidos():
         limitby=(inicio, inicio + registros_por_pagina)
     )
 
-    # Calcular totais
+    # Calcular totais gerais
     totais = db(query).select(
         db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
         db.solicitacao_refeicao.preco.sum().with_alias('preco_total'),
@@ -341,6 +341,43 @@ def admin_pedidos():
             db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id)
         ]
     ).first()
+
+    # NOVO: Calcular totais por tipo de refeição
+    totais_por_tipo = db(query).select(
+        db.cardapio.tipo,
+        db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+        db.solicitacao_refeicao.preco.sum().with_alias('preco_total'),
+        db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_pratos'),
+        left=[
+            db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+            db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id)
+        ],
+        groupby=db.cardapio.tipo,
+        orderby=db.cardapio.tipo
+    )
+
+    # Transformar resultado em dicionário unificando "Livre" e "A la carte"
+    resumo_por_tipo = {}
+    for total in totais_por_tipo:
+        tipo_original = total.cardapio.tipo or "Sem Tipo"
+        
+        # Unificar "Livre" e "A la carte"
+        if tipo_original == "Livre":
+            tipo = "A la carte"
+        else:
+            tipo = tipo_original
+        
+        # Se o tipo já existe, somar os valores
+        if tipo in resumo_por_tipo:
+            resumo_por_tipo[tipo]['pedidos'] += total.total_pedidos or 0
+            resumo_por_tipo[tipo]['pratos'] += total.total_pratos or 0
+            resumo_por_tipo[tipo]['receita'] += total.preco_total or 0
+        else:
+            resumo_por_tipo[tipo] = {
+                'pedidos': total.total_pedidos or 0,
+                'pratos': total.total_pratos or 0,
+                'receita': total.preco_total or 0
+            }
 
     total_pedidos = totais.total_pedidos or 0
     total_paginas = (total_pedidos // registros_por_pagina) + (1 if total_pedidos % registros_por_pagina > 0 else 0)
@@ -376,7 +413,9 @@ def admin_pedidos():
         total_paginas=total_paginas,
         registros_por_pagina=registros_por_pagina,
         filtro_tipo_refeicao=filtro_tipo_refeicao,
-        filtro_nome_prato=filtro_nome_prato
+        filtro_nome_prato=filtro_nome_prato,
+        # NOVO: Adicionando o resumo por tipo
+        resumo_por_tipo=resumo_por_tipo
     )
 
 

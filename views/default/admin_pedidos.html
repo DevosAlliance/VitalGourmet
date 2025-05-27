@@ -23,6 +23,52 @@
     margin-bottom: 0;
     flex-direction: column;
   }
+
+  /* Estilos para o resumo por tipo */
+  .resumo-container {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .resumo-tipo {
+    display: inline-block;
+    background-color: #ffffff;
+    border: 1px solid #007bff;
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin: 5px;
+    min-width: 180px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .resumo-tipo h6 {
+    color: #007bff;
+    margin-bottom: 8px;
+    font-weight: bold;
+  }
+
+  .resumo-tipo .valor {
+    font-size: 0.9em;
+    margin: 2px 0;
+  }
+
+  .totais-gerais {
+    background-color: #e3f2fd;
+    border: 2px solid #2196f3;
+    font-weight: bold;
+  }
+
+  .totais-gerais h6 {
+    color: #1976d2;
+  }
+  tr.pedido-row {
+    cursor: pointer;
+  }
+
 </style>
 
 <h2>Pedidos de Refeição</h2>
@@ -126,9 +172,28 @@
   <button type="submit" class="btn btn-primary" style="position: relative; bottom: -10px;">Filtrar</button>
 </form>
 
-<h5><b>Pedidos totais:</b> {{=total_pedidos}}</h5>
-<h5><b>Pratos totais:</b> {{=total_pratos}}</h5>
-<h5><b>Preço total:</b> <span id="precoTotal" data-valor="{{=preco_total}}"></span></h5>
+<!-- NOVO: Resumo por Tipo de Refeição -->
+<div class="resumo-container">
+  <h4 style="margin-bottom: 15px; color: #495057;">📊 Resumo por Tipo de Refeição</h4>
+  
+  <!-- Totais por tipo específico -->
+  {{for tipo, dados in resumo_por_tipo.items():}}
+  <div class="resumo-tipo">
+    <h6>{{=tipo}}</h6>
+    <div class="valor">Pedidos: {{=dados['pedidos']}}</div>
+    <div class="valor">unidades: {{=dados['pratos']}}</div>
+    <div class="valor receita" data-valor="{{=dados['receita']}}">Receita: </div>
+  </div>
+  {{pass}}
+
+  <!-- Totais gerais -->
+  <div class="resumo-tipo totais-gerais">
+    <h6>🔢 TOTAL GERAL</h6>
+    <div class="valor">Pedidos: {{=total_pedidos}}</div>
+    <div class="valor">unidades: {{=total_pratos}}</div>
+    <div class="valor receita" data-valor="{{=preco_total}}">Receita: </div>
+  </div>
+</div>
 
 <!-- Tabela de Pedidos -->
 {{if not pedidos:}}
@@ -207,12 +272,10 @@
         <h5 class="modal-title" id="pedidoModalLabel">Detalhes do Pedido</h5>
         <button
           type="button"
-          class="close"
-          data-dismiss="modal"
+          class="btn-close"
+          data-bs-dismiss="modal"
           aria-label="Close"
-        >
-          <span aria-hidden="true">&times;</span>
-        </button>
+        ></button>
       </div>
       <div class="modal-body">
         <p><strong>Nome do Prato:</strong> <span id="modalPratoNome"></span></p>
@@ -243,7 +306,13 @@
     // Itera sobre os elementos e formata os valores
     elementosComValor.forEach(function(elemento) {
       const valorBruto = parseFloat(elemento.getAttribute("data-valor"));
-      elemento.textContent = formatarBRL(valorBruto);
+      
+      // Para elementos com classe 'receita', adiciona o valor formatado ao texto existente
+      if (elemento.classList.contains('receita')) {
+        elemento.textContent += formatarBRL(valorBruto);
+      } else {
+        elemento.textContent = formatarBRL(valorBruto);
+      }
     });
   });
 </script>

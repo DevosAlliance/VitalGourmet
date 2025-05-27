@@ -14,7 +14,7 @@ def index():
     tipo_usuario = request.vars.tipo_usuario or 'Todos'
     
     if tipo_usuario == 'Paciente':
-        tipos = ['Paciente', 'Paciente Convenio', 'Paciente Particular', 'Acompanhante', 'Gestor']
+        tipos = ['Paciente', 'Paciente Convenio', 'Paciente Particular', 'Acompanhante']
     elif tipo_usuario == 'Colaborador':
         tipos = ['Administrador', 'Colaborador', 'Gestor', 'Instrumentador', 'Hemodialise', 'Medico']
     else:  # Todos
