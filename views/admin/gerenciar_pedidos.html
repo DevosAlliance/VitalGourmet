@@ -151,10 +151,12 @@
   <table class="table table-striped table-hover">
     <thead class="thead-dark">
       <tr>
+        <th>ID</th>
         <th>Cliente</th>
         <th>Tipo Usuario</th>
         <th>Setor</th>
         <th>Prato</th>
+        <th>Descrição</th>
         <th>Tipo Prato</th>
         <th>Foto</th>
         <th>Qtd</th>
@@ -260,6 +262,7 @@
 
               const row = `
                             <tr id="pedido_${pedido.id}">
+                                <td>${pedido.id}</td>
                                 <td>
                                     <strong>${pedido.solicitante}</strong>
                                     ${observacoes}
@@ -267,6 +270,7 @@
                                 <td><small>${pedido.tipo_usuario}</small></td>
                                 <td><small>${pedido.setor}</small></td>
                                 <td>${pedido.prato}</td>
+                                <td>${pedido.descricao}</td>
                                 <td><small class="text-muted">${
                                   pedido.tipo_prato
                                 }</small></td>

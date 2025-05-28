@@ -25,6 +25,7 @@
                         <th>Nome do Prato</th>
                         <th class="d-none d-md-table-cell">Quantidade Solicitada</th>
                         <th class="d-none d-md-table-cell">Preço</th>
+                        <th class="d-none d-md-table-cell">Observações</th>
                         <th>Status</th>
                         <th>Ações</th>
                     </tr>
@@ -37,9 +38,11 @@
                             data-quantidade="{{=pedido.solicitacao_refeicao.quantidade_solicitada}}" 
                             data-preco="{{=pedido.solicitacao_refeicao.preco}}" 
                             data-prato="{{=pedido.cardapio.nome}}">
+                            
                             <td>{{=pedido.cardapio.nome}}</td>
                             <td class="d-none d-md-table-cell">{{=pedido.solicitacao_refeicao.quantidade_solicitada}}</td>
                             <td class="d-none d-md-table-cell">R$ {{=pedido.solicitacao_refeicao.preco}}</td>
+                            <td>{{=pedido.solicitacao_refeicao.descricao}}</td>
                             <td>{{=pedido.solicitacao_refeicao.status}}</td>
                             <td>
                                 <button class="btn btn-info btn-sm btn-detalhes">Detalhes</button>

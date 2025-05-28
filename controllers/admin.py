@@ -237,6 +237,7 @@ def api_admin_listar_pedidos():
                 'solicitante': pedido.auth_user.first_name,
                 'setor': pedido.setor.name or '-',
                 'prato': pedido.cardapio.nome,
+                'descricao': pedido.solicitacao_refeicao.descricao or '-',
                 'tipo_prato': pedido.cardapio.tipo or '-',
                 'foto': f"data:image/png;base64,{pedido.cardapio.foto_do_prato}" if pedido.cardapio.foto_do_prato else '',
                 'quantidade': pedido.solicitacao_refeicao.quantidade_solicitada,
