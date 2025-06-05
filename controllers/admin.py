@@ -194,9 +194,11 @@ def api_admin_listar_pedidos():
         filtro_nome = request.vars.nome or ""
         filtro_tipo_usuario = request.vars.tipo_usuario or ""
         filtro_setor = request.vars.setor or ""
+        filtro_data_inicio = request.vars.data_inicio or ""
+        filtro_data_fim = request.vars.data_fim or ""
         
         # Query base: todos os pedidos não finalizados
-        query = (~db.solicitacao_refeicao.status.belongs(['Finalizado', 'Pago']))
+        query = (~db.solicitacao_refeicao.status.belongs(['Pago']))
         
         # Aplicar filtros
         if filtro_nome:
@@ -207,6 +209,25 @@ def api_admin_listar_pedidos():
             
         if filtro_setor:
             query &= (db.auth_user.setor_id == int(filtro_setor))
+        
+        # Filtro por data
+        if filtro_data_inicio:
+            try:
+                from datetime import datetime
+                data_inicio = datetime.strptime(filtro_data_inicio, '%Y-%m-%d').date()
+                query &= (db.solicitacao_refeicao.data_solicitacao >= data_inicio)
+            except ValueError:
+                pass  # Ignora se a data estiver em formato inválido
+                
+        if filtro_data_fim:
+            try:
+                from datetime import datetime, timedelta
+                data_fim = datetime.strptime(filtro_data_fim, '%Y-%m-%d').date()
+                # Inclui o dia inteiro (até 23:59:59)
+                data_fim_completa = datetime.combine(data_fim, datetime.max.time())
+                query &= (db.solicitacao_refeicao.data_solicitacao <= data_fim_completa)
+            except ValueError:
+                pass  # Ignora se a data estiver em formato inválido
         
         # Buscar pedidos
         pedidos = db(query).select(

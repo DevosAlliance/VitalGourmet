@@ -93,7 +93,7 @@
 <div class="filtros-container">
   <h5>🔍 Filtros</h5>
   <div class="form-row">
-    <div class="form-group col-md-4">
+    <div class="form-group col-md-3">
       <label for="filtro-nome">Nome do Cliente:</label>
       <input
         type="text"
@@ -103,7 +103,7 @@
       />
     </div>
 
-    <div class="form-group col-md-4">
+    <div class="form-group col-md-3">
       <label for="filtro-tipo-usuario">Tipo de Usuário:</label>
       <select class="form-control" id="filtro-tipo-usuario">
         <option value="">Todos os tipos</option>
@@ -113,7 +113,7 @@
       </select>
     </div>
 
-    <div class="form-group col-md-4">
+    <div class="form-group col-md-3">
       <label for="filtro-setor">Setor:</label>
       <select class="form-control" id="filtro-setor">
         <option value="">Todos os setores</option>
@@ -125,12 +125,25 @@
   </div>
 
   <div class="form-row">
-    <div class="col-md-12">
-      <!-- <button type="button" class="btn btn-primary" id="aplicar-filtros">
-        🔍 Aplicar Filtros
-      </button> -->
-      <button type="button" class="btn btn-secondary ml-2" id="limpar-filtros">
+    <div class="form-group col-md-3">
+      <label for="filtro-data-inicio">Data Inicial:</label>
+      <input type="date" class="form-control" id="filtro-data-inicio" />
+    </div>
+
+    <div class="form-group col-md-3">
+      <label for="filtro-data-fim">Data Final:</label>
+      <input type="date" class="form-control" id="filtro-data-fim" />
+    </div>
+
+    <div class="form-group col-md-6 d-flex align-items-end">
+      <button type="button" class="btn btn-secondary" id="limpar-filtros">
         🗑️ Limpar Filtros
+      </button>
+      <button type="button" class="btn btn-info ml-2" id="hoje-filtro">
+        📅 Hoje
+      </button>
+      <button type="button" class="btn btn-warning ml-2" id="ontem-hoje-filtro">
+        📅 Ontem-Hoje
       </button>
     </div>
   </div>
@@ -198,6 +211,21 @@
 
 <script>
   $(document).ready(function () {
+    // Função para formatar data para YYYY-MM-DD
+    function formatarDataParaInput(data) {
+      return data.toISOString().split("T")[0];
+    }
+
+    // Função para definir datas padrão (ontem até hoje)
+    function definirDatasPadrao() {
+      const hoje = new Date();
+      const ontem = new Date();
+      ontem.setDate(hoje.getDate() - 1);
+
+      $("#filtro-data-inicio").val(formatarDataParaInput(ontem));
+      $("#filtro-data-fim").val(formatarDataParaInput(hoje));
+    }
+
     // Função para formatar preço em Real
     function formatarPreco(valor) {
       return new Intl.NumberFormat("pt-BR", {
@@ -223,6 +251,8 @@
         nome: $("#filtro-nome").val().trim(),
         tipo_usuario: $("#filtro-tipo-usuario").val(),
         setor: $("#filtro-setor").val(),
+        data_inicio: $("#filtro-data-inicio").val(),
+        data_fim: $("#filtro-data-fim").val(),
       };
 
       $("#loading").show();
@@ -367,12 +397,25 @@
     }
 
     // Eventos dos filtros
-    $("#aplicar-filtros").on("click", carregarPedidos);
-
     $("#limpar-filtros").on("click", function () {
       $("#filtro-nome").val("");
       $("#filtro-tipo-usuario").val("");
       $("#filtro-setor").val("");
+      definirDatasPadrao(); // Volta para ontem-hoje
+      carregarPedidos();
+    });
+
+    // Botão "Hoje"
+    $("#hoje-filtro").on("click", function () {
+      const hoje = new Date();
+      $("#filtro-data-inicio").val(formatarDataParaInput(hoje));
+      $("#filtro-data-fim").val(formatarDataParaInput(hoje));
+      carregarPedidos();
+    });
+
+    // Botão "Ontem-Hoje"
+    $("#ontem-hoje-filtro").on("click", function () {
+      definirDatasPadrao();
       carregarPedidos();
     });
 
@@ -383,13 +426,13 @@
       timeoutId = setTimeout(carregarPedidos, 500);
     });
 
-    // Filtro automático ao mudar select
-    $("#filtro-tipo-usuario, #filtro-setor").on("change", carregarPedidos);
+    // Filtro automático ao mudar select ou datas
+    $(
+      "#filtro-tipo-usuario, #filtro-setor, #filtro-data-inicio, #filtro-data-fim"
+    ).on("change", carregarPedidos);
 
-    // Carregar pedidos inicial
+    // Definir datas padrão e carregar pedidos inicial
+    definirDatasPadrao();
     carregarPedidos();
-
-    // Auto-refresh a cada 30 segundos
-    setInterval(carregarPedidos, 30000);
   });
 </script>
