@@ -1,5 +1,310 @@
 {{extend 'layout.html'}}
 
+<style>
+  /* Estilos base reutilizados */
+  :root {
+    --success-color: #50a773;
+    --border-radius: 8px;
+  }
+
+  /* Modal de cardápio */
+  .modal-lg {
+    max-width: 900px;
+  }
+
+  .menu-header-modal {
+    background-color: white;
+    padding: 12px 0;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 15px;
+  }
+
+  .page-title-modal {
+    font-weight: 700;
+    margin-bottom: 5px;
+    font-size: 1.3rem;
+  }
+
+  .patient-info {
+    background-color: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid var(--primary-color);
+  }
+
+  .companion-info {
+    background-color: #e3f2fd;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid #2196f3;
+  }
+
+  .category-nav-modal {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px 0;
+    gap: 8px;
+    scrollbar-width: none;
+  }
+
+  .category-nav-modal::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-button-modal {
+    white-space: nowrap;
+    padding: 8px 16px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+  }
+
+  .category-button-modal.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+
+  /* Seções de cardápio no modal */
+  .menu-section-modal {
+    margin: 15px 0;
+    display: none;
+  }
+
+  .menu-section-modal.active {
+    display: block;
+  }
+
+  .section-title-modal {
+    font-weight: 600;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    padding-left: 8px;
+    border-left: 3px solid var(--primary-color);
+  }
+
+  /* Cards de produtos no modal */
+  .menu-items-modal {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .menu-item-modal {
+    background-color: white;
+    border-radius: var(--border-radius);
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .menu-item-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .item-image-modal {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+  }
+
+  .item-content-modal {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .item-title-modal {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .item-description-modal {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .item-price-modal {
+    font-weight: 700;
+    margin-top: auto;
+    font-size: 1rem;
+  }
+
+  .price-free-modal {
+    color: var(--success-color);
+  }
+
+  /* Skeleton loader para modal */
+  .skeleton-modal {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    height: 20px;
+    width: 100%;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton-image-modal {
+    height: 120px;
+  }
+
+  .skeleton-modal::after {
+    content: "";
+    display: block;
+    position: absolute;
+    left: -100%;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    animation: loading 1.5s infinite;
+  }
+
+  /* Modal de detalhes do prato */
+  .quantity-control-modal {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+  }
+
+  .btn-quantity-modal {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .btn-quantity-modal:hover {
+    background-color: #e9ecef;
+  }
+
+  .btn-quantity-modal:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+  }
+
+  .quantity-value-modal {
+    margin: 0 15px;
+    font-weight: 600;
+  }
+
+  /* Notifications */
+  .custom-popup {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 14px;
+    min-width: 250px;
+    max-width: 90%;
+    animation: slideUp 0.3s ease;
+  }
+
+  .custom-popup.success {
+    border-left: 4px solid var(--success-color);
+  }
+
+  .custom-popup.error {
+    border-left: 4px solid var(--primary-color);
+  }
+
+  .custom-popup .close-popup {
+    margin-left: auto;
+    cursor: pointer;
+    font-size: 18px;
+    color: #999;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 20px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  .fade-out {
+    animation: fadeOut 0.3s ease forwards;
+  }
+
+  /* Estilos específicos para a tabela de acompanhantes */
+  .companion-actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .companion-actions .btn {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+  }
+
+  /* Indicador de número do acompanhante */
+  .companion-number {
+    display: inline-block;
+    background-color: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    line-height: 24px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-right: 8px;
+  }
+</style>
+
 <div class="container">
   <div class="form-container">
     <h2>Vincular Acompanhante(s) ao Paciente: {{=paciente.first_name}}</h2>
@@ -72,6 +377,7 @@
     <table class="table table-striped">
       <thead>
         <tr>
+          <th>#</th>
           <th>Nome</th>
           <th>CPF</th>
           <th>Data de Nascimento</th>
@@ -79,9 +385,12 @@
         </tr>
       </thead>
       <tbody>
-        {{for vinculo in vinculos:}} {{cpf_limpo = ''.join(c for c in
-        str(vinculo.auth_user.cpf) if c.isdigit())}}
+        {{for i, vinculo in enumerate(vinculos, 1):}} 
+        {{cpf_limpo = ''.join(c for c in str(vinculo.auth_user.cpf) if c.isdigit())}}
         <tr>
+          <td>
+            <span class="companion-number">{{=i}}</span>
+          </td>
           <td>{{=vinculo.auth_user.first_name}}</td>
           <td>
             {{='{}.{}.{}-{}'.format( vinculo.auth_user.cpf[:3],
@@ -91,24 +400,151 @@
           </td>
           <td>{{=vinculo.auth_user.birth_date.strftime('%d/%m/%Y')}}</td>
           <td>
-            <form
-              action=""
-              method="POST"
-              style="display: inline"
-              onsubmit="return confirmarExclusao();"
-            >
-              <input
-                type="hidden"
-                name="delete_acompanhante_id"
-                value="{{=vinculo.acompanhante_vinculo.acompanhante_id}}"
-              />
-              <button type="submit" class="btn btn-danger">Excluir</button>
-            </form>
+            <div class="companion-actions">
+              <!-- Botão para solicitar refeição para o acompanhante -->
+              {{if auth.user and (db.user_type[auth.user.user_type].name in ['Gestor', 'Administrador'] or (auth.user.setor_id and db.setor[auth.user.setor_id].name == 'Cozinha')):}}
+                <button class="btn btn-success btn-sm" 
+                        onclick="abrirModalCardapioAcompanhante({{=vinculo.acompanhante_vinculo.acompanhante_id}}, '{{=vinculo.auth_user.first_name}}', {{=i}}, {{=paciente.id}}, '{{=paciente.first_name}}')">
+                  <i class="fas fa-utensils"></i> Solicitar Refeição
+                </button>
+              {{pass}}
+              
+              <!-- Botão para excluir acompanhante -->
+              <form
+                action=""
+                method="POST"
+                style="display: inline"
+                onsubmit="return confirmarExclusao();"
+              >
+                <input
+                  type="hidden"
+                  name="delete_acompanhante_id"
+                  value="{{=vinculo.acompanhante_vinculo.acompanhante_id}}"
+                />
+                <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+              </form>
+            </div>
           </td>
         </tr>
         {{pass}}
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- Modal para visualizar cardápio e solicitar refeição para acompanhante -->
+<div class="modal fade" id="modalCardapioAcompanhante" tabindex="-1" role="dialog" aria-labelledby="modalCardapioAcompanhanteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCardapioAcompanhanteLabel">Solicitar Refeição para Acompanhante</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Informações do paciente -->
+        <div class="patient-info">
+          <strong>Paciente:</strong> <span id="pacienteNomeAcompanhante"></span>
+        </div>
+
+        <!-- Informações do acompanhante -->
+        <div class="companion-info">
+          <strong>Acompanhante nº <span id="acompanhanteNumero"></span>:</strong> <span id="acompanhanteNome"></span>
+          <br>
+          <strong>Solicitante:</strong> {{=auth.user.first_name}} ({{=db.setor[auth.user.setor_id].name if auth.user.setor_id else "Sem setor"}})
+        </div>
+
+        <div class="menu-header-modal">
+          <h6 class="page-title-modal">Cardápio Disponível</h6>
+          
+          <div class="category-nav-modal">
+            <div class="category-button-modal active" data-category="todos">Todos</div>
+            <div class="category-button-modal" data-category="cafe-da-manha">Café da Manhã</div>
+            <div class="category-button-modal" data-category="Almoco">Almoço</div>
+            <div class="category-button-modal" data-category="Lanche">Lanche</div>
+            <div class="category-button-modal" data-category="Jantar">Jantar</div>
+            <div class="category-button-modal" data-category="Ceia">Ceia</div>
+            <div class="category-button-modal" data-category="Bebidas">Bebidas</div>
+            <div class="category-button-modal" data-category="A la carte">A La Carte</div>
+          </div>
+        </div>
+
+        <div id="cardapio-container-modal-acompanhante">
+          <!-- Skeleton loader -->
+          <div class="skeleton-section-modal">
+            <div class="section-title-modal skeleton-modal" style="width: 40%"></div>
+            <div class="menu-items-modal">
+              <div class="menu-item-modal">
+                <div class="skeleton-modal skeleton-image-modal"></div>
+                <div style="padding: 12px">
+                  <div class="skeleton-modal" style="width: 70%"></div>
+                  <div class="skeleton-modal" style="width: 90%"></div>
+                  <div class="skeleton-modal" style="width: 40%"></div>
+                </div>
+              </div>
+              <div class="menu-item-modal">
+                <div class="skeleton-modal skeleton-image-modal"></div>
+                <div style="padding: 12px">
+                  <div class="skeleton-modal" style="width: 70%"></div>
+                  <div class="skeleton-modal" style="width: 90%"></div>
+                  <div class="skeleton-modal" style="width: 40%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para detalhes do prato e confirmação para acompanhante -->
+<div class="modal fade" id="modalDetalhesPratoAcompanhante" tabindex="-1" role="dialog" aria-labelledby="modalPratoAcompanhanteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalPratoNomeAcompanhante"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-body-content">
+          <div class="modal-image-container">
+            <img id="modalPratoImagemAcompanhante" src="" alt="" class="img-fluid" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" />
+          </div>
+
+          <div class="prato-info mt-3">
+            <p id="modalPratoDescricaoAcompanhante" class="mb-3"></p>
+
+            <h6>Ingredientes:</h6>
+            <ul id="modalPratoIngredientesAcompanhante" class="list-unstyled mb-4"></ul>
+
+            <div class="row align-items-center">
+              <div class="col-6">
+                <h6 class="mb-0">Quantidade:</h6>
+              </div>
+              <div class="col-6">
+                <div class="quantity-control-modal">
+                  <button class="btn-quantity-modal" id="btnDiminuirAcompanhante">-</button>
+                  <span class="quantity-value-modal" id="quantidadeAcompanhante">1</span>
+                  <button class="btn-quantity-modal" id="btnAumentarAcompanhante">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Campo de Descrição -->
+            <div class="form-group mt-3">
+              <label for="descricaoAcompanhante">Observações:</label>
+              <textarea class="form-control" id="descricaoAcompanhante" placeholder="Observações adicionais (opcional)" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div id="modalPratoPrecoAcompanhante" class="h5 mb-0"></div>
+        <button type="button" class="btn btn-primary" id="confirmarSolicitacaoAcompanhante">
+          Confirmar Solicitação
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -214,12 +650,452 @@
     }
   });
 
-  // Adicionar alerta de confirmação para exclusão
-  document.addEventListener("submit", (e) => {
-    if (e.target.classList.contains("form-excluir")) {
-      if (!confirm("Tem certeza que deseja excluir este acompanhante?")) {
-        e.preventDefault();
-      }
+  // ===== FUNCIONALIDADE DE SOLICITAR REFEIÇÕES PARA ACOMPANHANTES =====
+
+  // Variáveis globais para o modal de acompanhantes
+  let currentAcompanhanteId = null;
+  let currentAcompanhanteNome = null;
+  let currentAcompanhanteNumero = null;
+  let currentPacienteId = null;
+  let currentPacienteNome = null;
+  let todosPratosAcompanhante = {};
+  let pratosPorCategoriaAcompanhante = {};
+
+  // Função para abrir modal do cardápio para um acompanhante específico
+  window.abrirModalCardapioAcompanhante = function(acompanhanteId, acompanhanteNome, acompanhanteNumero, pacienteId, pacienteNome) {
+    currentAcompanhanteId = acompanhanteId;
+    currentAcompanhanteNome = acompanhanteNome;
+    currentAcompanhanteNumero = acompanhanteNumero;
+    currentPacienteId = pacienteId;
+    currentPacienteNome = pacienteNome;
+    
+    // Atualizar informações no modal
+    document.getElementById('pacienteNomeAcompanhante').textContent = pacienteNome;
+    document.getElementById('acompanhanteNome').textContent = acompanhanteNome;
+    document.getElementById('acompanhanteNumero').textContent = acompanhanteNumero;
+    
+    // Limpar container e mostrar skeleton
+    const container = document.getElementById("cardapio-container-modal-acompanhante");
+    container.innerHTML = `
+        <div class="skeleton-section-modal">
+            <div class="section-title-modal skeleton-modal" style="width: 40%"></div>
+            <div class="menu-items-modal">
+                <div class="menu-item-modal">
+                    <div class="skeleton-modal skeleton-image-modal"></div>
+                    <div style="padding: 12px">
+                        <div class="skeleton-modal" style="width: 70%"></div>
+                        <div class="skeleton-modal" style="width: 90%"></div>
+                        <div class="skeleton-modal" style="width: 40%"></div>
+                    </div>
+                </div>
+                <div class="menu-item-modal">
+                    <div class="skeleton-modal skeleton-image-modal"></div>
+                    <div style="padding: 12px">
+                        <div class="skeleton-modal" style="width: 70%"></div>
+                        <div class="skeleton-modal" style="width: 90%"></div>
+                        <div class="skeleton-modal" style="width: 40%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Resetar navegação de categorias
+    document.querySelectorAll(".category-button-modal").forEach(btn => btn.classList.remove("active"));
+    document.querySelector('.category-button-modal[data-category="todos"]').classList.add("active");
+    
+    // Abrir modal
+    const modalEl = document.getElementById("modalCardapioAcompanhante");
+    const modalInstance = new bootstrap.Modal(modalEl);
+    modalInstance.show();
+    
+    // Carregar cardápio para o acompanhante (usa o ID do acompanhante, mas as regras do paciente)
+    carregarCardapioAcompanhante(acompanhanteId);
+  };
+
+  // Função para carregar cardápio específico do acompanhante
+  function carregarCardapioAcompanhante(acompanhanteId) {
+    fetch(`{{=URL("usuario", "api_listar_pratos_para_usuario")}}?solicitante_id=${acompanhanteId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                // Remover skeleton
+                const skeletonSection = document.querySelector(".skeleton-section-modal");
+                if (skeletonSection) {
+                    skeletonSection.remove();
+                }
+
+                // Organizar pratos
+                pratosPorCategoriaAcompanhante = data.pratos;
+                todosPratosAcompanhante = {};
+
+                // Criar índice de todos os pratos por ID
+                for (const categoria in pratosPorCategoriaAcompanhante) {
+                    const pratos = pratosPorCategoriaAcompanhante[categoria];
+                    pratos.forEach(prato => {
+                        todosPratosAcompanhante[prato.id] = {
+                            ...prato,
+                            categoria: categoria,
+                        };
+                    });
+                }
+
+                // Renderizar cardápio
+                renderizarCardapioAcompanhante(pratosPorCategoriaAcompanhante);
+                
+                // Mostrar seção "todos"
+                const todosSection = document.querySelector('.menu-section-modal[data-category="todos"]');
+                if (todosSection) {
+                    todosSection.classList.add("active");
+                }
+            } else {
+                showErrorPopup("Erro ao carregar o cardápio: " + data.message);
+            }
+        })
+        .catch(error => {
+            console.error("Erro ao carregar cardápio:", error);
+            showErrorPopup("Erro ao carregar o cardápio.");
+        });
+  }
+
+  // Mapeamento de tipos para categorias
+  const mapaTipoParaCategoria = {
+    "Café da Manhã": "cafe-da-manha",
+    Almoço: "Almoco",
+    Jantar: "Jantar",
+    lanche: "Lanche",
+    Ceia: "Ceia",
+    "A la carte": "A la carte",
+    Livre: "Livre",
+    Bebidas: "Bebidas",
+  };
+
+  function renderizarCardapioAcompanhante(pratosPorCategoria) {
+    const container = document.getElementById("cardapio-container-modal-acompanhante");
+    
+    // Criar seção "Todos"
+    const sectionTodos = document.createElement("div");
+    sectionTodos.className = "menu-section-modal";
+    sectionTodos.dataset.category = "todos";
+    container.appendChild(sectionTodos);
+
+    // Para cada tipo de prato
+    for (let tipo in pratosPorCategoria) {
+        const categoriaNome = tipo;
+        const categoriaSlug = mapaTipoParaCategoria[tipo] || tipo.toLowerCase().replace(/\s+/g, "-");
+        const pratos = pratosPorCategoria[tipo];
+
+        // Criar seção específica
+        let sectionCategoria = document.createElement("div");
+        sectionCategoria.className = "menu-section-modal";
+        sectionCategoria.dataset.category = categoriaSlug;
+
+        let tituloCategoria = document.createElement("h3");
+        tituloCategoria.className = "section-title-modal";
+        tituloCategoria.textContent = categoriaNome;
+        sectionCategoria.appendChild(tituloCategoria);
+
+        let itemsContainer = document.createElement("div");
+        itemsContainer.className = "menu-items-modal";
+        sectionCategoria.appendChild(itemsContainer);
+
+        container.appendChild(sectionCategoria);
+
+        // Adicionar à seção "Todos"
+        const todosItemsContainer = document.createElement("div");
+        todosItemsContainer.className = "menu-section-group-modal";
+
+        let todosTitulo = document.createElement("h3");
+        todosTitulo.className = "section-title-modal";
+        todosTitulo.textContent = categoriaNome;
+        todosItemsContainer.appendChild(todosTitulo);
+
+        let todosItems = document.createElement("div");
+        todosItems.className = "menu-items-modal";
+        todosItemsContainer.appendChild(todosItems);
+
+        sectionTodos.appendChild(todosItemsContainer);
+
+        // Renderizar pratos
+        pratos.forEach(prato => {
+            const itemCard = criarItemCardAcompanhante(prato);
+            itemsContainer.appendChild(itemCard.cloneNode(true));
+            todosItems.appendChild(itemCard);
+        });
     }
-  });
+
+    // Event listeners para os cards
+    document.querySelectorAll(".menu-item-modal").forEach(card => {
+        card.addEventListener("click", function () {
+            const pratoId = parseInt(this.dataset.id);
+            const prato = todosPratosAcompanhante[pratoId];
+            
+            if (!prato) {
+                showErrorPopup("Erro ao abrir detalhes do prato");
+                return;
+            }
+            
+            abrirModalDetalhesAcompanhante(prato);
+        });
+    });
+
+    // Event listeners para navegação de categorias
+    document.querySelectorAll(".category-button-modal").forEach(button => {
+        button.addEventListener("click", function () {
+            // Remover active de todos
+            document.querySelectorAll(".category-button-modal").forEach(btn => btn.classList.remove("active"));
+            this.classList.add("active");
+
+            // Esconder todas as seções
+            document.querySelectorAll(".menu-section-modal").forEach(section => section.classList.remove("active"));
+
+            // Mostrar seção selecionada
+            const category = this.dataset.category;
+            const targetSection = document.querySelector(`.menu-section-modal[data-category="${category}"]`);
+            if (targetSection) {
+                targetSection.classList.add("active");
+            }
+        });
+    });
+  }
+
+  function criarItemCardAcompanhante(prato) {
+    const card = document.createElement("div");
+    card.className = "menu-item-modal";
+    card.dataset.id = prato.id;
+
+    const img = document.createElement("img");
+    img.className = "item-image-modal";
+    img.src = prato.foto_do_prato 
+        ? `data:image/png;base64,${prato.foto_do_prato}`
+        : '{{=URL("static", "images/no-image.png")}}';
+    img.alt = prato.nome;
+    
+    img.onerror = function () {
+        this.src = '{{=URL("static", "images/no-image.png")}}';
+    };
+
+    card.appendChild(img);
+
+    const content = document.createElement("div");
+    content.className = "item-content-modal";
+
+    const title = document.createElement("h5");
+    title.className = "item-title-modal";
+    title.textContent = prato.nome;
+    content.appendChild(title);
+
+    if (prato.descricao) {
+        const desc = document.createElement("p");
+        desc.className = "item-description-modal";
+        desc.textContent = prato.descricao;
+        content.appendChild(desc);
+    }
+
+    const price = document.createElement("div");
+    price.className = prato.gratuidade || prato.preco === 0 
+        ? "item-price-modal price-free-modal"
+        : "item-price-modal";
+    price.textContent = prato.gratuidade || prato.preco === 0
+        ? "Gratuito"
+        : `R$ ${prato.preco.toFixed(2)}`;
+    content.appendChild(price);
+
+    card.appendChild(content);
+    return card;
+  }
+
+  function abrirModalDetalhesAcompanhante(prato) {
+    const modal = document.getElementById("modalDetalhesPratoAcompanhante");
+    const modalNome = document.getElementById("modalPratoNomeAcompanhante");
+    const modalDescricao = document.getElementById("modalPratoDescricaoAcompanhante");
+    const modalIngredientes = document.getElementById("modalPratoIngredientesAcompanhante");
+    const modalImagem = document.getElementById("modalPratoImagemAcompanhante");
+    const modalPreco = document.getElementById("modalPratoPrecoAcompanhante");
+    const quantidadeEl = document.getElementById("quantidadeAcompanhante");
+    const descricaoTextarea = document.getElementById("descricaoAcompanhante");
+
+    // Preencher dados do modal
+    modalNome.textContent = prato.nome;
+    modalDescricao.textContent = prato.descricao;
+    modalImagem.src = prato.foto_do_prato 
+        ? `data:image/png;base64,${prato.foto_do_prato}`
+        : '{{=URL("static", "images/no-image.png")}}';
+
+    modalImagem.onerror = function () {
+        this.src = '{{=URL("static", "images/no-image.png")}}';
+    };
+
+    // Preço
+    modalPreco.textContent = prato.gratuidade || prato.preco === 0
+        ? "Gratuito"
+        : `R$ ${prato.preco.toFixed(2)}`;
+
+    modalPreco.classList.remove("price-free-modal");
+    if (prato.gratuidade || prato.preco === 0) {
+        modalPreco.classList.add("price-free-modal");
+    }
+
+    // Ingredientes
+    modalIngredientes.innerHTML = "";
+    if (prato.ingredientes && Array.isArray(prato.ingredientes)) {
+        prato.ingredientes.forEach(ing => {
+            const li = document.createElement("li");
+            li.textContent = `• ${ing.nome} - ${ing.gramatura}g`;
+            li.style.marginBottom = "5px";
+            modalIngredientes.appendChild(li);
+        });
+    }
+
+    // Reset quantidade
+    quantidadeEl.textContent = "1";
+
+    // Configurar descrição automática
+    const colaboradorNome = "{{=auth.user.first_name}}";
+    const colaboradorSetor = "{{=db.setor[auth.user.setor_id].name if auth.user.setor_id else 'Sem setor'}}";
+    descricaoTextarea.value = `Pedido pelo colaborador ${colaboradorNome} (${colaboradorSetor}) para o acompanhante nº ${currentAcompanhanteNumero} do paciente ${currentPacienteNome}`;
+
+    // Configurar botões de quantidade - colaboradores podem alterar quantidade
+    const btnDiminuir = document.getElementById("btnDiminuirAcompanhante");
+    const btnAumentar = document.getElementById("btnAumentarAcompanhante");
+
+    btnDiminuir.disabled = false;
+    btnAumentar.disabled = false;
+
+    btnDiminuir.onclick = function () {
+        let qtd = parseInt(quantidadeEl.textContent);
+        if (qtd > 1) {
+            quantidadeEl.textContent = qtd - 1;
+            atualizarPrecoTotalAcompanhante(prato);
+        }
+    };
+
+    btnAumentar.onclick = function () {
+        let qtd = parseInt(quantidadeEl.textContent);
+        quantidadeEl.textContent = qtd + 1;
+        atualizarPrecoTotalAcompanhante(prato);
+    };
+
+    function atualizarPrecoTotalAcompanhante(prato) {
+        if (!prato.gratuidade && prato.preco !== 0) {
+            const qtd = parseInt(quantidadeEl.textContent);
+            const total = prato.preco * qtd;
+            modalPreco.textContent = `R$ ${total.toFixed(2)}`;
+        }
+    }
+
+    // Configurar botão de confirmação
+    const confirmarBtn = document.getElementById("confirmarSolicitacaoAcompanhante");
+    confirmarBtn.onclick = function () {
+        confirmarSolicitacaoAcompanhante(prato.id);
+    };
+
+    // Abrir modal de detalhes
+    const modalEl = document.getElementById("modalDetalhesPratoAcompanhante");
+    const modalInstance = new bootstrap.Modal(modalEl);
+    modalInstance.show();
+  }
+
+  function confirmarSolicitacaoAcompanhante(prato_id) {
+    const quantidade = document.getElementById("quantidadeAcompanhante").textContent;
+    const descricao = document.getElementById("descricaoAcompanhante").value;
+    const confirmarButton = document.getElementById("confirmarSolicitacaoAcompanhante");
+
+    confirmarButton.disabled = true;
+    confirmarButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
+
+    // O pedido é feito em nome do PACIENTE, não do acompanhante
+    fetch('{{=URL("usuario", "api_registrar_solicitacao_refeicao")}}', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            solicitante_id: currentPacienteId, // ID do PACIENTE, não do acompanhante
+            pratoid: prato_id,
+            quantidade: quantidade,
+            descricao: descricao,
+            status: "Pendente",
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            // Fechar ambos os modais
+            const modalDetalhes = document.getElementById("modalDetalhesPratoAcompanhante");
+            const modalCardapio = document.getElementById("modalCardapioAcompanhante");
+            
+            const modalDetalhesInstance = bootstrap.Modal.getInstance(modalDetalhes);
+            const modalCardapioInstance = bootstrap.Modal.getInstance(modalCardapio);
+            
+            if (modalDetalhesInstance) modalDetalhesInstance.hide();
+            if (modalCardapioInstance) modalCardapioInstance.hide();
+
+            showSuccessPopup(`Refeição solicitada com sucesso para o acompanhante nº ${currentAcompanhanteNumero} do paciente ${currentPacienteNome}!`);
+        } else {
+            showErrorPopup("Erro ao registrar solicitação: " + data.message);
+        }
+    })
+    .catch(error => {
+        console.error("Erro ao registrar solicitação:", error);
+        showErrorPopup("Erro ao registrar solicitação.");
+    })
+    .finally(() => {
+        confirmarButton.disabled = false;
+        confirmarButton.textContent = "Confirmar Solicitação";
+    });
+  }
+
+  // Funções de notificação
+  function showSuccessPopup(message) {
+    const popup = document.createElement("div");
+    popup.className = "custom-popup success";
+    popup.innerHTML = `
+        <div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="green" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <p class="mb-0">${message}</p>
+        <span class="close-popup">&times;</span>
+    `;
+
+    document.body.appendChild(popup);
+
+    popup.querySelector(".close-popup").addEventListener("click", () => {
+        popup.remove();
+    });
+
+    setTimeout(() => {
+        popup.classList.add("fade-out");
+        setTimeout(() => popup.remove(), 300);
+    }, 4000);
+  }
+
+  function showErrorPopup(message) {
+    const popup = document.createElement("div");
+    popup.className = "custom-popup error";
+    popup.innerHTML = `
+        <div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+        </div>
+        <p class="mb-0">${message}</p>
+        <span class="close-popup">&times;</span>
+    `;
+
+    document.body.appendChild(popup);
+
+    popup.querySelector(".close-popup").addEventListener("click", () => {
+        popup.remove();
+    });
+
+    setTimeout(() => {
+        popup.classList.add("fade-out");
+        setTimeout(() => popup.remove(), 300);
+    }, 4000);
+  }
 </script>

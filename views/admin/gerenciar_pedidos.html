@@ -85,6 +85,16 @@
     font-weight: bold;
     color: #1976d2;
   }
+
+  .date-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 5px;
+    font-size: 0.85em;
+    color: #856404;
+  }
 </style>
 
 <h2>🔧 Administração de Pedidos</h2>
@@ -127,12 +137,26 @@
   <div class="form-row">
     <div class="form-group col-md-3">
       <label for="filtro-data-inicio">Data Inicial:</label>
-      <input type="date" class="form-control" id="filtro-data-inicio" />
+      <input
+        type="date"
+        class="form-control"
+        id="filtro-data-inicio"
+      />
+      <div class="date-warning" id="warning-data-inicio" style="display: none;">
+        ⚠️ Período máximo: 15 dias
+      </div>
     </div>
 
     <div class="form-group col-md-3">
       <label for="filtro-data-fim">Data Final:</label>
-      <input type="date" class="form-control" id="filtro-data-fim" />
+      <input
+        type="date"
+        class="form-control"
+        id="filtro-data-fim"
+      />
+      <div class="date-warning" id="warning-data-fim" style="display: none;">
+        ⚠️ Não é possível selecionar datas futuras
+      </div>
     </div>
 
     <div class="form-group col-md-6 d-flex align-items-end">
@@ -211,9 +235,25 @@
 
 <script>
   $(document).ready(function () {
+    
     // Função para formatar data para YYYY-MM-DD
     function formatarDataParaInput(data) {
-      return data.toISOString().split("T")[0];
+      return data.toISOString().split('T')[0];
+    }
+
+    // Função para ajustar limites das datas
+    function ajustarLimitesDatas() {
+      const hoje = new Date();
+      const maxDataPassado = new Date();
+      maxDataPassado.setDate(hoje.getDate() - 365); // Limite de 1 ano no passado
+      
+      // Definir data máxima como hoje
+      const hojeFormatado = formatarDataParaInput(hoje);
+      $("#filtro-data-inicio, #filtro-data-fim").attr('max', hojeFormatado);
+      
+      // Definir data mínima (opcional - 1 ano atrás)
+      const minDataFormatada = formatarDataParaInput(maxDataPassado);
+      $("#filtro-data-inicio, #filtro-data-fim").attr('min', minDataFormatada);
     }
 
     // Função para definir datas padrão (ontem até hoje)
@@ -221,9 +261,112 @@
       const hoje = new Date();
       const ontem = new Date();
       ontem.setDate(hoje.getDate() - 1);
-
+      
       $("#filtro-data-inicio").val(formatarDataParaInput(ontem));
       $("#filtro-data-fim").val(formatarDataParaInput(hoje));
+      
+      // Reajustar limites após definir valores padrão
+      ajustarLimitesDatas();
+    }
+
+    // Função para validar período selecionado
+    function validarPeriodo() {
+      const dataInicio = $("#filtro-data-inicio").val();
+      const dataFim = $("#filtro-data-fim").val();
+      
+      if (!dataInicio || !dataFim) {
+        esconderWarnings();
+        return true; // Se alguma data estiver vazia, não validar
+      }
+      
+      const inicio = new Date(dataInicio);
+      const fim = new Date(dataFim);
+      const hoje = new Date();
+      
+      // Resetar warnings
+      esconderWarnings();
+      
+      // Validar se as datas não são futuras
+      if (inicio > hoje || fim > hoje) {
+        mostrarWarning("warning-data-fim", "⚠️ Não é possível selecionar datas futuras!");
+        return false;
+      }
+      
+      // Validar se data início não é maior que data fim
+      if (inicio > fim) {
+        mostrarWarning("warning-data-inicio", "⚠️ Data inicial não pode ser maior que a final!");
+        return false;
+      }
+      
+      // Calcular diferença em dias
+      const diferencaMs = fim.getTime() - inicio.getTime();
+      const diferencaDias = Math.ceil(diferencaMs / (1000 * 60 * 60 * 24));
+      
+      if (diferencaDias > 15) {
+        mostrarWarning("warning-data-inicio", "⚠️ Período máximo permitido: 15 dias!");
+        return false;
+      }
+      
+      return true;
+    }
+
+    // Função para mostrar warnings
+    function mostrarWarning(elementId, mensagem) {
+      const elemento = $("#" + elementId);
+      elemento.text(mensagem).show();
+      setTimeout(() => elemento.fadeOut(3000), 2000);
+    }
+
+    // Função para esconder todos os warnings
+    function esconderWarnings() {
+      $("#warning-data-inicio, #warning-data-fim").hide();
+    }
+
+    // Função para ajustar data fim quando data início muda
+    function ajustarDataFim() {
+      const dataInicio = $("#filtro-data-inicio").val();
+      if (!dataInicio) return;
+      
+      const inicio = new Date(dataInicio);
+      const maxDataFim = new Date(inicio);
+      maxDataFim.setDate(inicio.getDate() + 15); // Máximo 15 dias após o início
+      
+      const hoje = new Date();
+      const dataLimite = maxDataFim > hoje ? hoje : maxDataFim;
+      
+      $("#filtro-data-fim").attr('min', dataInicio);
+      $("#filtro-data-fim").attr('max', formatarDataParaInput(dataLimite));
+      
+      // Se a data fim atual for inválida, ajustar
+      const dataFimAtual = $("#filtro-data-fim").val();
+      if (dataFimAtual) {
+        const fimAtual = new Date(dataFimAtual);
+        if (fimAtual < inicio || fimAtual > dataLimite) {
+          $("#filtro-data-fim").val(formatarDataParaInput(dataLimite));
+        }
+      }
+    }
+
+    // Função para ajustar data início quando data fim muda
+    function ajustarDataInicio() {
+      const dataFim = $("#filtro-data-fim").val();
+      if (!dataFim) return;
+      
+      const fim = new Date(dataFim);
+      const minDataInicio = new Date(fim);
+      minDataInicio.setDate(fim.getDate() - 15); // Mínimo 15 dias antes do fim
+      
+      $("#filtro-data-inicio").attr('max', dataFim);
+      $("#filtro-data-inicio").attr('min', formatarDataParaInput(minDataInicio));
+      
+      // Se a data início atual for inválida, ajustar
+      const dataInicioAtual = $("#filtro-data-inicio").val();
+      if (dataInicioAtual) {
+        const inicioAtual = new Date(dataInicioAtual);
+        if (inicioAtual > fim || inicioAtual < minDataInicio) {
+          $("#filtro-data-inicio").val(formatarDataParaInput(minDataInicio));
+        }
+      }
     }
 
     // Função para formatar preço em Real
@@ -252,7 +395,7 @@
         tipo_usuario: $("#filtro-tipo-usuario").val(),
         setor: $("#filtro-setor").val(),
         data_inicio: $("#filtro-data-inicio").val(),
-        data_fim: $("#filtro-data-fim").val(),
+        data_fim: $("#filtro-data-fim").val()
       };
 
       $("#loading").show();
@@ -345,6 +488,16 @@
       });
     }
 
+    // Função modificada para carregar pedidos com validação
+    function carregarPedidosComValidacao() {
+      if (validarPeriodo()) {
+        carregarPedidos();
+      } else {
+        // Se validação falhou, manter os filtros atuais mas não carregar
+        console.log("Validação de período falhou - aguardando correção");
+      }
+    }
+
     // Função para associar eventos aos botões
     function associarEventos() {
       // Cancelar pedido
@@ -401,7 +554,8 @@
       $("#filtro-nome").val("");
       $("#filtro-tipo-usuario").val("");
       $("#filtro-setor").val("");
-      definirDatasPadrao(); // Volta para ontem-hoje
+      esconderWarnings();
+      definirDatasPadrao();
       carregarPedidos();
     });
 
@@ -410,13 +564,46 @@
       const hoje = new Date();
       $("#filtro-data-inicio").val(formatarDataParaInput(hoje));
       $("#filtro-data-fim").val(formatarDataParaInput(hoje));
+      esconderWarnings();
+      ajustarLimitesDatas();
       carregarPedidos();
     });
 
     // Botão "Ontem-Hoje"
     $("#ontem-hoje-filtro").on("click", function () {
+      esconderWarnings();
       definirDatasPadrao();
       carregarPedidos();
+    });
+
+    // События для дат с валидацией
+    $("#filtro-data-inicio").on("change", function() {
+      ajustarDataFim();
+      carregarPedidosComValidacao();
+    });
+
+    $("#filtro-data-fim").on("change", function() {
+      ajustarDataInicio();
+      carregarPedidosComValidacao();
+    });
+
+    // Evento para impedir digitação de datas inválidas
+    $("#filtro-data-inicio, #filtro-data-fim").on("blur", function() {
+      const valor = $(this).val();
+      if (valor) {
+        const data = new Date(valor);
+        const hoje = new Date();
+        
+        if (data > hoje) {
+          mostrarWarning("warning-data-fim", "⚠️ Data não pode ser futura!");
+          $(this).val(formatarDataParaInput(hoje));
+          if ($(this).attr('id') === 'filtro-data-inicio') {
+            ajustarDataFim();
+          } else {
+            ajustarDataInicio();
+          }
+        }
+      }
     });
 
     // Filtro automático ao digitar (com delay)
@@ -426,13 +613,13 @@
       timeoutId = setTimeout(carregarPedidos, 500);
     });
 
-    // Filtro automático ao mudar select ou datas
-    $(
-      "#filtro-tipo-usuario, #filtro-setor, #filtro-data-inicio, #filtro-data-fim"
-    ).on("change", carregarPedidos);
+    // Filtro automático ao mudar select
+    $("#filtro-tipo-usuario, #filtro-setor").on("change", carregarPedidos);
 
-    // Definir datas padrão e carregar pedidos inicial
+    // Inicialização
     definirDatasPadrao();
+    ajustarLimitesDatas();
     carregarPedidos();
+
   });
 </script>

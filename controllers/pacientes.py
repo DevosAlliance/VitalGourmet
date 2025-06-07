@@ -247,8 +247,27 @@ def vincular_acompanhante():
     # Excluir acompanhante
     if 'delete_acompanhante_id' in request.vars:
         acompanhante_id = request.vars.delete_acompanhante_id
+        
+        # Log da exclusão antes de excluir
+        acompanhante_info = db.auth_user(acompanhante_id)
+        if acompanhante_info:
+            db.log_sistema.insert(
+                user_id=auth.user.id,
+                entidade='acompanhante_vinculo',
+                acao='exclusao',
+                registro_id=acompanhante_id,
+                observacao=json.dumps({
+                    'acao': 'exclusao_acompanhante',
+                    'paciente_id': paciente_id,
+                    'acompanhante_nome': acompanhante_info.first_name,
+                    'acompanhante_cpf': acompanhante_info.cpf
+                })
+            )
+        
+        # Excluir vinculo e usuário
         db(db.acompanhante_vinculo.acompanhante_id == acompanhante_id).delete()
         db(db.auth_user.id == acompanhante_id).delete()
+        
         session.flash = f'Acompanhante excluído com sucesso!'
         redirect(URL('vincular_acompanhante', args=[paciente_id]))
 
@@ -280,14 +299,19 @@ def vincular_acompanhante():
 
             # Inserir novo acompanhante
             try:
+                # Buscar o setor "Acompanhante" - se não existir, usar um padrão
+                setor_acompanhante = db(db.setor.name == 'Acompanhante').select().first()
+                setor_id = setor_acompanhante.id if setor_acompanhante else 23  # fallback para ID 23
+
                 acompanhante_id = db.auth_user.insert(
                     first_name=nome.strip(),
                     cpf=cpf_limpo,
                     birth_date=data_nascimento,
                     user_type=db(db.user_type.name == 'Acompanhante').select().first().id,
-                    setor_id=23,
+                    setor_id=setor_id,
                     password=db.auth_user.password.validate(senha_inicial)[0],
-                    email=f"{cpf_limpo}@temp.com"
+                    email=f"{cpf_limpo}@temp.com",
+                    status='Ativo'  # Garantir que o acompanhante está ativo
                 )
 
                 # Vincular acompanhante ao paciente
@@ -298,6 +322,20 @@ def vincular_acompanhante():
 
                 # Adicionar o acompanhante ao grupo correto
                 auth.add_membership('Acompanhante', acompanhante_id)
+
+                # Log do cadastro
+                db.log_sistema.insert(
+                    user_id=auth.user.id,
+                    entidade='acompanhante_vinculo',
+                    acao='edicao',
+                    registro_id=acompanhante_id,
+                    observacao=json.dumps({
+                        'acao': 'cadastro_acompanhante',
+                        'paciente_id': paciente_id,
+                        'acompanhante_nome': nome.strip(),
+                        'acompanhante_cpf': cpf_limpo
+                    })
+                )
 
                 sucesso = True
 
@@ -315,12 +353,73 @@ def vincular_acompanhante():
         # Redirecionar após o processamento
         redirect(URL('vincular_acompanhante', args=[paciente_id]))
 
-    # Listar vínculos existentes
+    # Listar vínculos existentes com ordenação
     vinculos = db(db.acompanhante_vinculo.paciente_id == paciente_id).select(
-        join=db.auth_user.on(db.acompanhante_vinculo.acompanhante_id == db.auth_user.id)
+        join=db.auth_user.on(db.acompanhante_vinculo.acompanhante_id == db.auth_user.id),
+        orderby=db.acompanhante_vinculo.id  # Ordena pela ordem de criação do vínculo
     )
 
     return dict(paciente=paciente, vinculos=vinculos)
+
+def api_info_acompanhante():
+    """
+    Retorna informações de um acompanhante e seu paciente vinculado
+    """
+    try:
+        acompanhante_id = request.vars.get('id') or request.args(0)
+        
+        if not acompanhante_id:
+            raise ValueError("ID do acompanhante não fornecido.")
+            
+        # Buscar acompanhante e seu vínculo
+        vinculo = db((db.acompanhante_vinculo.acompanhante_id == acompanhante_id) &
+                    (db.auth_user.id == db.acompanhante_vinculo.acompanhante_id)).select(
+            db.auth_user.ALL,
+            db.acompanhante_vinculo.ALL,
+            join=db.auth_user.on(db.acompanhante_vinculo.acompanhante_id == db.auth_user.id)
+        ).first()
+        
+        if not vinculo:
+            raise ValueError("Acompanhante não encontrado ou não está vinculado a nenhum paciente.")
+            
+        # Buscar dados do paciente
+        paciente = db.auth_user(vinculo.acompanhante_vinculo.paciente_id)
+        if not paciente:
+            raise ValueError("Paciente vinculado não encontrado.")
+            
+        # Calcular posição do acompanhante (número sequencial)
+        vinculos_paciente = db(db.acompanhante_vinculo.paciente_id == paciente.id).select(
+            orderby=db.acompanhante_vinculo.id
+        )
+        
+        numero_acompanhante = None
+        for i, v in enumerate(vinculos_paciente, 1):
+            if v.acompanhante_id == int(acompanhante_id):
+                numero_acompanhante = i
+                break
+        
+        return response.json({
+            'status': 'success',
+            'acompanhante': {
+                'id': vinculo.auth_user.id,
+                'nome': vinculo.auth_user.first_name,
+                'cpf': vinculo.auth_user.cpf,
+                'birth_date': vinculo.auth_user.birth_date.isoformat() if vinculo.auth_user.birth_date else None,
+                'numero': numero_acompanhante
+            },
+            'paciente': {
+                'id': paciente.id,
+                'nome': paciente.first_name,
+                'cpf': paciente.cpf,
+                'tipo': db.user_type[paciente.user_type].name if paciente.user_type else None
+            }
+        })
+        
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
 
 
 
@@ -422,6 +521,7 @@ def excluir_paciente():
 
 
 def registrar_log(entidade, registro_id, acao, estado_anterior=None):
+
     """Registra uma ação no log geral do sistema.
 
     Args:
@@ -439,3 +539,333 @@ def registrar_log(entidade, registro_id, acao, estado_anterior=None):
         timestamp=request.now
     )
     db.commit()
+
+
+
+    # 2. Função para verificar se o colaborador pode solicitar refeição para pacientes
+
+def pode_solicitar_para_paciente():
+    """
+    Verifica se o usuário logado tem permissão para solicitar refeições para pacientes
+    """
+    if not auth.user:
+        return False
+    
+    # Tipos de usuário que podem solicitar refeições para pacientes
+    tipos_permitidos = ['Gestor', 'Recepção', 'Colaborador', 'Administrador', 'Enfermagem', 'Medico']
+    
+    # Verifica se o usuário tem um dos tipos permitidos
+    user_type_name = db.user_type[auth.user.user_type].name if auth.user.user_type else None
+    
+    return user_type_name in tipos_permitidos
+
+def api_verificar_permissao_solicitar():
+    """
+    API para verificar se o colaborador atual pode solicitar refeições para pacientes
+    """
+    try:
+        pode_solicitar = pode_solicitar_para_paciente()
+        user_info = {
+            'nome': auth.user.first_name if auth.user else '',
+            'setor': db.setor[auth.user.setor_id].name if auth.user and auth.user.setor_id else 'Sem setor'
+        }
+        
+        return response.json({
+            'status': 'success',
+            'pode_solicitar': pode_solicitar,
+            'colaborador': user_info
+        })
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+
+def api_registrar_solicitacao_refeicao():
+    if request.env.request_method != 'POST':
+        return response.json({'status': 'error', 'message': 'Método inválido. Use POST.'})
+    
+    try:
+        # Verificar se é uma solicitação via JSON (do frontend) ou form data
+        if request.body:
+            dados = json.loads(request.body.read().decode('utf-8'))
+            solicitante_id = dados.get('solicitante_id')
+            prato_id = int(dados.get('pratoid'))
+            quantidade_solicitada = int(dados.get('quantidade'))
+            descricao = dados.get('descricao', None)
+            status = dados.get('status', 'Pendente')
+            # Novo campo para identificar se é para acompanhante
+            is_para_acompanhante = dados.get('is_para_acompanhante', False)
+            acompanhante_id = dados.get('acompanhante_id', None)
+        else:
+            # Fallback para form data
+            solicitante_id = request.post_vars.get('solicitante_id')
+            prato_id = int(request.post_vars.get('pratoid'))
+            quantidade_solicitada = int(request.post_vars.get('quantidade'))
+            descricao = request.post_vars.get('descricao', None)
+            status = request.post_vars.get('status', 'Pendente')
+            is_para_acompanhante = request.post_vars.get('is_para_acompanhante', False)
+            acompanhante_id = request.post_vars.get('acompanhante_id', None)
+
+        # Se não foi fornecido solicitante_id, usar o usuário logado
+        if not solicitante_id:
+            solicitante_id = auth.user.id if auth.user else None
+            
+        if not solicitante_id:
+            raise ValueError("Usuário não identificado.")
+
+        # Verificar se o usuário logado pode fazer solicitações para outros usuários
+        is_solicitacao_para_outro = str(solicitante_id) != str(auth.user.id if auth.user else '')
+        
+        if is_solicitacao_para_outro and not pode_solicitar_para_paciente():
+            raise ValueError("Você não tem permissão para solicitar refeições para outros usuários.")
+
+        # Se for para acompanhante, verificar se o acompanhante existe e está vinculado ao paciente
+        if is_para_acompanhante and acompanhante_id:
+            vinculo_acompanhante = db(
+                (db.acompanhante_vinculo.acompanhante_id == acompanhante_id) &
+                (db.acompanhante_vinculo.paciente_id == solicitante_id)
+            ).select().first()
+            
+            if not vinculo_acompanhante:
+                raise ValueError("Acompanhante não está vinculado ao paciente especificado.")
+
+        hoje = datetime.now()
+
+        # Verifica se o prato existe
+        prato = db(db.cardapio.id == prato_id).select(
+            db.cardapio.ALL,
+            db.horario_refeicoes.pedido_fim,
+            left=[
+                db.horario_refeicoes.on(db.cardapio.tipo == db.horario_refeicoes.refeicao)
+            ]
+        ).first()
+
+        if not prato:
+            raise ValueError("O prato especificado não existe.")
+
+        # Se for para acompanhante, usar o ID do acompanhante para validação, 
+        # mas o pedido será registrado no nome do paciente
+        validador_id = acompanhante_id if is_para_acompanhante and acompanhante_id else solicitante_id
+        
+        # Inicializa classes de validação e gratuidade
+        validador = ValidadorUsuario(validador_id, db)
+        gerenciador = GerenciadorGratuidade(validador, db)
+
+        # Verifica se o usuário pode solicitar o prato
+        if not validador.pode_solicitar_prato(prato.cardapio):
+            usuario_nome = "o acompanhante" if is_para_acompanhante else "o usuário"
+            raise ValueError(f"{usuario_nome} não tem permissão para solicitar este prato.")
+
+        # Calcula preço/verifica gratuidade
+        resultado_gratuidade = gerenciador.calcular_gratuidade(prato.cardapio, quantidade_solicitada)
+
+        # Se não foi fornecida descrição e é uma solicitação para outro usuário, criar descrição automática
+        if not descricao and is_solicitacao_para_outro:
+            colaborador_nome = auth.user.first_name if auth.user else 'Colaborador'
+            colaborador_setor = db.setor[auth.user.setor_id].name if auth.user and auth.user.setor_id else 'Sem setor'
+            
+            if is_para_acompanhante and acompanhante_id:
+                # Buscar informações do acompanhante
+                acompanhante_info = db.auth_user(acompanhante_id)
+                paciente_info = db.auth_user(solicitante_id)
+                
+                # Calcular número do acompanhante
+                vinculos_paciente = db(db.acompanhante_vinculo.paciente_id == solicitante_id).select(
+                    orderby=db.acompanhante_vinculo.id
+                )
+                numero_acompanhante = None
+                for i, v in enumerate(vinculos_paciente, 1):
+                    if v.acompanhante_id == int(acompanhante_id):
+                        numero_acompanhante = i
+                        break
+                
+                if acompanhante_info and paciente_info and numero_acompanhante:
+                    descricao = f"Pedido pelo colaborador {colaborador_nome} ({colaborador_setor}) para o acompanhante nº {numero_acompanhante} do paciente {paciente_info.first_name}"
+                else:
+                    descricao = f"Pedido pelo colaborador {colaborador_nome} ({colaborador_setor}) para acompanhante do paciente"
+            else:
+                paciente_nome = db.auth_user[solicitante_id].first_name if db.auth_user[solicitante_id] else 'Paciente'
+                descricao = f"Pedido pelo colaborador {colaborador_nome} ({colaborador_setor}) para o paciente {paciente_nome}"
+        elif not descricao:
+            descricao = validador.obter_nome_observacao_pedido()
+
+        # O pedido sempre fica no nome do paciente (solicitante_id), mesmo quando é para acompanhante
+        dict_solicitacao = {
+            'solicitante_id': validador.solicitante_real_id,  # Sempre será o paciente
+            'is_acompanhante': validador.is_acompanhante,
+            'prato_id': prato_id,
+            'preco': resultado_gratuidade['preco_total'],
+            'quantidade_solicitada': quantidade_solicitada,
+            'descricao': descricao,
+            'status': status
+        }
+
+        # Verificar se é café da manhã e se passou do horário
+        if prato.cardapio.tipo == 'Café da Manhã' and \
+            prato.horario_refeicoes.pedido_fim < hoje.time():
+            dict_solicitacao['data_solicitacao'] = (hoje + timedelta(days=1)).date()
+
+        # Commit
+        solicitacao_id = db.solicitacao_refeicao.insert(**dict_solicitacao)
+
+        # Atualiza o saldo (sempre do paciente)
+        _atualizar_saldo_usuario(validador.solicitante_real_id, resultado_gratuidade['preco_total'])
+
+        # Log da ação se foi feita por um colaborador
+        if is_solicitacao_para_outro:
+            log_observacao = {
+                'acao': 'solicitacao_por_colaborador_para_acompanhante' if is_para_acompanhante else 'solicitacao_por_colaborador',
+                'paciente_id': solicitante_id,
+                'prato_id': prato_id,
+                'quantidade': quantidade_solicitada,
+                'valor': float(resultado_gratuidade['preco_total'])
+            }
+            
+            if is_para_acompanhante and acompanhante_id:
+                log_observacao['acompanhante_id'] = acompanhante_id
+            
+            db.log_sistema.insert(
+                user_id=auth.user.id,
+                entidade='solicitacao_refeicao',
+                acao='edicao',
+                registro_id=solicitacao_id,
+                observacao=json.dumps(log_observacao)
+            )
+
+        db.commit()
+        
+        return response.json({
+            'status': 'success', 
+            'message': 'Solicitação de refeição registrada com sucesso!', 
+            'solicitacao_id': solicitacao_id,
+            'is_solicitacao_colaborador': is_solicitacao_para_outro,
+            'is_para_acompanhante': is_para_acompanhante
+        })
+
+    except Exception as e:
+        db.rollback()
+        return response.json({'status': 'error', 'message': str(e)})
+
+
+# 4. Função auxiliar para validar acompanhante
+def validar_acompanhante(acompanhante_id, paciente_id=None):
+    """
+    Valida se o usuário é um acompanhante válido e, opcionalmente, 
+    se está vinculado a um paciente específico
+    """
+    try:
+        acompanhante = db.auth_user(acompanhante_id)
+        if not acompanhante:
+            return False
+            
+        # Verifica se é do tipo "Acompanhante"
+        user_type_name = db.user_type[acompanhante.user_type].name if acompanhante.user_type else None
+        if user_type_name != 'Acompanhante':
+            return False
+            
+        # Se foi especificado um paciente, verifica o vínculo
+        if paciente_id:
+            vinculo = db((db.acompanhante_vinculo.acompanhante_id == acompanhante_id) &
+                        (db.acompanhante_vinculo.paciente_id == paciente_id)).select().first()
+            return bool(vinculo)
+            
+        # Se não foi especificado paciente, apenas verifica se tem algum vínculo
+        vinculo = db(db.acompanhante_vinculo.acompanhante_id == acompanhante_id).select().first()
+        return bool(vinculo)
+        
+    except:
+        return False
+
+def api_listar_acompanhantes_paciente():
+    """
+    Lista todos os acompanhantes vinculados a um paciente específico
+    """
+    try:
+        paciente_id = request.vars.get('paciente_id') or request.args(0)
+        
+        if not paciente_id:
+            raise ValueError("ID do paciente não fornecido.")
+            
+        if not validar_usuario_paciente(paciente_id):
+            raise ValueError("Usuário não é um paciente válido.")
+            
+        # Buscar acompanhantes
+        vinculos = db(db.acompanhante_vinculo.paciente_id == paciente_id).select(
+            db.auth_user.ALL,
+            db.acompanhante_vinculo.ALL,
+            join=db.auth_user.on(db.acompanhante_vinculo.acompanhante_id == db.auth_user.id),
+            orderby=db.acompanhante_vinculo.id
+        )
+        
+        acompanhantes = []
+        for i, vinculo in enumerate(vinculos, 1):
+            acompanhantes.append({
+                'id': vinculo.auth_user.id,
+                'nome': vinculo.auth_user.first_name,
+                'cpf': vinculo.auth_user.cpf,
+                'birth_date': vinculo.auth_user.birth_date.isoformat() if vinculo.auth_user.birth_date else None,
+                'numero': i  # Número sequencial do acompanhante
+            })
+        
+        return response.json({
+            'status': 'success',
+            'paciente_id': paciente_id,
+            'acompanhantes': acompanhantes,
+            'total': len(acompanhantes)
+        })
+        
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+
+def validar_usuario_paciente(usuario_id):
+    """
+    Valida se o usuário fornecido é realmente um paciente
+    """
+    try:
+        usuario = db.auth_user[usuario_id]
+        if not usuario:
+            return False
+            
+        tipos_paciente = ['Paciente', 'Paciente Convenio', 'Paciente Particular']
+        user_type_name = db.user_type[usuario.user_type].name if usuario.user_type else None
+        
+        return user_type_name in tipos_paciente and usuario.status == 'Ativo'
+    except:
+        return False
+
+def api_info_paciente():
+    """
+    Retorna informações básicas de um paciente específico
+    """
+    try:
+        paciente_id = request.vars.get('id') or request.args(0)
+        
+        if not paciente_id:
+            raise ValueError("ID do paciente não fornecido.")
+            
+        if not validar_usuario_paciente(paciente_id):
+            raise ValueError("Usuário não é um paciente válido.")
+            
+        paciente = db.auth_user[paciente_id]
+        user_type = db.user_type[paciente.user_type]
+        
+        return response.json({
+            'status': 'success',
+            'paciente': {
+                'id': paciente.id,
+                'nome': paciente.first_name,
+                'cpf': paciente.cpf,
+                'tipo': user_type.name,
+                'birth_date': paciente.birth_date.isoformat() if paciente.birth_date else None
+            }
+        })
+        
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })

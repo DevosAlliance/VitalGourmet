@@ -10,6 +10,7 @@ from gluon.contrib.pymysql.err import IntegrityError
 
 
 # models/regras_gratuidade.py
+
 class ConfiguracaoSistema:
     """Classe para gerenciar configurações do sistema que podem ser ajustadas via banco de dados"""
     
