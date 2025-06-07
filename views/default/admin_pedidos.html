@@ -1,5 +1,8 @@
 {{extend 'layout.html'}}
 
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
 <style>
   .pagination .btn {
     margin-right: 5px;
@@ -16,6 +19,7 @@
     outline: none;
     box-shadow: none;
   }
+  
   .form-inline .form-group {
     display: flex;
     flex: 0 0 auto;
@@ -43,6 +47,19 @@
     min-width: 180px;
     text-align: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .resumo-tipo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: #0056b3;
+  }
+
+  .resumo-tipo:active {
+    transform: translateY(0);
+    transition: transform 0.1s ease;
   }
 
   .resumo-tipo h6 {
@@ -56,6 +73,13 @@
     margin: 2px 0;
   }
 
+  .resumo-tipo .analytics-hint {
+    font-size: 0.8em;
+    color: #6c757d;
+    margin-top: 5px;
+    font-style: italic;
+  }
+
   .totais-gerais {
     background-color: #e3f2fd;
     border: 2px solid #2196f3;
@@ -65,10 +89,294 @@
   .totais-gerais h6 {
     color: #1976d2;
   }
+
   tr.pedido-row {
     cursor: pointer;
   }
 
+  /* Estilos para a modal de analytics */
+  .analytics-modal {
+    max-width: 98%;
+    width: 1400px;
+  }
+
+  .analytics-header {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    color: white;
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
+    margin: -1rem -1rem 1rem -1rem;
+  }
+
+  .analytics-section {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .analytics-section h5 {
+    color: #495057;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+
+  .metric-card {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #007bff;
+  }
+
+  .metric-title {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 8px;
+  }
+
+  .metric-value {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .metric-number {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #007bff;
+  }
+
+  .metric-money {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #28a745;
+  }
+
+  .progress-container {
+    margin-top: 8px;
+  }
+
+  .progress {
+    height: 8px;
+    border-radius: 4px;
+  }
+
+  /* Estilos para gráficos */
+  .charts-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .chart-wrapper {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  .chart-title {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 1.1em;
+  }
+
+  .chart-canvas {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
+
+  .full-width-chart {
+    grid-column: 1 / -1;
+  }
+
+  .skeleton-analytics {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    height: 20px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton-analytics::after {
+    content: "";
+    display: block;
+    position: absolute;
+    left: -100%;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: loading 1.5s infinite;
+  }
+
+  @keyframes loading {
+    0% { left: -100%; }
+    50% { left: 100%; }
+    100% { left: 100%; }
+  }
+
+  .no-data-message {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+  }
+
+  .analytics-summary {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+  }
+
+  .summary-item {
+    text-align: center;
+  }
+
+  .summary-value {
+    font-size: 1.5em;
+    font-weight: bold;
+    display: block;
+  }
+
+  .summary-label {
+    font-size: 0.9em;
+    opacity: 0.9;
+  }
+
+  /* Estilos específicos para impressão */
+  @media print {
+    .analytics-modal {
+      max-width: none;
+      width: 100%;
+      margin: 0;
+    }
+    
+    .analytics-header {
+      background: #007bff !important;
+      color: white !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    
+    .charts-container {
+      grid-template-columns: 1fr;
+      gap: 30px;
+      page-break-inside: avoid;
+    }
+    
+    .chart-wrapper {
+      page-break-inside: avoid;
+      margin-bottom: 30px;
+    }
+    
+    .analytics-section {
+      page-break-inside: avoid;
+      margin-bottom: 30px;
+    }
+    
+    .summary-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    
+    /* Garantir que cores sejam impressas */
+    * {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+
+  /* Responsividade */
+  @media (max-width: 1200px) {
+    .charts-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .analytics-modal {
+      max-width: 98%;
+      width: 100%;
+      margin: 10px;
+    }
+    
+    .analytics-section {
+      padding: 15px;
+    }
+    
+    .metric-value {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .analytics-header .d-flex {
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .resumo-container {
+      padding: 10px;
+    }
+
+    .resumo-tipo {
+      min-width: 150px;
+      padding: 8px 12px;
+    }
+
+    .form-inline {
+      flex-direction: column;
+    }
+
+    .form-inline .form-group {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .charts-container {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+
+    .chart-canvas {
+      height: 250px;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .resumo-tipo {
+      display: block;
+      margin: 5px 0;
+    }
+
+    .chart-canvas {
+      height: 200px;
+    }
+  }
 </style>
 
 <h2>Pedidos de Refeição</h2>
@@ -92,7 +400,7 @@
     />
   </div>
 
-  <!-- Nome do Prato (Novo) -->
+  <!-- Nome do Prato -->
   <div class="form-group mr-2">
     <label for="nome_prato">Nome do Prato</label>
     <input
@@ -172,26 +480,35 @@
   <button type="submit" class="btn btn-primary" style="position: relative; bottom: -10px;">Filtrar</button>
 </form>
 
-<!-- NOVO: Resumo por Tipo de Refeição -->
+<!-- Resumo por Tipo de Refeição -->
 <div class="resumo-container">
   <h4 style="margin-bottom: 15px; color: #495057;">📊 Resumo por Tipo de Refeição</h4>
+  <p class="text-muted">Clique em qualquer tipo de refeição para ver analytics detalhados com gráficos</p>
   
   <!-- Totais por tipo específico -->
   {{for tipo, dados in resumo_por_tipo.items():}}
-  <div class="resumo-tipo">
+  <div class="resumo-tipo" onclick="abrirAnalytics('{{=tipo}}')" data-tipo="{{=tipo}}" 
+       title="Clique para ver analytics detalhados de {{=tipo}}" data-bs-toggle="tooltip">
     <h6>{{=tipo}}</h6>
     <div class="valor">Pedidos: {{=dados['pedidos']}}</div>
-    <div class="valor">unidades: {{=dados['pratos']}}</div>
+    <div class="valor">Unidades: {{=dados['pratos']}}</div>
     <div class="valor receita" data-valor="{{=dados['receita']}}">Receita: </div>
+    <div class="analytics-hint">
+      <i class="fas fa-chart-bar"></i> Clique para gráficos
+    </div>
   </div>
   {{pass}}
 
-  <!-- Totais gerais -->
-  <div class="resumo-tipo totais-gerais">
+  <!-- Totais gerais - CLICÁVEL -->
+  <div class="resumo-tipo totais-gerais" onclick="abrirAnalytics('TOTAL_GERAL')" data-tipo="TOTAL_GERAL" 
+       title="Clique para ver analytics gerais completos com gráficos" data-bs-toggle="tooltip">
     <h6>🔢 TOTAL GERAL</h6>
     <div class="valor">Pedidos: {{=total_pedidos}}</div>
-    <div class="valor">unidades: {{=total_pratos}}</div>
+    <div class="valor">Unidades: {{=total_pratos}}</div>
     <div class="valor receita" data-valor="{{=preco_total}}">Receita: </div>
+    <div class="analytics-hint">
+      <i class="fas fa-chart-bar"></i> Clique para gráficos
+    </div>
   </div>
 </div>
 
@@ -223,7 +540,7 @@
         data-tipo-refeicao="{{=pedido.cardapio.tipo}}"
       >
         <td>{{=pedido.auth_user.first_name}}</td>
-        <td>{{=pedido.auth_user.setor_id.name if pedido.auth_user.setor_id else ''}}</td>
+        <td>{{=pedido.auth_user.setor_id.name if pedido.auth_user.setor_id else 'Sem setor'}}</td>
         <td>{{=pedido.cardapio.nome}}</td>
         <td>{{=pedido.solicitacao_refeicao.quantidade_solicitada}}</td>
         <td>{{=pedido.solicitacao_refeicao.data_solicitacao.strftime('%d/%m/%Y') if pedido.solicitacao_refeicao.data_solicitacao else ''}}</td>
@@ -240,14 +557,12 @@
     <a href="{{=URL(vars=dict(request.vars, pagina=pagina-1))}}" class="btn btn-secondary">Anterior</a>
   {{pass}}
 
-  <!-- Sempre exibe 1, 2, 3 e 4 -->
   {{for i in range(1, min(5, total_paginas + 1)):}}
     <a href="{{=URL(vars=dict(request.vars, pagina=i))}}" class="btn btn-secondary {{='active' if i == pagina else ''}}">
       {{=i}}
     </a>
   {{pass}}
 
-  <!-- Adiciona reticências se houver mais páginas -->
   {{if total_paginas > 4 and pagina < total_paginas:}}
     <span class="btn btn-secondary disabled">...</span>
     <a href="{{=URL(vars=dict(request.vars, pagina=pagina+1))}}" class="btn btn-secondary">Próxima</a>
@@ -258,31 +573,16 @@
 {{pass}}
 
 <!-- Modal para detalhes do pedido -->
-<div
-  class="modal fade"
-  id="pedidoModal"
-  tabindex="-1"
-  role="dialog"
-  aria-labelledby="pedidoModalLabel"
-  aria-hidden="true"
->
+<div class="modal fade" id="pedidoModal" tabindex="-1" role="dialog" aria-labelledby="pedidoModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="pedidoModalLabel">Detalhes do Pedido</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <p><strong>Nome do Prato:</strong> <span id="modalPratoNome"></span></p>
-        <p>
-          <strong>Quantidade Solicitada:</strong>
-          <span id="modalQuantidade"></span>
-        </p>
+        <p><strong>Quantidade Solicitada:</strong> <span id="modalQuantidade"></span></p>
         <p><strong>Preço:</strong> R$ <span id="modalPreco"></span></p>
         <p><strong>Descrição:</strong> <span id="modalDescricao"></span></p>
       </div>
@@ -290,7 +590,131 @@
   </div>
 </div>
 
+<!-- Modal de Analytics Detalhados com Gráficos -->
+<div class="modal fade" id="analyticsModal" tabindex="-1" aria-labelledby="analyticsModalLabel" aria-hidden="true">
+  <div class="modal-dialog analytics-modal">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="analytics-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-0">
+                <i class="fas fa-chart-pie"></i>
+                Analytics Detalhados: <span id="analyticsTypeTitle"></span>
+              </h4>
+              <p class="mb-0 mt-2" id="analyticsSubtitle">Análise completa com gráficos visuais</p>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-light" onclick="exportarAnalytics()" title="Exportar para CSV">
+                <i class="fas fa-download"></i>
+              </button>
+              <button type="button" class="btn btn-light" onclick="imprimirAnalytics()" title="Imprimir relatório com gráficos">
+                <i class="fas fa-print"></i>
+              </button>
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="analyticsLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando...</span>
+          </div>
+          <p class="mt-3">Processando dados analíticos e gerando gráficos...</p>
+        </div>
+
+        <!-- Analytics Content -->
+        <div id="analyticsContent" class="d-none">
+          <!-- Resumo Geral -->
+          <div class="analytics-summary">
+            <h5 class="mb-3">
+              <i class="fas fa-clipboard-list"></i>
+              Resumo Geral
+            </h5>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="summary-value" id="summaryTotalPedidos">0</span>
+                <span class="summary-label">Total de Pedidos</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-value" id="summaryTotalUnidades">0</span>
+                <span class="summary-label">Total de Unidades</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-value" id="summaryTotalReceita">R$ 0,00</span>
+                <span class="summary-label">Receita Total</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-value" id="summaryMediaPedido">R$ 0,00</span>
+                <span class="summary-label">Média por Pedido</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráficos Visuais -->
+          <div class="analytics-section">
+            <h5>
+              <i class="fas fa-chart-bar"></i>
+              Análise Visual
+            </h5>
+            <div class="charts-container" id="chartsContainer">
+              <!-- Gráficos serão inseridos dinamicamente -->
+            </div>
+          </div>
+
+          <!-- Analytics por Tipo de Refeição (só aparece no TOTAL_GERAL) -->
+          <div class="analytics-section" id="sectionByTipoRefeicao" style="display: none;">
+            <h5>
+              <i class="fas fa-utensils"></i>
+              Consumo por Tipo de Refeição
+            </h5>
+            <div id="analyticsByTipoRefeicao"></div>
+          </div>
+
+          <!-- Analytics por Tipo de Usuário -->
+          <div class="analytics-section">
+            <h5>
+              <i class="fas fa-users"></i>
+              Consumo por Tipo de Usuário
+            </h5>
+            <div id="analyticsByUserType"></div>
+          </div>
+
+          <!-- Analytics por Setor -->
+          <div class="analytics-section">
+            <h5>
+              <i class="fas fa-building"></i>
+              Consumo por Setor
+            </h5>
+            <div id="analyticsBySetor"></div>
+          </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="analyticsError" class="d-none">
+          <div class="no-data-message">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>Erro ao carregar dados</h5>
+            <p>Não foi possível carregar os dados analíticos. Tente novamente.</p>
+            <button class="btn btn-primary" onclick="recarregarAnalytics()">
+              <i class="fas fa-refresh"></i> Tentar Novamente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+  // Variáveis globais
+  let currentAnalyticsType = null;
+  let analyticsCache = {};
+  let analyticsCharts = {}; // Para armazenar instâncias dos gráficos
+
   document.addEventListener("DOMContentLoaded", function() {
     // Função para formatar valores em BRL
     function formatarBRL(valor) {
@@ -300,14 +724,10 @@
       }).format(valor);
     }
 
-    // Seleciona todos os elementos com o atributo data-valor
+    // Formatar valores na página
     const elementosComValor = document.querySelectorAll("[data-valor]");
-    
-    // Itera sobre os elementos e formata os valores
     elementosComValor.forEach(function(elemento) {
       const valorBruto = parseFloat(elemento.getAttribute("data-valor"));
-      
-      // Para elementos com classe 'receita', adiciona o valor formatado ao texto existente
       if (elemento.classList.contains('receita')) {
         elemento.textContent += formatarBRL(valorBruto);
       } else {
@@ -315,11 +735,750 @@
       }
     });
   });
-</script>
 
-<script>
+  // Função para gerar cores para gráficos
+  function gerarCores(quantidade) {
+    const cores = [
+      '#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1',
+      '#fd7e14', '#20c997', '#e83e8c', '#6c757d', '#17a2b8',
+      '#f8f9fa', '#e9ecef', '#dee2e6', '#ced4da', '#adb5bd'
+    ];
+    
+    if (quantidade <= cores.length) {
+      return cores.slice(0, quantidade);
+    }
+    
+    // Gerar cores adicionais se necessário
+    const coresExtras = [];
+    for (let i = cores.length; i < quantidade; i++) {
+      const hue = (i * 137.508) % 360; // Golden angle
+      coresExtras.push(`hsl(${hue}, 70%, 50%)`);
+    }
+    
+    return [...cores, ...coresExtras];
+  }
+
+  // Função para criar gráfico de pizza
+  function criarGraficoPizza(containerId, titulo, dados, labelKey, valueKey) {
+    const canvas = document.createElement('canvas');
+    canvas.id = `chart-${containerId}`;
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chart-wrapper';
+    wrapper.innerHTML = `
+      <div class="chart-title">${titulo}</div>
+      <div class="chart-canvas"></div>
+    `;
+    wrapper.querySelector('.chart-canvas').appendChild(canvas);
+    
+    const cores = gerarCores(dados.length);
+    
+    const chart = new Chart(canvas, {
+      type: 'pie',
+      data: {
+        labels: dados.map(item => item[labelKey]),
+        datasets: [{
+          data: dados.map(item => item[valueKey]),
+          backgroundColor: cores,
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 15,
+              usePointStyle: true
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${label}: ${formatarBRL(value)} (${percentage}%)`;
+              }
+            }
+          }
+        },
+        // Configurações para impressão
+        animation: {
+          duration: 0 // Desabilitar animação para impressão
+        }
+      }
+    });
+    
+    analyticsCharts[containerId] = chart;
+    return wrapper;
+  }
+
+  // Função para criar gráfico de barras
+  function criarGraficoBarras(containerId, titulo, dados, labelKey, valueKey) {
+    const canvas = document.createElement('canvas');
+    canvas.id = `chart-${containerId}`;
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chart-wrapper';
+    wrapper.innerHTML = `
+      <div class="chart-title">${titulo}</div>
+      <div class="chart-canvas"></div>
+    `;
+    wrapper.querySelector('.chart-canvas').appendChild(canvas);
+    
+    const cores = gerarCores(dados.length);
+    
+    const chart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: dados.map(item => item[labelKey]),
+        datasets: [{
+          label: 'Receita (R$)',
+          data: dados.map(item => item[valueKey]),
+          backgroundColor: cores,
+          borderColor: cores.map(cor => cor.replace('0.7', '1')),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return formatarBRL(value);
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return `Receita: ${formatarBRL(context.parsed.y)}`;
+              }
+            }
+          }
+        },
+        // Configurações para impressão
+        animation: {
+          duration: 0
+        }
+      }
+    });
+    
+    analyticsCharts[containerId] = chart;
+    return wrapper;
+  }
+
+  // Função para limpar gráficos existentes
+  function limparGraficos() {
+    Object.values(analyticsCharts).forEach(chart => {
+      chart.destroy();
+    });
+    analyticsCharts = {};
+  }
+
+  // Função para criar gráficos baseados nos dados
+  function criarGraficos(data) {
+    const container = document.getElementById('chartsContainer');
+    container.innerHTML = '';
+    
+    limparGraficos();
+    
+    // Gráfico de pizza por tipo de usuário
+    if (data.por_tipo_usuario && data.por_tipo_usuario.length > 0) {
+      const graficoUsuarios = criarGraficoPizza(
+        'usuarios',
+        'Distribuição de Receita por Tipo de Usuário',
+        data.por_tipo_usuario,
+        'tipo_usuario',
+        'total_receita'
+      );
+      container.appendChild(graficoUsuarios);
+    }
+    
+    // Gráfico de pizza por setor
+    if (data.por_setor && data.por_setor.length > 0) {
+      const graficoSetores = criarGraficoPizza(
+        'setores',
+        'Distribuição de Receita por Setor',
+        data.por_setor,
+        'setor',
+        'total_receita'
+      );
+      container.appendChild(graficoSetores);
+    }
+    
+    // Gráfico de barras por tipo de refeição (só no TOTAL_GERAL)
+    if (currentAnalyticsType === 'TOTAL_GERAL' && data.por_tipo_refeicao && data.por_tipo_refeicao.length > 0) {
+      const graficoTipos = criarGraficoBarras(
+        'tipos-refeicao',
+        'Receita por Tipo de Refeição',
+        data.por_tipo_refeicao,
+        'tipo_refeicao',
+        'total_receita'
+      );
+      graficoTipos.classList.add('full-width-chart');
+      container.appendChild(graficoTipos);
+    }
+  }
+
+  // Função para abrir modal de analytics
+  function abrirAnalytics(tipoRefeicao) {
+    currentAnalyticsType = tipoRefeicao;
+    
+    // Atualizar título
+    if (tipoRefeicao === 'TOTAL_GERAL') {
+      document.getElementById('analyticsTypeTitle').textContent = 'Visão Geral Completa';
+    } else {
+      document.getElementById('analyticsTypeTitle').textContent = tipoRefeicao;
+    }
+    
+    // Feedback visual no card
+    const card = document.querySelector(`[data-tipo="${tipoRefeicao}"]`);
+    if (card) {
+      card.style.opacity = '0.7';
+      card.style.transform = 'scale(0.98)';
+    }
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('analyticsModal'));
+    modal.show();
+    
+    // Restaurar visual do card
+    setTimeout(() => {
+      if (card) {
+        card.style.opacity = '';
+        card.style.transform = '';
+      }
+    }, 300);
+    
+    // Carregar dados
+    carregarDadosAnalytics(tipoRefeicao);
+  }
+
+  // Função para carregar dados de analytics
+  function carregarDadosAnalytics(tipoRefeicao) {
+    // Mostrar loading
+    document.getElementById('analyticsLoading').classList.remove('d-none');
+    document.getElementById('analyticsContent').classList.add('d-none');
+    document.getElementById('analyticsError').classList.add('d-none');
+    
+    // Verificar cache (válido por 5 minutos)
+    const cacheKey = `${tipoRefeicao}_${window.location.search}`;
+    const cacheData = analyticsCache[cacheKey];
+    if (cacheData && (Date.now() - cacheData.timestamp) < 300000) {
+      setTimeout(() => {
+        processarDadosAnalytics(cacheData.data);
+      }, 500);
+      return;
+    }
+    
+    // Construir URL com filtros
+    const params = new URLSearchParams();
+    const filtros = ['nome', 'nome_prato', 'tipo_usuario', 'setor', 'data_inicio', 'data_fim', 'tipo_refeicao'];
+    filtros.forEach(filtro => {
+      const elemento = document.querySelector(`[name="${filtro}"]`);
+      if (elemento && elemento.value) {
+        params.append(filtro, elemento.value);
+      }
+    });
+    
+    // Escolher URL baseado no tipo
+    let url;
+    if (tipoRefeicao === 'TOTAL_GERAL') {
+      url = `{{=URL('default', 'api_analytics_geral')}}?${params.toString()}`;
+    } else {
+      params.append('tipo_refeicao_analytics', tipoRefeicao);
+      url = `{{=URL('default', 'api_analytics_tipo_refeicao')}}?${params.toString()}`;
+    }
+    
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.status === 'success') {
+          // Salvar no cache
+          analyticsCache[cacheKey] = {
+            data: data,
+            timestamp: Date.now()
+          };
+          processarDadosAnalytics(data);
+        } else {
+          mostrarErroAnalytics(data.message || 'Erro desconhecido');
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao carregar analytics:', error);
+        mostrarErroAnalytics(`Erro de conexão: ${error.message}`);
+      });
+  }
+
+  // Função para processar e exibir dados de analytics
+  function processarDadosAnalytics(data) {
+    // Esconder loading
+    document.getElementById('analyticsLoading').classList.add('d-none');
+    document.getElementById('analyticsContent').classList.remove('d-none');
+    
+    // Atualizar subtitle
+    const filtrosAtivos = [];
+    const filtros = {
+      'nome': 'Nome do usuário',
+      'nome_prato': 'Nome do prato',
+      'tipo_usuario': 'Tipo de usuário',
+      'setor': 'Setor',
+      'data_inicio': 'Data início',
+      'data_fim': 'Data fim'
+    };
+    
+    Object.keys(filtros).forEach(filtro => {
+      const elemento = document.querySelector(`[name="${filtro}"]`);
+      if (elemento && elemento.value) {
+        let valor = elemento.value;
+        if (filtro === 'setor') {
+          const option = elemento.options[elemento.selectedIndex];
+          valor = option ? option.text : valor;
+        }
+        filtrosAtivos.push(`${filtros[filtro]}: ${valor}`);
+      }
+    });
+    
+    const subtitleText = filtrosAtivos.length > 0 
+      ? `Filtros aplicados: ${filtrosAtivos.join(' | ')}`
+      : currentAnalyticsType === 'TOTAL_GERAL' 
+        ? 'Análise completa com gráficos visuais de todos os tipos' 
+        : 'Análise completa com gráficos visuais por tipo de usuário e setor';
+    
+    document.getElementById('analyticsSubtitle').textContent = subtitleText;
+    
+    // Atualizar resumo geral
+    const resumo = data.resumo_geral;
+    document.getElementById('summaryTotalPedidos').textContent = resumo.total_pedidos;
+    document.getElementById('summaryTotalUnidades').textContent = resumo.total_unidades;
+    document.getElementById('summaryTotalReceita').textContent = formatarBRL(resumo.total_receita);
+    document.getElementById('summaryMediaPedido').textContent = formatarBRL(resumo.media_por_pedido);
+    
+    // Criar gráficos
+    criarGraficos(data);
+    
+    // Se for TOTAL_GERAL, mostrar analytics por tipo de refeição
+    const sectionTipoRefeicao = document.getElementById('sectionByTipoRefeicao');
+    if (currentAnalyticsType === 'TOTAL_GERAL' && data.por_tipo_refeicao) {
+      sectionTipoRefeicao.style.display = 'block';
+      renderizarAnalyticsByTipoRefeicao(data.por_tipo_refeicao);
+    } else {
+      sectionTipoRefeicao.style.display = 'none';
+    }
+    
+    // Renderizar tabelas
+    renderizarAnalyticsByUserType(data.por_tipo_usuario);
+    renderizarAnalyticsBySetor(data.por_setor);
+  }
+
+  // Funções de renderização (mantidas do código anterior)
+  function renderizarAnalyticsByTipoRefeicao(dados) {
+    const container = document.getElementById('analyticsByTipoRefeicao');
+    
+    if (!dados || dados.length === 0) {
+      container.innerHTML = '<div class="no-data-message"><p>Nenhum dado encontrado para tipos de refeição.</p></div>';
+      return;
+    }
+    
+    let html = '';
+    dados.forEach(item => {
+      const percentual = (item.total_receita / dados.reduce((sum, d) => sum + d.total_receita, 0)) * 100;
+      
+      html += `
+        <div class="metric-card">
+          <div class="metric-title">${item.tipo_refeicao || 'Sem tipo definido'}</div>
+          <div class="metric-value">
+            <div>
+              <span class="metric-number">${item.total_pedidos} pedidos</span>
+              <span class="text-muted">• ${item.total_unidades} unidades</span>
+            </div>
+            <div class="metric-money">${formatarBRL(item.total_receita)}</div>
+          </div>
+          <div class="progress-container">
+            <div class="progress">
+              <div class="progress-bar bg-warning" style="width: ${percentual}%"></div>
+            </div>
+            <small class="text-muted">${percentual.toFixed(1)}% do total</small>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  }
+
+  function renderizarAnalyticsByUserType(dados) {
+    const container = document.getElementById('analyticsByUserType');
+    
+    if (!dados || dados.length === 0) {
+      container.innerHTML = '<div class="no-data-message"><p>Nenhum dado encontrado para tipos de usuário.</p></div>';
+      return;
+    }
+    
+    let html = '';
+    dados.forEach(item => {
+      const percentual = (item.total_receita / dados.reduce((sum, d) => sum + d.total_receita, 0)) * 100;
+      
+      html += `
+        <div class="metric-card">
+          <div class="metric-title">${item.tipo_usuario}</div>
+          <div class="metric-value">
+            <div>
+              <span class="metric-number">${item.total_pedidos} pedidos</span>
+              <span class="text-muted">• ${item.total_unidades} unidades</span>
+            </div>
+            <div class="metric-money">${formatarBRL(item.total_receita)}</div>
+          </div>
+          <div class="progress-container">
+            <div class="progress">
+              <div class="progress-bar bg-primary" style="width: ${percentual}%"></div>
+            </div>
+            <small class="text-muted">${percentual.toFixed(1)}% do total</small>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  }
+
+  function renderizarAnalyticsBySetor(dados) {
+    const container = document.getElementById('analyticsBySetor');
+    
+    if (!dados || dados.length === 0) {
+      container.innerHTML = '<div class="no-data-message"><p>Nenhum dado encontrado para setores.</p></div>';
+      return;
+    }
+    
+    let html = '';
+    dados.forEach(item => {
+      const percentual = (item.total_receita / dados.reduce((sum, d) => sum + d.total_receita, 0)) * 100;
+      
+      html += `
+        <div class="metric-card">
+          <div class="metric-title">${item.setor || 'Sem setor definido'}</div>
+          <div class="metric-value">
+            <div>
+              <span class="metric-number">${item.total_pedidos} pedidos</span>
+              <span class="text-muted">• ${item.total_unidades} unidades</span>
+            </div>
+            <div class="metric-money">${formatarBRL(item.total_receita)}</div>
+          </div>
+          <div class="progress-container">
+            <div class="progress">
+              <div class="progress-bar bg-success" style="width: ${percentual}%"></div>
+            </div>
+            <small class="text-muted">${percentual.toFixed(1)}% do total</small>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  }
+
+  // Função para mostrar erro
+  function mostrarErroAnalytics(mensagem) {
+    document.getElementById('analyticsLoading').classList.add('d-none');
+    document.getElementById('analyticsContent').classList.add('d-none');
+    document.getElementById('analyticsError').classList.remove('d-none');
+  }
+
+  // Função para recarregar analytics
+  function recarregarAnalytics() {
+    if (currentAnalyticsType) {
+      const cacheKey = `${currentAnalyticsType}_${window.location.search}`;
+      delete analyticsCache[cacheKey];
+      carregarDadosAnalytics(currentAnalyticsType);
+    }
+  }
+
+  // Função para exportar analytics para CSV
+  function exportarAnalytics() {
+    if (!currentAnalyticsType) return;
+    
+    const cacheKey = `${currentAnalyticsType}_${window.location.search}`;
+    const cacheData = analyticsCache[cacheKey];
+    if (!cacheData) {
+      alert('Dados não carregados. Aguarde o carregamento dos analytics.');
+      return;
+    }
+    
+    const data = cacheData.data;
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    const tipoTitulo = currentAnalyticsType === 'TOTAL_GERAL' ? 'Visão Geral Completa' : currentAnalyticsType;
+    csvContent += `Relatório Analytics - ${tipoTitulo}\n`;
+    csvContent += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
+    
+    // Resumo geral
+    csvContent += "RESUMO GERAL\n";
+    csvContent += "Métrica,Valor\n";
+    csvContent += `Total de Pedidos,${data.resumo_geral.total_pedidos}\n`;
+    csvContent += `Total de Unidades,${data.resumo_geral.total_unidades}\n`;
+    csvContent += `Receita Total,${formatarBRL(data.resumo_geral.total_receita)}\n`;
+    csvContent += `Média por Pedido,${formatarBRL(data.resumo_geral.media_por_pedido)}\n\n`;
+    
+    // Por tipo de refeição (se for TOTAL_GERAL)
+    if (data.por_tipo_refeicao) {
+      csvContent += "CONSUMO POR TIPO DE REFEIÇÃO\n";
+      csvContent += "Tipo de Refeição,Pedidos,Unidades,Receita\n";
+      data.por_tipo_refeicao.forEach(item => {
+        csvContent += `${item.tipo_refeicao},${item.total_pedidos},${item.total_unidades},${formatarBRL(item.total_receita)}\n`;
+      });
+      csvContent += "\n";
+    }
+    
+    // Por tipo de usuário
+    csvContent += "CONSUMO POR TIPO DE USUÁRIO\n";
+    csvContent += "Tipo de Usuário,Pedidos,Unidades,Receita\n";
+    data.por_tipo_usuario.forEach(item => {
+      csvContent += `${item.tipo_usuario},${item.total_pedidos},${item.total_unidades},${formatarBRL(item.total_receita)}\n`;
+    });
+    csvContent += "\n";
+    
+    // Por setor
+    csvContent += "CONSUMO POR SETOR\n";
+    csvContent += "Setor,Pedidos,Unidades,Receita\n";
+    data.por_setor.forEach(item => {
+      csvContent += `${item.setor},${item.total_pedidos},${item.total_unidades},${formatarBRL(item.total_receita)}\n`;
+    });
+    
+    // Download
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const fileName = currentAnalyticsType === 'TOTAL_GERAL' ? 'GERAL' : currentAnalyticsType;
+    link.setAttribute("download", `analytics_${fileName}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Função para imprimir analytics COM GRÁFICOS
+  function imprimirAnalytics() {
+    if (!currentAnalyticsType) return;
+    
+    const cacheKey = `${currentAnalyticsType}_${window.location.search}`;
+    const cacheData = analyticsCache[cacheKey];
+    if (!cacheData) {
+      alert('Dados não carregados. Aguarde o carregamento dos analytics.');
+      return;
+    }
+    
+    // Converter gráficos para imagens
+    const graficosImagens = {};
+    Object.keys(analyticsCharts).forEach(key => {
+      const chart = analyticsCharts[key];
+      graficosImagens[key] = chart.toBase64Image('image/png', 1.0);
+    });
+    
+    const data = cacheData.data;
+    const tipoTitulo = currentAnalyticsType === 'TOTAL_GERAL' ? 'Visão Geral Completa' : currentAnalyticsType;
+    
+    // Criar janela de impressão
+    const printWindow = window.open('', '_blank');
+    
+    let tipoRefeicaoSection = '';
+    if (data.por_tipo_refeicao) {
+      tipoRefeicaoSection = `
+        <div class="section">
+          <h3>Consumo por Tipo de Refeição</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Tipo de Refeição</th>
+                <th>Pedidos</th>
+                <th>Unidades</th>
+                <th>Receita</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.por_tipo_refeicao.map(item => `
+                <tr>
+                  <td>${item.tipo_refeicao}</td>
+                  <td>${item.total_pedidos}</td>
+                  <td>${item.total_unidades}</td>
+                  <td>${formatarBRL(item.total_receita)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+    
+    // Seção de gráficos
+    let graficosSection = '';
+    if (Object.keys(graficosImagens).length > 0) {
+      graficosSection = `
+        <div class="section">
+          <h3>Análise Visual</h3>
+          <div class="charts-print">
+            ${Object.keys(graficosImagens).map(key => `
+              <div class="chart-print">
+                <img src="${graficosImagens[key]}" style="max-width: 100%; height: auto; margin-bottom: 20px;" />
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Analytics ${tipoTitulo}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007bff; padding-bottom: 15px; }
+          .section { margin-bottom: 30px; page-break-inside: avoid; }
+          .section h3 { color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f8f9fa; font-weight: bold; }
+          .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0; }
+          .summary-item { text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+          .summary-value { font-size: 1.2em; font-weight: bold; color: #007bff; }
+          .charts-print { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+          .chart-print { text-align: center; page-break-inside: avoid; }
+          @media print { 
+            body { margin: 0; } 
+            .section { page-break-inside: avoid; }
+            .charts-print { grid-template-columns: 1fr; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Relatório Analytics - ${tipoTitulo}</h1>
+          <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+        
+        <div class="section">
+          <h3>Resumo Geral</h3>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="summary-value">${data.resumo_geral.total_pedidos}</div>
+              <div>Total de Pedidos</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-value">${data.resumo_geral.total_unidades}</div>
+              <div>Total de Unidades</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-value">${formatarBRL(data.resumo_geral.total_receita)}</div>
+              <div>Receita Total</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-value">${formatarBRL(data.resumo_geral.media_por_pedido)}</div>
+              <div>Média por Pedido</div>
+            </div>
+          </div>
+        </div>
+        
+        ${graficosSection}
+        
+        ${tipoRefeicaoSection}
+        
+        <div class="section">
+          <h3>Consumo por Tipo de Usuário</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Tipo de Usuário</th>
+                <th>Pedidos</th>
+                <th>Unidades</th>
+                <th>Receita</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.por_tipo_usuario.map(item => `
+                <tr>
+                  <td>${item.tipo_usuario}</td>
+                  <td>${item.total_pedidos}</td>
+                  <td>${item.total_unidades}</td>
+                  <td>${formatarBRL(item.total_receita)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="section">
+          <h3>Consumo por Setor</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Setor</th>
+                <th>Pedidos</th>
+                <th>Unidades</th>
+                <th>Receita</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.por_setor.map(item => `
+                <tr>
+                  <td>${item.setor}</td>
+                  <td>${item.total_pedidos}</td>
+                  <td>${item.total_unidades}</td>
+                  <td>${formatarBRL(item.total_receita)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Aguardar carregamento antes de imprimir
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  }
+
+  // Função auxiliar para formatação
+  function formatarBRL(valor) {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    }).format(valor);
+  }
+
+  // Event listeners para pedidos
   $(document).ready(function () {
-    // Exibir modal com detalhes do pedido ao clicar na linha
+    // Inicializar tooltips do Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Modal de detalhes do pedido
     $(".pedido-row").click(function () {
       var prato = $(this).data("prato");
       var quantidade = $(this).data("quantidade");
@@ -330,7 +1489,9 @@
       $("#modalQuantidade").text(quantidade);
       $("#modalPreco").text(preco.toFixed(2));
       $("#modalDescricao").text(descricao);
-      $("#pedidoModal").modal("show");
+      
+      const modal = new bootstrap.Modal(document.getElementById('pedidoModal'));
+      modal.show();
     });
 
     // Filtro pelo tipo de refeição
@@ -347,5 +1508,15 @@
         }
       });
     });
+
+    // Animação nos cards de resumo
+    $('.resumo-tipo').hover(
+      function() {
+        $(this).addClass('shadow-lg');
+      },
+      function() {
+        $(this).removeClass('shadow-lg');
+      }
+    );
   });
 </script>

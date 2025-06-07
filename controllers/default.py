@@ -419,6 +419,486 @@ def admin_pedidos():
     )
 
 
+@auth.requires_login()
+def api_analytics_tipo_refeicao():
+    """
+    API para retornar analytics detalhados de um tipo de refeição específico
+    """
+    try:
+        # Obter tipo de refeição para análise
+        tipo_refeicao_analytics = request.vars.tipo_refeicao_analytics
+        if not tipo_refeicao_analytics:
+            raise ValueError("Tipo de refeição não especificado")
+
+        # Aplicar os mesmos filtros da página principal
+        filtro_nome = request.vars.nome or ""
+        filtro_tipo_usuario = request.vars.tipo_usuario or ""
+        filtro_setor = request.vars.setor or ""
+        filtro_tipo_refeicao = request.vars.tipo_refeicao
+        filtro_nome_prato = request.vars.nome_prato or ""
+        data_inicio = request.vars.data_inicio or None
+        data_fim = request.vars.data_fim or None
+
+        # Query base - mesma lógica da função admin_pedidos
+        query = (db.solicitacao_refeicao.id > 0)
+
+        # Filtro específico para o tipo de refeição da análise
+        if tipo_refeicao_analytics == "A la carte":
+            # Para A la carte, incluir tanto "A la carte" quanto "Livre"
+            query &= db.cardapio.tipo.belongs(["A la carte", "Livre"])
+        else:
+            query &= (db.cardapio.tipo == tipo_refeicao_analytics)
+
+        # Aplicar filtros adicionais
+        if filtro_nome:
+            query &= db.auth_user.first_name.contains(filtro_nome)
+
+        if filtro_nome_prato:
+            query &= db.cardapio.nome.contains(filtro_nome_prato)
+
+        if filtro_tipo_usuario:
+            if filtro_tipo_usuario == "Colaboradores Generalizados":
+                user_types = db(db.user_type.name.belongs(['colaborador', 'medico', 'gestor', 'administrador', 'instrumentador'])).select(db.user_type.id)
+                user_type_ids = [ut.id for ut in user_types]
+
+                setor_colaborador_hemodialise = db(db.setor.name == "Colaborador Hemodiálise").select(db.setor.id).first()
+                setor_colaborador_hemodialise_id = setor_colaborador_hemodialise.id if setor_colaborador_hemodialise else None
+
+                if setor_colaborador_hemodialise_id:
+                    tipo_hemodialise = db(db.user_type.name == "hemodialise").select(db.user_type.id).first()
+                    tipo_hemodialise_id = tipo_hemodialise.id if tipo_hemodialise else None
+
+                    query &= ((db.auth_user.user_type.belongs(user_type_ids)) |
+                              ((db.auth_user.setor_id == setor_colaborador_hemodialise_id) & (db.auth_user.user_type == tipo_hemodialise_id)))
+
+            elif filtro_tipo_usuario == "Pacientes Generalizados":
+                user_types = db(db.user_type.name.belongs([
+                    'paciente', 'paciente convenio', 'acompanhante', 'hemodialise'
+                ])).select(db.user_type.id)
+                user_type_ids = [ut.id for ut in user_types]
+
+                setor_colaborador_hemodialise = db(db.setor.name == "Colaborador Hemodiálise").select(db.setor.id).first()
+                setor_colaborador_hemodialise_id = setor_colaborador_hemodialise.id if setor_colaborador_hemodialise else None
+
+                tipo_hemodialise = db(db.user_type.name == "hemodialise").select(db.user_type.id).first()
+                tipo_hemodialise_id = tipo_hemodialise.id if tipo_hemodialise else None
+
+                query &= db.auth_user.user_type.belongs(user_type_ids)
+
+                if setor_colaborador_hemodialise_id:
+                    query &= ~((db.auth_user.user_type == tipo_hemodialise_id) &
+                               (db.auth_user.setor_id == setor_colaborador_hemodialise_id))
+            else:
+                user_type = db(db.user_type.name == filtro_tipo_usuario).select(db.user_type.id).first()
+                if user_type:
+                    query &= (db.auth_user.user_type == user_type.id)
+
+        if filtro_setor:
+            query &= (db.auth_user.setor_id == int(filtro_setor))
+
+        if data_inicio:
+            query &= (db.solicitacao_refeicao.data_solicitacao >= data_inicio)
+        if data_fim:
+            query &= (db.solicitacao_refeicao.data_solicitacao <= data_fim)
+
+        if filtro_tipo_refeicao == "especial":
+            query &= (db.cardapio.tipo.belongs(["Livre", "A la carte", "Bebidas"]))
+        elif filtro_tipo_refeicao == "comum":
+            query &= (db.cardapio.tipo.belongs(['Almoço', 'Café da Manhã', 'Ceia', 'Lanche', 'Jantar']))
+
+        # 1. ANALYTICS POR TIPO DE USUÁRIO
+        analytics_por_tipo = db(query).select(
+            db.user_type.name.with_alias('tipo_usuario'),
+            db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+            db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_unidades'),
+            db.solicitacao_refeicao.preco.sum().with_alias('total_receita'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
+                db.user_type.on(db.auth_user.user_type == db.user_type.id)
+            ],
+            groupby=db.user_type.name,
+            orderby=~db.solicitacao_refeicao.preco.sum()
+        )
+
+        # 2. ANALYTICS POR SETOR
+        analytics_por_setor = db(query).select(
+            db.setor.name.with_alias('setor'),
+            db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+            db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_unidades'),
+            db.solicitacao_refeicao.preco.sum().with_alias('total_receita'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
+                db.setor.on(db.auth_user.setor_id == db.setor.id)
+            ],
+            groupby=db.setor.name,
+            orderby=~db.solicitacao_refeicao.preco.sum()
+        )
+
+        # 3. TOTAIS GERAIS
+        totais_gerais = db(query).select(
+            db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+            db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_unidades'),
+            db.solicitacao_refeicao.preco.sum().with_alias('total_receita'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id)
+            ]
+        ).first()
+
+        # Processar dados por tipo de usuário
+        dados_por_tipo = []
+        for item in analytics_por_tipo:
+            if item.tipo_usuario:  # Só incluir se tiver tipo de usuário
+                dados_por_tipo.append({
+                    'tipo_usuario': item.tipo_usuario,
+                    'total_pedidos': int(item.total_pedidos or 0),
+                    'total_unidades': int(item.total_unidades or 0),
+                    'total_receita': float(item.total_receita or 0)
+                })
+
+        # Processar dados por setor
+        dados_por_setor = []
+        for item in analytics_por_setor:
+            dados_por_setor.append({
+                'setor': item.setor or 'Sem setor definido',
+                'total_pedidos': int(item.total_pedidos or 0),
+                'total_unidades': int(item.total_unidades or 0),
+                'total_receita': float(item.total_receita or 0)
+            })
+
+        # Calcular resumo geral
+        total_pedidos = int(totais_gerais.total_pedidos or 0)
+        total_unidades = int(totais_gerais.total_unidades or 0)
+        total_receita = float(totais_gerais.total_receita or 0)
+        media_por_pedido = total_receita / total_pedidos if total_pedidos > 0 else 0
+
+        resumo_geral = {
+            'total_pedidos': total_pedidos,
+            'total_unidades': total_unidades,
+            'total_receita': total_receita,
+            'media_por_pedido': media_por_pedido
+        }
+
+        return response.json({
+            'status': 'success',
+            'tipo_refeicao': tipo_refeicao_analytics,
+            'resumo_geral': resumo_geral,
+            'por_tipo_usuario': dados_por_tipo,
+            'por_setor': dados_por_setor,
+            'timestamp': str(request.now)
+        })
+
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@auth.requires_login()
+def api_analytics_geral():
+    """
+    API para retornar analytics detalhados de TODOS os tipos de refeição
+    """
+    try:
+        # Aplicar os mesmos filtros da página principal (sem filtro de tipo de refeição)
+        filtro_nome = request.vars.nome or ""
+        filtro_tipo_usuario = request.vars.tipo_usuario or ""
+        filtro_setor = request.vars.setor or ""
+        filtro_nome_prato = request.vars.nome_prato or ""
+        data_inicio = request.vars.data_inicio or None
+        data_fim = request.vars.data_fim or None
+
+        # Query base - mesma lógica da função admin_pedidos mas SEM filtro de tipo
+        query = (db.solicitacao_refeicao.id > 0)
+
+        # Aplicar filtros (mesma lógica do admin_pedidos)
+        if filtro_nome:
+            query &= db.auth_user.first_name.contains(filtro_nome)
+
+        if filtro_nome_prato:
+            query &= db.cardapio.nome.contains(filtro_nome_prato)
+
+        if filtro_tipo_usuario:
+            if filtro_tipo_usuario == "Colaboradores Generalizados":
+                # Obter IDs dos tipos de usuário que fazem parte dos colaboradores
+                user_types = db(db.user_type.name.belongs(['colaborador', 'medico', 'gestor', 'administrador', 'instrumentador'])).select(db.user_type.id)
+                user_type_ids = [ut.id for ut in user_types]
+
+                # Buscar o ID do setor "Colaborador Hemodiálise"
+                setor_colaborador_hemodialise = db(db.setor.name == "Colaborador Hemodiálise").select(db.setor.id).first()
+                setor_colaborador_hemodialise_id = setor_colaborador_hemodialise.id if setor_colaborador_hemodialise else None
+
+                if setor_colaborador_hemodialise_id:
+                    # Buscar o ID do tipo de usuário "Hemodiálise"
+                    tipo_hemodialise = db(db.user_type.name == "hemodialise").select(db.user_type.id).first()
+                    tipo_hemodialise_id = tipo_hemodialise.id if tipo_hemodialise else None
+
+                    # Incluir usuários que sejam:
+                    # 1️⃣ Qualquer um dos colaboradores generalizados OU
+                    # 2️⃣ Do setor "Colaborador Hemodiálise" E tenham tipo "Hemodiálise"
+                    query &= ((db.auth_user.user_type.belongs(user_type_ids)) |
+                              ((db.auth_user.setor_id == setor_colaborador_hemodialise_id) & (db.auth_user.user_type == tipo_hemodialise_id)))
+
+            elif filtro_tipo_usuario == "Pacientes Generalizados":
+                # Obter IDs dos tipos de usuário que fazem parte dos pacientes
+                user_types = db(db.user_type.name.belongs([
+                    'paciente', 'paciente convenio', 'acompanhante', 'hemodialise'
+                ])).select(db.user_type.id)
+                user_type_ids = [ut.id for ut in user_types]
+
+                # Excluir "Hemodiálise" do setor "Colaborador Hemodiálise"
+                setor_colaborador_hemodialise = db(db.setor.name == "Colaborador Hemodiálise").select(db.setor.id).first()
+                setor_colaborador_hemodialise_id = setor_colaborador_hemodialise.id if setor_colaborador_hemodialise else None
+
+                tipo_hemodialise = db(db.user_type.name == "hemodialise").select(db.user_type.id).first()
+                tipo_hemodialise_id = tipo_hemodialise.id if tipo_hemodialise else None
+
+                query &= db.auth_user.user_type.belongs(user_type_ids)
+
+                if setor_colaborador_hemodialise_id:
+                    query &= ~((db.auth_user.user_type == tipo_hemodialise_id) &
+                               (db.auth_user.setor_id == setor_colaborador_hemodialise_id))
+
+            else:
+                user_type = db(db.user_type.name == filtro_tipo_usuario).select(db.user_type.id).first()
+                if user_type:
+                    query &= (db.auth_user.user_type == user_type.id)
+
+        if filtro_setor:
+            query &= (db.auth_user.setor_id == int(filtro_setor))
+
+        if data_inicio:
+            query &= (db.solicitacao_refeicao.data_solicitacao >= data_inicio)
+        if data_fim:
+            query &= (db.solicitacao_refeicao.data_solicitacao <= data_fim)
+
+        # ANALYTICS POR TIPO DE USUÁRIO
+        analytics_por_tipo = db(query).select(
+            db.user_type.name.with_alias('tipo_usuario'),
+            db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+            db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_unidades'),
+            db.solicitacao_refeicao.preco.sum().with_alias('total_receita'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
+                db.user_type.on(db.auth_user.user_type == db.user_type.id)
+            ],
+            groupby=db.user_type.name,
+            orderby=~db.solicitacao_refeicao.preco.sum()
+        )
+
+        # ANALYTICS POR SETOR
+        analytics_por_setor = db(query).select(
+            db.setor.name.with_alias('setor'),
+            db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+            db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_unidades'),
+            db.solicitacao_refeicao.preco.sum().with_alias('total_receita'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
+                db.setor.on(db.auth_user.setor_id == db.setor.id)
+            ],
+            groupby=db.setor.name,
+            orderby=~db.solicitacao_refeicao.preco.sum()
+        )
+
+        # ANALYTICS POR TIPO DE REFEIÇÃO (novo!)
+        analytics_por_tipo_refeicao = db(query).select(
+            db.cardapio.tipo.with_alias('tipo_refeicao'),
+            db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+            db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_unidades'),
+            db.solicitacao_refeicao.preco.sum().with_alias('total_receita'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id)
+            ],
+            groupby=db.cardapio.tipo,
+            orderby=~db.solicitacao_refeicao.preco.sum()
+        )
+
+        # TOTAIS GERAIS
+        totais_gerais = db(query).select(
+            db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+            db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_unidades'),
+            db.solicitacao_refeicao.preco.sum().with_alias('total_receita'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id)
+            ]
+        ).first()
+
+        # Processar dados por tipo de usuário
+        dados_por_tipo = []
+        for item in analytics_por_tipo:
+            if item.tipo_usuario:  # Só incluir se tiver tipo de usuário
+                dados_por_tipo.append({
+                    'tipo_usuario': item.tipo_usuario,
+                    'total_pedidos': int(item.total_pedidos or 0),
+                    'total_unidades': int(item.total_unidades or 0),
+                    'total_receita': float(item.total_receita or 0)
+                })
+
+        # Processar dados por setor
+        dados_por_setor = []
+        for item in analytics_por_setor:
+            dados_por_setor.append({
+                'setor': item.setor or 'Sem setor definido',
+                'total_pedidos': int(item.total_pedidos or 0),
+                'total_unidades': int(item.total_unidades or 0),
+                'total_receita': float(item.total_receita or 0)
+            })
+        
+        # NOVO: Processar dados por tipo de refeição
+        dados_por_tipo_refeicao = []
+        resumo_unificado = {}
+        
+        for item in analytics_por_tipo_refeicao:
+            if item.tipo_refeicao:
+                tipo_original = item.tipo_refeicao
+                
+                # Unificar "Livre" e "A la carte" como na função admin_pedidos
+                if tipo_original == "Livre":
+                    tipo = "A la carte"
+                else:
+                    tipo = tipo_original
+                
+                # Se o tipo já existe, somar os valores
+                if tipo in resumo_unificado:
+                    resumo_unificado[tipo]['total_pedidos'] += int(item.total_pedidos or 0)
+                    resumo_unificado[tipo]['total_unidades'] += int(item.total_unidades or 0)
+                    resumo_unificado[tipo]['total_receita'] += float(item.total_receita or 0)
+                else:
+                    resumo_unificado[tipo] = {
+                        'tipo_refeicao': tipo,
+                        'total_pedidos': int(item.total_pedidos or 0),
+                        'total_unidades': int(item.total_unidades or 0),
+                        'total_receita': float(item.total_receita or 0)
+                    }
+        
+        # Converter dicionário para lista ordenada por receita
+        dados_por_tipo_refeicao = sorted(
+            resumo_unificado.values(),
+            key=lambda x: x['total_receita'],
+            reverse=True
+        )
+
+        # Calcular resumo geral
+        total_pedidos = int(totais_gerais.total_pedidos or 0)
+        total_unidades = int(totais_gerais.total_unidades or 0)
+        total_receita = float(totais_gerais.total_receita or 0)
+        media_por_pedido = total_receita / total_pedidos if total_pedidos > 0 else 0
+
+        resumo_geral = {
+            'total_pedidos': total_pedidos,
+            'total_unidades': total_unidades,
+            'total_receita': total_receita,
+            'media_por_pedido': media_por_pedido
+        }
+
+        return response.json({
+            'status': 'success',
+            'tipo_refeicao': 'TOTAL_GERAL',
+            'resumo_geral': resumo_geral,
+            'por_tipo_usuario': dados_por_tipo,
+            'por_setor': dados_por_setor,
+            'por_tipo_refeicao': dados_por_tipo_refeicao,
+            'timestamp': str(request.now)
+        })
+
+    except Exception as e:
+        import traceback
+        print("Erro na api_analytics_geral:", str(e))
+        print("Traceback:", traceback.format_exc())
+        return response.json({
+            'status': 'error', 
+            'message': str(e),
+            'debug': traceback.format_exc() if request.is_local else None
+        })
+
+# Função auxiliar para debug dos analytics (opcional)
+@auth.requires_login()
+def debug_analytics():
+    """
+    Função para debug dos dados de analytics
+    """
+    try:
+        tipo_refeicao = request.args(0) or 'Almoço'
+        
+        # Query base
+        query = (db.solicitacao_refeicao.id > 0) & (db.cardapio.tipo == tipo_refeicao)
+        
+        # Dados brutos
+        dados_brutos = db(query).select(
+            db.solicitacao_refeicao.ALL,
+            db.cardapio.nome,
+            db.cardapio.tipo,
+            db.auth_user.first_name,
+            db.user_type.name.with_alias('tipo_usuario'),
+            db.setor.name.with_alias('setor'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
+                db.user_type.on(db.auth_user.user_type == db.user_type.id),
+                db.setor.on(db.auth_user.setor_id == db.setor.id)
+            ]
+        )
+        
+        # Analytics agregados
+        por_tipo = db(query).select(
+            db.user_type.name.with_alias('tipo_usuario'),
+            db.solicitacao_refeicao.id.count().with_alias('total_pedidos'),
+            db.solicitacao_refeicao.quantidade_solicitada.sum().with_alias('total_unidades'),
+            db.solicitacao_refeicao.preco.sum().with_alias('total_receita'),
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id),
+                db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
+                db.user_type.on(db.auth_user.user_type == db.user_type.id)
+            ],
+            groupby=db.user_type.name
+        )
+        
+        return dict(
+            tipo_refeicao=tipo_refeicao,
+            total_registros=len(dados_brutos),
+            dados_brutos=dados_brutos,
+            por_tipo=por_tipo,
+            estrutura_tabelas={
+                'solicitacao_refeicao': db.solicitacao_refeicao.fields,
+                'cardapio': db.cardapio.fields,
+                'auth_user': db.auth_user.fields,
+                'user_type': db.user_type.fields,
+                'setor': db.setor.fields
+            }
+        )
+        
+    except Exception as e:
+        return dict(erro=str(e))
+
+
+# Função adicional para otimização (opcional)
+@auth.requires_login()
+def limpar_cache_analytics():
+    """
+    Função para limpar cache de analytics se necessário
+    """
+    try:
+        # Limpar cache do web2py se estiver usando
+        cache.ram.clear()
+        
+        return response.json({
+            'status': 'success',
+            'message': 'Cache de analytics limpo com sucesso'
+        })
+        
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+    
+
 def custom_login():
     if request.env.request_method == 'POST':
         cpf = request.post_vars.cpf.replace('.', '').replace('-', '')  # Remove formatação

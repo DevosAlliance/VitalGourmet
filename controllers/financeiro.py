@@ -265,6 +265,48 @@ def api_relatorio_financeiro():
         return response.json({"status": "error", "message": str(e)})
 
 
+@auth.requires_login()
+def api_listar_pagamentos():
+    """
+    API para listar pagamentos de um paciente específico
+    """
+    try:
+        paciente_id = request.args(0)
+        
+        if not paciente_id:
+            raise ValueError("ID do paciente não fornecido.")
+        
+        # Verificar se o paciente existe
+        paciente = db.auth_user(paciente_id)
+        if not paciente:
+            raise ValueError("Paciente não encontrado.")
+        
+        # Buscar pagamentos do paciente
+        pagamentos = db(db.pagamentos.paciente_id == paciente_id).select(
+            orderby=~db.pagamentos.data_pagamento  # Mais recentes primeiro
+        )
+        
+        # Formaterar dados para JSON
+        pagamentos_json = []
+        for pagamento in pagamentos:
+            pagamentos_json.append({
+                'id': pagamento.id,
+                'valor_pago': float(pagamento.valor_pago),
+                'data_pagamento': pagamento.data_pagamento.strftime('%d/%m/%Y'),
+                'descricao': pagamento.descricao or 'Sem descrição'
+            })
+        
+        return response.json({
+            'status': 'success',
+            'pagamentos': pagamentos_json,
+            'total': len(pagamentos_json)
+        })
+        
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
 
 
 
