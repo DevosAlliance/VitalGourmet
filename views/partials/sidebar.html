@@ -38,7 +38,7 @@
   <!-- Pacientes - somente gestores, administradores e colaboradores do setor "recepção" podem ver -->
   {{if auth.user and ((db.user_type[auth.user.user_type] and
   db.user_type[auth.user.user_type].name in ['Gestor', 'Administrador']) or
-  (auth.user.setor_id and db.setor[auth.user.setor_id].name == 'Recepção')):}}
+  (auth.user.setor_id and db.setor[auth.user.setor_id].name in ['Recepção', 'Cozinha'])):}}
   <li
     class="nav-item {{='active' if request.controller == 'default' and request.function == 'listar_pacientes' else ''}}"
   >

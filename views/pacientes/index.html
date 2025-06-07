@@ -323,12 +323,14 @@
             <td>{{='{}.{}.{}-{}'.format(paciente.cpf[:3], paciente.cpf[3:6], paciente.cpf[6:9], paciente.cpf[9:]) if paciente.cpf and len(paciente.cpf) == 11 else paciente.cpf}}</td>
             <td>{{=paciente.birth_date.strftime('%d/%m/%Y') if paciente.birth_date else ''}}</td>
             <td>
-                <a href="{{=URL('editar_paciente', args=[paciente.id])}}" class="btn btn-primary btn-sm">Editar</a>
-                
-                <!-- Botão para alterar status -->
-                <a href="{{=URL('alterar_status_paciente', args=[paciente.id])}}" class="btn btn-secondary btn-sm">
-                    {{='Desativar' if paciente.status == 'Ativo' else 'Ativar'}}
-                </a>
+                {{if auth.user and (db.user_type[auth.user.user_type].name in ['Gestor', 'Administrador'] or (auth.user.setor_id and db.setor[auth.user.setor_id].name == 'Recepção')):}}
+                    <a href="{{=URL('editar_paciente', args=[paciente.id])}}" class="btn btn-primary btn-sm">Editar</a>
+                    
+                    <!-- Botão para alterar status -->
+                    <a href="{{=URL('alterar_status_paciente', args=[paciente.id])}}" class="btn btn-secondary btn-sm">
+                        {{='Desativar' if paciente.status == 'Ativo' else 'Ativar'}}
+                    </a>
+                {{pass}}
                 
                 <!-- Novo botão para solicitar refeição -->
                 {{if auth.user and (db.user_type[auth.user.user_type].name in ['Gestor', 'Administrador'] or (auth.user.setor_id and db.setor[auth.user.setor_id].name == 'Cozinha')):}}

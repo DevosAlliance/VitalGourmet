@@ -410,19 +410,21 @@
               {{pass}}
               
               <!-- Botão para excluir acompanhante -->
-              <form
-                action=""
-                method="POST"
-                style="display: inline"
-                onsubmit="return confirmarExclusao();"
-              >
-                <input
-                  type="hidden"
-                  name="delete_acompanhante_id"
-                  value="{{=vinculo.acompanhante_vinculo.acompanhante_id}}"
-                />
-                <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
-              </form>
+              {{if auth.user and (db.user_type[auth.user.user_type].name in ['Gestor', 'Administrador'] or (auth.user.setor_id and db.setor[auth.user.setor_id].name == 'Recepção')):}}
+                <form
+                  action=""
+                  method="POST"
+                  style="display: inline"
+                  onsubmit="return confirmarExclusao();"
+                >
+                  <input
+                    type="hidden"
+                    name="delete_acompanhante_id"
+                    value="{{=vinculo.acompanhante_vinculo.acompanhante_id}}"
+                  />
+                  <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+                </form>
+              {{pass}}
             </div>
           </td>
         </tr>
