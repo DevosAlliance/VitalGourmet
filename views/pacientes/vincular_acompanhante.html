@@ -717,7 +717,7 @@
 
   // Função para carregar cardápio específico do acompanhante
   function carregarCardapioAcompanhante(acompanhanteId) {
-    fetch(`{{=URL("usuario", "api_listar_pratos_para_usuario")}}?solicitante_id=${acompanhanteId}`)
+    fetch(`{{=URL("usuario", "api_listar_pratos_para_usuario")}}?solicitante_id=${currentAcompanhanteId}`)
         .then(response => response.json())
         .then(data => {
             if (data.status === "success") {
@@ -1006,14 +1006,14 @@
     confirmarButton.disabled = true;
     confirmarButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
 
-    // O pedido é feito em nome do PACIENTE, não do acompanhante
+    // O pedido é feito em nome do ACOMPANHANTE, não do paciente
     fetch('{{=URL("usuario", "api_registrar_solicitacao_refeicao")}}', {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            solicitante_id: currentPacienteId, // ID do PACIENTE, não do acompanhante
+            solicitante_id: currentAcompanhanteId, // ID do ACOMPANHANTE
             pratoid: prato_id,
             quantidade: quantidade,
             descricao: descricao,

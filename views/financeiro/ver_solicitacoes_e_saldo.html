@@ -201,7 +201,7 @@
               <td data-valor="{{=solicitacao.preco}}"></td>
               <td>
                 {{if solicitacao.descricao:}}
-                  <span class="text-muted">{{=solicitacao.descricao[:50]}}{{='...' if len(solicitacao.descricao) > 50 else ''}}</span>
+                  <span class="text-muted">{{=solicitacao.descricao}}</span>
                 {{else:}}
                   <span class="text-muted fst-italic">Sem observação</span>
                 {{pass}}
