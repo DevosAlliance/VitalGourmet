@@ -565,7 +565,8 @@ def verificar_inconsistencias_saldo():
             saldo_registrado = balance.saldo_devedor
             saldo_real = saldos_reais_dict.get(balance.user_id, 0)
             
-            if abs(saldo_registrado - saldo_real) > 0.01:  # Tolerância para diferenças de centavos
+            # Só considerar inconsistência se a diferença for maior que 1 centavo
+            if abs(saldo_registrado - saldo_real) > 0.01:
                 inconsistencias.append({
                     'user_id': balance.user_id,
                     'saldo_registrado': float(saldo_registrado),
@@ -576,7 +577,7 @@ def verificar_inconsistencias_saldo():
         # Verificar usuários com dívidas que não estão na user_balance
         for user_id, saldo_real in saldos_reais_dict.items():
             balance_existente = db(db.user_balance.user_id == user_id).select().first()
-            if not balance_existente and saldo_real > 0:
+            if not balance_existente and saldo_real > 0.01:  # Só considerar se o saldo for significativo
                 inconsistencias.append({
                     'user_id': user_id,
                     'saldo_registrado': 0.0,
@@ -694,10 +695,14 @@ def correcao_saldo():
     
     return dict(form=form, resultado=resultado)
 
+
 def corrigir_saldo_devedor_usuarios():
     """
     Função que varre todas as solicitações não pagas e corrige o saldo devedor
     dos usuários na tabela user_balance.
+    
+    OTIMIZAÇÃO: Só atualiza usuários que realmente têm diferença significativa
+    (maior que 1 centavo) para evitar atualizações desnecessárias.
     
     Returns:
         dict: Relatório da operação com usuários atualizados e valores
@@ -729,38 +734,47 @@ def corrigir_saldo_devedor_usuarios():
             balance_existente = db(db.user_balance.user_id == user_id).select().first()
             
             if balance_existente:
-                # Atualizar registro existente
+                # Verificar se há diferença significativa (tolerância de 1 centavo)
                 saldo_anterior = balance_existente.saldo_devedor
-                db(db.user_balance.user_id == user_id).update(
-                    saldo_devedor=saldo_correto,
-                    updated_at=request.now
-                )
+                diferenca = abs(saldo_correto - saldo_anterior)
                 
-                usuarios_atualizados.append({
-                    'user_id': user_id,
-                    'saldo_anterior': float(saldo_anterior),
-                    'saldo_correto': float(saldo_correto),
-                    'diferenca': float(saldo_correto - saldo_anterior),
-                    'acao': 'atualizado'
-                })
+                if diferenca > 0.01:  # Só atualizar se a diferença for maior que 1 centavo
+                    db(db.user_balance.user_id == user_id).update(
+                        saldo_devedor=saldo_correto,
+                        updated_at=request.now
+                    )
+                    
+                    usuarios_atualizados.append({
+                        'user_id': user_id,
+                        'saldo_anterior': float(saldo_anterior),
+                        'saldo_correto': float(saldo_correto),
+                        'diferenca': float(saldo_correto - saldo_anterior),
+                        'acao': 'atualizado'
+                    })
+                    
+                    total_usuarios += 1
+                    valor_total_ajustado += saldo_correto
+                # Se não há diferença significativa, não faz nada
+                
             else:
-                # Criar novo registro
-                db.user_balance.insert(
-                    user_id=user_id,
-                    saldo_devedor=saldo_correto,
-                    updated_at=request.now
-                )
-                
-                usuarios_atualizados.append({
-                    'user_id': user_id,
-                    'saldo_anterior': 0.0,
-                    'saldo_correto': float(saldo_correto),
-                    'diferenca': float(saldo_correto),
-                    'acao': 'criado'
-                })
-            
-            total_usuarios += 1
-            valor_total_ajustado += saldo_correto
+                # Criar novo registro apenas se o saldo for maior que zero
+                if saldo_correto > 0:
+                    db.user_balance.insert(
+                        user_id=user_id,
+                        saldo_devedor=saldo_correto,
+                        updated_at=request.now
+                    )
+                    
+                    usuarios_atualizados.append({
+                        'user_id': user_id,
+                        'saldo_anterior': 0.0,
+                        'saldo_correto': float(saldo_correto),
+                        'diferenca': float(saldo_correto),
+                        'acao': 'criado'
+                    })
+                    
+                    total_usuarios += 1
+                    valor_total_ajustado += saldo_correto
         
         # Buscar usuários que não têm mais dívidas (todos os pedidos foram pagos)
         # mas ainda têm saldo devedor na tabela
@@ -772,22 +786,23 @@ def corrigir_saldo_devedor_usuarios():
                            (db.solicitacao_refeicao.foi_pago == False)).count()
             
             if tem_dividas == 0:
-                # Zerar saldo devedor
-                saldo_anterior = balance.saldo_devedor
-                db(db.user_balance.user_id == balance.user_id).update(
-                    saldo_devedor=0,
-                    updated_at=request.now
-                )
-                
-                usuarios_atualizados.append({
-                    'user_id': balance.user_id,
-                    'saldo_anterior': float(saldo_anterior),
-                    'saldo_correto': 0.0,
-                    'diferenca': float(-saldo_anterior),
-                    'acao': 'zerado'
-                })
-                
-                total_usuarios += 1
+                # Só zerar se o saldo atual for maior que 1 centavo
+                if balance.saldo_devedor > 0.01:
+                    saldo_anterior = balance.saldo_devedor
+                    db(db.user_balance.user_id == balance.user_id).update(
+                        saldo_devedor=0,
+                        updated_at=request.now
+                    )
+                    
+                    usuarios_atualizados.append({
+                        'user_id': balance.user_id,
+                        'saldo_anterior': float(saldo_anterior),
+                        'saldo_correto': 0.0,
+                        'diferenca': float(-saldo_anterior),
+                        'acao': 'zerado'
+                    })
+                    
+                    total_usuarios += 1
         
         # Commit das alterações
         db.commit()
@@ -811,7 +826,7 @@ def corrigir_saldo_devedor_usuarios():
             'total_usuarios_atualizados': total_usuarios,
             'valor_total_ajustado': float(valor_total_ajustado),
             'usuarios_atualizados': usuarios_atualizados,
-            'mensagem': f'Saldo devedor corrigido para {total_usuarios} usuários'
+            'mensagem': f'Saldo devedor corrigido para {total_usuarios} usuários' if total_usuarios > 0 else 'Nenhum usuário precisou de correção - todos os saldos já estão corretos'
         }
         
     except Exception as e:
@@ -837,9 +852,11 @@ def corrigir_saldo_devedor_usuarios():
             'mensagem': 'Erro ao corrigir saldo devedor dos usuários'
         }
     
+    
 def executar_correcao_saldo_com_relatorio():
     """
     Função que combina verificação e correção, gerando um relatório completo.
+    Só executa correções se realmente houver inconsistências significativas.
     
     Returns:
         dict: Relatório completo da operação
@@ -850,9 +867,10 @@ def executar_correcao_saldo_com_relatorio():
     if not relatorio_inconsistencias.get('requer_correcao', False):
         return {
             'sucesso': True,
-            'mensagem': 'Nenhuma inconsistência encontrada. Saldos já estão corretos.',
+            'mensagem': 'Nenhuma inconsistência encontrada. Todos os saldos já estão corretos (diferenças menores que R$ 0,01 são ignoradas).',
             'inconsistencias_encontradas': 0,
-            'correcoes_realizadas': 0
+            'correcoes_realizadas': 0,
+            'valor_total_ajustado': 0.0
         }
     
     # Se há inconsistências, executar correção
