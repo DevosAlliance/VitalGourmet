@@ -694,6 +694,36 @@ def correcao_saldo():
     
     return dict(form=form, resultado=resultado)
 
+def executar_correcao_saldo_com_relatorio():
+    """
+    Função que combina verificação e correção, gerando um relatório completo.
+    
+    Returns:
+        dict: Relatório completo da operação
+    """
+    # Primeiro verificar inconsistências
+    relatorio_inconsistencias = verificar_inconsistencias_saldo()
+    
+    if not relatorio_inconsistencias.get('requer_correcao', False):
+        return {
+            'sucesso': True,
+            'mensagem': 'Nenhuma inconsistência encontrada. Saldos já estão corretos.',
+            'inconsistencias_encontradas': 0,
+            'correcoes_realizadas': 0
+        }
+    
+    # Se há inconsistências, executar correção
+    resultado_correcao = corrigir_saldo_devedor_usuarios()
+    
+    return {
+        'sucesso': resultado_correcao['sucesso'],
+        'inconsistencias_encontradas': relatorio_inconsistencias['total_inconsistencias'],
+        'correcoes_realizadas': resultado_correcao.get('total_usuarios_atualizados', 0),
+        'valor_total_ajustado': resultado_correcao.get('valor_total_ajustado', 0),
+        'detalhes_inconsistencias': relatorio_inconsistencias['inconsistencias'],
+        'detalhes_correcoes': resultado_correcao.get('usuarios_atualizados', []),
+        'mensagem': resultado_correcao.get('mensagem', '')
+    }
 
 def task_correcao_automatica():
     """
