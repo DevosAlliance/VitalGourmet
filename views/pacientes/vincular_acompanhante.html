@@ -955,7 +955,7 @@
     // Configurar descrição automática
     const colaboradorNome = "{{=auth.user.first_name}}";
     const colaboradorSetor = "{{=db.setor[auth.user.setor_id].name if auth.user.setor_id else 'Sem setor'}}";
-    descricaoTextarea.value = `Pedido pelo colaborador ${colaboradorNome} (${colaboradorSetor}) para o acompanhante nº ${currentAcompanhanteNumero} do paciente ${currentPacienteNome}`;
+    descricaoTextarea.value = `Pedido pelo colaborador ${colaboradorNome} (${colaboradorSetor}) para o acompanhante ${currentAcompanhanteNome} do paciente ${currentPacienteNome}`;
 
     // Configurar botões de quantidade - colaboradores podem alterar quantidade
     const btnDiminuir = document.getElementById("btnDiminuirAcompanhante");
@@ -1033,7 +1033,7 @@
             if (modalDetalhesInstance) modalDetalhesInstance.hide();
             if (modalCardapioInstance) modalCardapioInstance.hide();
 
-            showSuccessPopup(`Refeição solicitada com sucesso para o acompanhante nº ${currentAcompanhanteNumero} do paciente ${currentPacienteNome}!`);
+            showSuccessPopup(`Refeição solicitada com sucesso para o acompanhante ${currentAcompanhanteNome} do paciente ${currentPacienteNome}!`);
         } else {
             showErrorPopup("Erro ao registrar solicitação: " + data.message);
         }
