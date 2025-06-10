@@ -1,7 +1,7 @@
 {{extend 'layout.html'}}
 
 <h2>Pedidos Pendentes</h2>
-<div id="loading" style="display: none;">Carregando...</div>
+<div id="loading" style="display: none">Carregando...</div>
 <button id="imprimir" class="btn btn-primary mb-3">Imprimir PDF</button>
 <table class="table table-striped">
   <thead>
@@ -24,12 +24,24 @@
 </table>
 
 <!-- Modal para ampliar a imagem -->
-<div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel" aria-hidden="true">
+<div
+  class="modal fade"
+  id="imageModal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="imageModalLabel"
+  aria-hidden="true"
+>
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="imageModalLabel">Visualizar Imagem</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <button
+          type="button"
+          class="close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        >
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -41,7 +53,7 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+  document.addEventListener("DOMContentLoaded", function () {
     // Função para imprimir pedidos
     function imprimirPedidos() {
       fetch("{{=URL('cozinha', 'api_gerenciar_pedidos')}}")
@@ -58,13 +70,17 @@
                 printIframe.style.display = "none";
                 document.body.appendChild(printIframe);
 
-                const iframeDoc = printIframe.contentDocument || printIframe.contentWindow.document;
+                const iframeDoc =
+                  printIframe.contentDocument ||
+                  printIframe.contentWindow.document;
                 iframeDoc.open();
                 iframeDoc.write(templateHtml);
                 iframeDoc.close();
 
                 // Preencher os dados no template
-                const tabelaBody = iframeDoc.querySelector("#tabela-pedidos tbody");
+                const tabelaBody = iframeDoc.querySelector(
+                  "#tabela-pedidos tbody"
+                );
                 pedidos.forEach((pedido) => {
                   const linha = `
                     <tr>
@@ -83,7 +99,8 @@
                 };
               });
           } else {
-            const errorMessage = data.message || "Erro inesperado ao carregar pedidos.";
+            const errorMessage =
+              data.message || "Erro inesperado ao carregar pedidos.";
             alert("Erro ao carregar pedidos para impressão: " + errorMessage);
           }
         })
@@ -108,7 +125,9 @@
 
             pedidos.forEach((pedido) => {
               const row = `
-                <tr id="pedido_${pedido.id}" class="${pedido.status === 'Em Preparação' ? 'preparacao' : ''}">
+                <tr id="pedido_${pedido.id}" class="${
+                pedido.status === "Em Preparação" ? "preparacao" : ""
+              }">
                   <td>${pedido.solicitante}</td>
                   <td>${pedido.setor}</td>
                   <td>${pedido.prato}</td>
@@ -125,13 +144,17 @@
                   <td class="status">${pedido.status}</td>
                   <td>
                     <button class="btn ${
-                      pedido.status === "Pendente" ? "btn-danger" : "btn-warning"
+                      pedido.status === "Pendente"
+                        ? "btn-danger"
+                        : "btn-warning"
                     } atualizar-status" data-id="${pedido.id}">
                       Confirmar
                     </button>
                   </td>
                   <td>
-                    <button class="btn btn-danger cancelar-pedido" data-id="${pedido.id}">X</button>
+                    <button class="btn btn-danger cancelar-pedido" data-id="${
+                      pedido.id
+                    }">X</button>
                   </td>
                 </tr>
               `;
@@ -151,54 +174,60 @@
 
     // Associar eventos aos botões
     function associarEventos() {
-      $(".atualizar-status").off("click").on("click", function () {
-        const pedidoId = $(this).data("id");
-        const row = $(`#pedido_${pedidoId}`);
-        const button = $(this);
-        button.prop("disabled", true).text("Atualizando...");
+      $(".atualizar-status")
+        .off("click")
+        .on("click", function () {
+          const pedidoId = $(this).data("id");
+          const row = $(`#pedido_${pedidoId}`);
+          const button = $(this);
+          button.prop("disabled", true).text("Atualizando...");
 
-        $.post(
-          "{{=URL('atualizar_status')}}",
-          { pedido_id: pedidoId },
-          function (response) {
-            button.prop("disabled", false).text("Confirmar");
-            if (response.status === "success") {
-              row.find(".status").text(response.novo_status);
-              if (response.novo_status === "Em Preparação") {
-                row.addClass("preparacao").removeClass("pendente");
-              } else {
-                row.removeClass("preparacao").addClass("pendente");
-              }
-            } else {
-              alert("Erro ao atualizar status: " + response.message);
-            }
-          }
-        );
-      });
-
-      $(".cancelar-pedido").off("click").on("click", function () {
-        const pedidoId = $(this).data("id");
-        const row = $(`#pedido_${pedidoId}`);
-        if (confirm("Tem certeza de que deseja cancelar este pedido?")) {
           $.post(
-            "{{=URL('cancelar_pedido')}}",
+            "{{=URL('atualizar_status')}}",
             { pedido_id: pedidoId },
             function (response) {
+              button.prop("disabled", false).text("Confirmar");
               if (response.status === "success") {
-                row.remove();
+                row.find(".status").text(response.novo_status);
+                if (response.novo_status === "Em Preparação") {
+                  row.addClass("preparacao").removeClass("pendente");
+                } else {
+                  row.removeClass("preparacao").addClass("pendente");
+                }
               } else {
-                alert("Erro ao cancelar pedido: " + response.message);
+                alert("Erro ao atualizar status: " + response.message);
               }
             }
           );
-        }
-      });
+        });
 
-      $(".small-image").off("click").on("click", function () {
-        const imgSrc = $(this).attr("src");
-        $("#modalImage").attr("src", imgSrc);
-        $("#imageModal").modal("show");
-      });
+      $(".cancelar-pedido")
+        .off("click")
+        .on("click", function () {
+          const pedidoId = $(this).data("id");
+          const row = $(`#pedido_${pedidoId}`);
+          if (confirm("Tem certeza de que deseja cancelar este pedido?")) {
+            $.post(
+              "{{=URL('cancelar_pedido')}}",
+              { pedido_id: pedidoId },
+              function (response) {
+                if (response.status === "success") {
+                  row.remove();
+                } else {
+                  alert("Erro ao cancelar pedido: " + response.message);
+                }
+              }
+            );
+          }
+        });
+
+      $(".small-image")
+        .off("click")
+        .on("click", function () {
+          const imgSrc = $(this).attr("src");
+          $("#modalImage").attr("src", imgSrc);
+          $("#imageModal").modal("show");
+        });
     }
 
     // Inicialização

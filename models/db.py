@@ -9,7 +9,7 @@ TENANTS = {
     'hst.sistemasdevos.com.br': {
         'id': 'cliente1',
         'name': 'HST',
-        'db_uri': 'mysql+mysqlconnector://lucas:!zJbfC!yamNVbJSnfPNJqN$1@srv647131.hstgr.cloud/hst',
+        'db_uri': 'mysql+mysqlconnector://lucas:!zJbfC!yamNVbJSnfPNJqN$1@srv647131.hstgr.cloud/newhst',
         'theme': 'hst',
         'logo': 'logo_cliente1.png',
         'primary_color': '#4e73df',

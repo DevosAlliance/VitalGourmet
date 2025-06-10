@@ -156,9 +156,9 @@
                                 <div class="col-md-6 col-lg-4 mb-2">
                                     <div class="form-check">
                                         <input class="form-check-input tipo-usuario-checkbox" type="checkbox" 
-                                               id="tipo_{{=tipo.replace(' ', '_')}}" 
+                                               id="tipo_{{=tipo.replace(' ', '_').replace('(', '').replace(')', '')}}" 
                                                value="{{=tipo}}">
-                                        <label class="form-check-label" for="tipo_{{=tipo.replace(' ', '_')}}">
+                                        <label class="form-check-label" for="tipo_{{=tipo.replace(' ', '_').replace('(', '').replace(')', '')}}">
                                             {{=tipo}}
                                         </label>
                                     </div>
@@ -182,10 +182,62 @@
                                 <div class="col-md-6 col-lg-4 mb-2">
                                     <div class="form-check">
                                         <input class="form-check-input tipo-refeicao-checkbox" type="checkbox" 
-                                               id="refeicao_{{=refeicao.replace(' ', '_')}}" 
+                                               id="refeicao_{{=refeicao.replace(' ', '_').replace('(', '').replace(')', '')}}" 
                                                value="{{=refeicao}}">
-                                        <label class="form-check-label" for="refeicao_{{=refeicao.replace(' ', '_')}}">
+                                        <label class="form-check-label" for="refeicao_{{=refeicao.replace(' ', '_').replace('(', '').replace(')', '')}}">
                                             {{=refeicao}}
+                                        </label>
+                                    </div>
+                                </div>
+                                {{pass}}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Campo para Tipos de Paciente (JSON) -->
+                    <div class="mb-3" id="edit_valor_tipos_paciente_container" style="display: none;">
+                        <label class="form-label">Selecione os Tipos de Paciente</label>
+                        <div class="mb-2 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="select_all_pacientes">Selecionar Todos</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="unselect_all_pacientes">Desmarcar Todos</button>
+                        </div>
+                        <div id="tipos_paciente_checkbox_list" class="border p-3 rounded">
+                            <div class="row">
+                                <!-- Checkboxes para tipos de paciente são preenchidos aqui -->
+                                {{for paciente in tipos_paciente:}}
+                                <div class="col-md-6 col-lg-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input tipo-paciente-checkbox" type="checkbox" 
+                                               id="paciente_{{=paciente.replace(' ', '_').replace('(', '').replace(')', '')}}" 
+                                               value="{{=paciente}}">
+                                        <label class="form-check-label" for="paciente_{{=paciente.replace(' ', '_').replace('(', '').replace(')', '')}}">
+                                            {{=paciente}}
+                                        </label>
+                                    </div>
+                                </div>
+                                {{pass}}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Campo para Setores (JSON) -->
+                    <div class="mb-3" id="edit_valor_setores_container" style="display: none;">
+                        <label class="form-label">Selecione os Setores</label>
+                        <div class="mb-2 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="select_all_setores">Selecionar Todos</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="unselect_all_setores">Desmarcar Todos</button>
+                        </div>
+                        <div id="setores_checkbox_list" class="border p-3 rounded">
+                            <div class="row">
+                                <!-- Checkboxes para setores são preenchidos aqui -->
+                                {{for setor in setores:}}
+                                <div class="col-md-6 col-lg-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input setor-checkbox" type="checkbox" 
+                                               id="setor_{{=setor.replace(' ', '_').replace('(', '').replace(')', '')}}" 
+                                               value="{{=setor}}">
+                                        <label class="form-check-label" for="setor_{{=setor.replace(' ', '_').replace('(', '').replace(')', '')}}">
+                                            {{=setor}}
                                         </label>
                                     </div>
                                 </div>
@@ -289,6 +341,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Botões para tipos de paciente
+    document.getElementById('select_all_pacientes').addEventListener('click', function() {
+        document.querySelectorAll('.tipo-paciente-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+    });
+    
+    document.getElementById('unselect_all_pacientes').addEventListener('click', function() {
+        document.querySelectorAll('.tipo-paciente-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+    });
+    
+    // Botões para setores
+    document.getElementById('select_all_setores').addEventListener('click', function() {
+        document.querySelectorAll('.setor-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+    });
+    
+    document.getElementById('unselect_all_setores').addEventListener('click', function() {
+        document.querySelectorAll('.setor-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+    });
+    
     // Visualizar JSON como lista
     document.querySelectorAll('.visualizar-json').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -311,6 +389,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const tipo = this.getAttribute('data-tipo');
             const descricao = this.getAttribute('data-descricao');
             
+            // Debug
+            console.log('=== EDITANDO CONFIGURAÇÃO ===');
+            console.log('Nome:', nome);
+            console.log('Tipo:', tipo);
+            console.log('Valor:', valor);
+            
             document.getElementById('edit_id').value = id;
             document.getElementById('edit_nome').value = nome;
             document.getElementById('edit_tipo').value = tipo;
@@ -318,12 +402,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Esconde todos os containers de valor e remove required de todos
             const inputValor = document.getElementById('edit_valor');
-            inputValor.removeAttribute('required'); // Remove required para evitar validação de campo oculto
+            inputValor.removeAttribute('required');
             
             document.getElementById('edit_valor_container').style.display = 'none';
             document.getElementById('edit_valor_boolean_container').style.display = 'none';
             document.getElementById('edit_valor_tipos_usuario_container').style.display = 'none';
             document.getElementById('edit_valor_tipos_refeicao_container').style.display = 'none';
+            document.getElementById('edit_valor_tipos_paciente_container').style.display = 'none';
+            document.getElementById('edit_valor_setores_container').style.display = 'none';
             document.getElementById('edit_valor_json_container').style.display = 'none';
             
             // Configura o valor com base no tipo
@@ -336,15 +422,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('edit_valor_false').checked = true;
                 }
             } else if (tipo === 'json') {
-                // Para JSON, armazenamos o valor original em um campo oculto
-                // Isso mantém o valor JSON original disponível, mesmo que usemos interfaces diferentes
                 inputValor.value = valor;
                 
+                // Detectar qual tipo de editor usar baseado no nome da configuração
                 if (nome.includes('tipos_usuario')) {
-                    // Editor de tipos de usuário
+                    console.log('>>> Detectado: Tipos de usuário');
                     document.getElementById('edit_valor_tipos_usuario_container').style.display = 'block';
                     
-                    // Analisar o JSON e marcar os checkboxes apropriados
                     try {
                         const tiposSelecionados = JSON.parse(valor);
                         
@@ -355,66 +439,110 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Marcar os checkboxes selecionados
                         if (Array.isArray(tiposSelecionados)) {
-                            // console.log('Tipos selecionados no banco:', tiposSelecionados);
                             tiposSelecionados.forEach(tipo => {
-                                const checkbox = document.getElementById(`tipo_${tipo.replace(' ', '_')}`);
+                                const tipoLimpo = tipo.replace(' ', '_').replace('(', '').replace(')', '');
+                                const checkbox = document.getElementById(`tipo_${tipoLimpo}`);
                                 if (checkbox) {
                                     checkbox.checked = true;
+                                    console.log('Marcado:', tipo);
                                 }
                             });
                         }
                     } catch (e) {
                         console.error('Erro ao processar tipos de usuário:', e);
                     }
+                    
                 } else if (nome === 'tipos_prato_sem_gratuidade') {
-                    // Editor de tipos de refeição
+                    console.log('>>> Detectado: Tipos de refeição');
                     document.getElementById('edit_valor_tipos_refeicao_container').style.display = 'block';
                     
-                    // Analisar o JSON e marcar os checkboxes apropriados
                     try {
                         const tiposSelecionados = JSON.parse(valor);
                         
                         // Limpar todos os checkboxes
-                       document.querySelectorAll('.tipo-refeicao-checkbox').forEach(cb => {
-                            // Debug para ver cada checkbox disponível
-                            // console.log('Checkbox:', cb.value);
-                            
-                            // Verifica se o valor do checkbox está na lista normalizando as strings
-                            const cbValorNormalizado = cb.value.trim();
-                            const encontrado = tiposSelecionados.some(tipo => 
-                                tipo.trim() === cbValorNormalizado
-                            );
-                            
-                            if (encontrado) {
-                                console.log('Marcando checkbox:', cbValorNormalizado);
-                                cb.checked = true;
-                            }
+                        document.querySelectorAll('.tipo-refeicao-checkbox').forEach(cb => {
+                            cb.checked = false;
                         });
                         
                         // Marcar os checkboxes selecionados
                         if (Array.isArray(tiposSelecionados)) {
                             tiposSelecionados.forEach(tipo => {
-                                const checkbox = document.getElementById(`refeicao_${tipo.replace(' ', '_')}`);
+                                const tipoLimpo = tipo.replace(' ', '_').replace('(', '').replace(')', '');
+                                const checkbox = document.getElementById(`refeicao_${tipoLimpo}`);
                                 if (checkbox) {
                                     checkbox.checked = true;
+                                    console.log('Marcado:', tipo);
                                 }
                             });
                         }
                     } catch (e) {
                         console.error('Erro ao processar tipos de refeição:', e);
                     }
+                    
+                } else if (nome === 'tipos_paciente_acompanhante_herda_gratuidade') {
+                    console.log('>>> Detectado: Tipos de paciente');
+                    document.getElementById('edit_valor_tipos_paciente_container').style.display = 'block';
+                    
+                    try {
+                        const tiposSelecionados = JSON.parse(valor);
+                        
+                        // Limpar todos os checkboxes
+                        document.querySelectorAll('.tipo-paciente-checkbox').forEach(cb => {
+                            cb.checked = false;
+                        });
+                        
+                        // Marcar os checkboxes selecionados
+                        if (Array.isArray(tiposSelecionados)) {
+                            tiposSelecionados.forEach(tipo => {
+                                const tipoLimpo = tipo.replace(' ', '_').replace('(', '').replace(')', '');
+                                const checkbox = document.getElementById(`paciente_${tipoLimpo}`);
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                    console.log('Marcado:', tipo);
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Erro ao processar tipos de paciente:', e);
+                    }
+                    
+                } else if (nome === 'setores_por_tipo_colaborador') {
+                    console.log('>>> Detectado: Setores');
+                    document.getElementById('edit_valor_setores_container').style.display = 'block';
+                    
+                    try {
+                        const setoresSelecionados = JSON.parse(valor);
+                        
+                        // Limpar todos os checkboxes
+                        document.querySelectorAll('.setor-checkbox').forEach(cb => {
+                            cb.checked = false;
+                        });
+                        
+                        // Marcar os checkboxes selecionados
+                        if (Array.isArray(setoresSelecionados)) {
+                            setoresSelecionados.forEach(setor => {
+                                const setorLimpo = setor.replace(' ', '_').replace('(', '').replace(')', '');
+                                const checkbox = document.getElementById(`setor_${setorLimpo}`);
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                    console.log('Marcado:', setor);
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Erro ao processar setores:', e);
+                    }
+                    
                 } else {
-                    // Editor genérico para outros JSONs
+                    console.log('>>> Usando editor genérico para:', nome);
                     document.getElementById('edit_valor_json_container').style.display = 'block';
                     
                     try {
                         const jsonObj = JSON.parse(valor);
                         
                         if (Array.isArray(jsonObj)) {
-                            // Para arrays, mostra um item por linha
                             document.getElementById('edit_valor_json').value = jsonObj.join('\n');
                         } else {
-                            // Para objetos, mostra o JSON formatado
                             document.getElementById('edit_valor_json').value = JSON.stringify(jsonObj, null, 2);
                         }
                     } catch (e) {
@@ -425,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 // Para tipos simples (string, int, float)
                 document.getElementById('edit_valor_container').style.display = 'block';
-                inputValor.setAttribute('required', 'required'); // Reativa o required para estes tipos
+                inputValor.setAttribute('required', 'required');
                 inputValor.value = valor;
             }
             
@@ -438,9 +566,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Botão para atualizar configuração
     document.getElementById('btnAtualizarConfig').addEventListener('click', function() {
         const form = document.getElementById('formEditarConfiguracao');
-        
-        // Não usamos checkValidity para o formulário inteiro
-        // Em vez disso, validamos manualmente os campos relevantes
         
         // Desabilita o botão durante o processamento
         this.disabled = true;
@@ -468,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const checkboxes = document.querySelectorAll('.tipo-usuario-checkbox:checked');
                 const tiposSelecionados = Array.from(checkboxes).map(cb => cb.value);
                 
-                if (tiposSelecionados.length === 0 && nome !== 'tipos_prato_sem_gratuidade') {
+                if (tiposSelecionados.length === 0) {
                     alert('Por favor, selecione pelo menos um tipo de usuário.');
                     this.disabled = false;
                     this.innerHTML = 'Salvar Alterações';
@@ -477,7 +602,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 valor = JSON.stringify(tiposSelecionados);
                 console.log('Tipos de usuário selecionados:', tiposSelecionados);
-                console.log('JSON serializado para tipos de usuário:', valor);
                 
             } else if (nome === 'tipos_prato_sem_gratuidade') {
                 // Coletar valores das checkboxes de tipos de refeição
@@ -493,7 +617,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 valor = JSON.stringify(tiposSelecionados);
                 console.log('Tipos de refeição selecionados:', tiposSelecionados);
-                console.log('JSON serializado para tipos de refeição:', valor);
+                
+            } else if (nome === 'tipos_paciente_acompanhante_herda_gratuidade') {
+                // Coletar valores das checkboxes de tipos de paciente
+                const checkboxes = document.querySelectorAll('.tipo-paciente-checkbox:checked');
+                const tiposSelecionados = Array.from(checkboxes).map(cb => cb.value);
+                
+                if (tiposSelecionados.length === 0) {
+                    alert('Por favor, selecione pelo menos um tipo de paciente.');
+                    this.disabled = false;
+                    this.innerHTML = 'Salvar Alterações';
+                    return;
+                }
+                
+                valor = JSON.stringify(tiposSelecionados);
+                console.log('Tipos de paciente selecionados:', tiposSelecionados);
+                
+            } else if (nome === 'setores_por_tipo_colaborador') {
+                // Coletar valores das checkboxes de setores
+                const checkboxes = document.querySelectorAll('.setor-checkbox:checked');
+                const setoresSelecionados = Array.from(checkboxes).map(cb => cb.value);
+                
+                if (setoresSelecionados.length === 0) {
+                    alert('Por favor, selecione pelo menos um setor.');
+                    this.disabled = false;
+                    this.innerHTML = 'Salvar Alterações';
+                    return;
+                }
+                
+                valor = JSON.stringify(setoresSelecionados);
+                console.log('Setores selecionados:', setoresSelecionados);
                 
             } else {
                 // Para outros JSONs, processar o texto como lista
@@ -590,5 +743,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
 </script>

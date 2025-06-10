@@ -450,8 +450,7 @@ def pesquisar_usuarios():
         return response.json({'status': 'error', 'message': 'Digite pelo menos 3 caracteres para pesquisar'})
     
     # Recupera os IDs dos tipos permitidos (mesma lógica que já usava)
-    tipos_permitidos = ['Paciente', 'Paciente Convenio', 'Colaborador']
-    tipos_ids = db(db.user_type.name.belongs(tipos_permitidos)).select(db.user_type.id)
+    tipos_ids = db(db.user_type).select(db.user_type.id)
     tipos_ids = [tipo.id for tipo in tipos_ids]
     
     # Consulta com filtro de nome e tipo de usuário
@@ -500,9 +499,8 @@ def api_listar_pratos_para_usuario():
 
 def api_listar_usuarios_para_excecao():
     try:
-        # Recupera os IDs dos tipos permitidos
-        tipos_permitidos = ['Paciente', 'Paciente Convenio', 'Colaborador']
-        tipos_ids = db(db.user_type.name.belongs(tipos_permitidos)).select(db.user_type.id)
+        # Recupera todos os tipos de usuários
+        tipos_ids = db(db.user_type).select(db.user_type.id)
         tipos_ids = [tipo.id for tipo in tipos_ids]
 
         # Busca os usuários com esses tipos

@@ -49,11 +49,26 @@
     color: #fff;
     padding: 4px 8px;
     font-size: 0.8em;
+    margin-right: 5px;
   }
 
   .btn-cancelar:hover {
     background-color: #c82333;
     border-color: #bd2130;
+  }
+
+  .btn-ajustar-preco {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+    padding: 4px 8px;
+    font-size: 0.8em;
+  }
+
+  .btn-ajustar-preco:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    color: #000;
   }
 
   .table td,
@@ -95,6 +110,49 @@
     font-size: 0.85em;
     color: #856404;
   }
+
+  .preco-input {
+    font-size: 1.1em;
+    text-align: center;
+    font-weight: bold;
+  }
+
+  .diferenca-info {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+  }
+
+  .diferenca-positiva {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+
+  .diferenca-negativa {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+
+  .diferenca-neutra {
+    background-color: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #d6d8db;
+  }
+
+  /* Estilo para o select de ordenação */
+  .ordenacao-select {
+    border: 2px solid #007bff;
+    border-radius: 6px;
+    background-color: #f8f9ff;
+  }
+
+  .ordenacao-select:focus {
+    border-color: #0056b3;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
 </style>
 
 <h2>🔧 Administração de Pedidos</h2>
@@ -132,29 +190,32 @@
         {{pass}}
       </select>
     </div>
+
+    <!-- NOVO: Select de Ordenação -->
+    <div class="form-group col-md-3">
+      <label for="filtro-ordenacao">📊 Ordenar por:</label>
+      <select class="form-control ordenacao-select" id="filtro-ordenacao">
+        <option value="data_desc">📅 Data (Mais Recentes)</option>
+        <option value="data_asc">📅 Data (Mais Antigos)</option>
+        <option value="preco_desc">💰 Preço (Maior → Menor)</option>
+        <option value="preco_asc">💰 Preço (Menor → Maior)</option>
+      </select>
+    </div>
   </div>
 
   <div class="form-row">
     <div class="form-group col-md-3">
       <label for="filtro-data-inicio">Data Inicial:</label>
-      <input
-        type="date"
-        class="form-control"
-        id="filtro-data-inicio"
-      />
-      <div class="date-warning" id="warning-data-inicio" style="display: none;">
-        ⚠️ Período máximo: 15 dias
+      <input type="date" class="form-control" id="filtro-data-inicio" />
+      <div class="date-warning" id="warning-data-inicio" style="display: none">
+        ⚠️ Período máximo: 30 dias
       </div>
     </div>
 
     <div class="form-group col-md-3">
       <label for="filtro-data-fim">Data Final:</label>
-      <input
-        type="date"
-        class="form-control"
-        id="filtro-data-fim"
-      />
-      <div class="date-warning" id="warning-data-fim" style="display: none;">
+      <input type="date" class="form-control" id="filtro-data-fim" />
+      <div class="date-warning" id="warning-data-fim" style="display: none">
         ⚠️ Não é possível selecionar datas futuras
       </div>
     </div>
@@ -176,6 +237,12 @@
 <!-- Informações Totais -->
 <div class="total-info" id="total-info" style="display: none">
   <span id="total-pedidos">0</span> pedidos encontrados
+  <!-- NOVO: Indicador de ordenação -->
+  <span
+    id="ordenacao-info"
+    class="ml-3 text-muted"
+    style="font-size: 0.9em"
+  ></span>
 </div>
 
 <!-- Loading -->
@@ -188,7 +255,7 @@
   <table class="table table-striped table-hover">
     <thead class="thead-dark">
       <tr>
-        <th>ID</th>
+        <!-- <th>ID</th> -->
         <th>Cliente</th>
         <th>Tipo Usuario</th>
         <th>Setor</th>
@@ -233,12 +300,80 @@
   </div>
 </div>
 
+<!-- Modal para ajustar preço -->
+<div class="modal fade" id="ajustarPrecoModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">💰 Ajustar Preço do Pedido</h5>
+        <button
+          type="button"
+          class="close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label><strong>Cliente:</strong></label>
+          <p id="modal-cliente-nome" class="form-control-plaintext"></p>
+        </div>
+
+        <div class="form-group">
+          <label><strong>Prato:</strong></label>
+          <p id="modal-prato-nome" class="form-control-plaintext"></p>
+        </div>
+
+        <div class="form-group">
+          <label for="modal-preco-atual"><strong>Preço Atual:</strong></label>
+          <input
+            type="text"
+            class="form-control"
+            id="modal-preco-atual"
+            readonly
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="modal-novo-preco"><strong>Novo Preço:</strong></label>
+          <input
+            type="number"
+            class="form-control preco-input"
+            id="modal-novo-preco"
+            step="0.01"
+            min="0"
+            placeholder="Digite o novo preço..."
+          />
+        </div>
+
+        <div
+          id="diferenca-preview"
+          class="diferenca-info"
+          style="display: none"
+        >
+          <div id="diferenca-texto"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="confirmar-ajuste-preco"
+        >
+          ✅ Confirmar Ajuste
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   $(document).ready(function () {
-    
     // Função para formatar data para YYYY-MM-DD
     function formatarDataParaInput(data) {
-      return data.toISOString().split('T')[0];
+      return data.toISOString().split("T")[0];
     }
 
     // Função para ajustar limites das datas
@@ -246,14 +381,14 @@
       const hoje = new Date();
       const maxDataPassado = new Date();
       maxDataPassado.setDate(hoje.getDate() - 365); // Limite de 1 ano no passado
-      
+
       // Definir data máxima como hoje
       const hojeFormatado = formatarDataParaInput(hoje);
-      $("#filtro-data-inicio, #filtro-data-fim").attr('max', hojeFormatado);
-      
+      $("#filtro-data-inicio, #filtro-data-fim").attr("max", hojeFormatado);
+
       // Definir data mínima (opcional - 1 ano atrás)
       const minDataFormatada = formatarDataParaInput(maxDataPassado);
-      $("#filtro-data-inicio, #filtro-data-fim").attr('min', minDataFormatada);
+      $("#filtro-data-inicio, #filtro-data-fim").attr("min", minDataFormatada);
     }
 
     // Função para definir datas padrão (ontem até hoje)
@@ -261,52 +396,72 @@
       const hoje = new Date();
       const ontem = new Date();
       ontem.setDate(hoje.getDate() - 1);
-      
+
       $("#filtro-data-inicio").val(formatarDataParaInput(ontem));
       $("#filtro-data-fim").val(formatarDataParaInput(hoje));
-      
+
       // Reajustar limites após definir valores padrão
       ajustarLimitesDatas();
+    }
+
+    // NOVA: Função para obter texto da ordenação
+    function obterTextoOrdenacao(valor) {
+      const textos = {
+        data_desc: "📅 por Data (Mais Recentes)",
+        data_asc: "📅 por Data (Mais Antigos)",
+        preco_desc: "💰 por Preço (Maior → Menor)",
+        preco_asc: "💰 por Preço (Menor → Maior)",
+      };
+      return textos[valor] || "📅 por Data (Mais Recentes)";
     }
 
     // Função para validar período selecionado
     function validarPeriodo() {
       const dataInicio = $("#filtro-data-inicio").val();
       const dataFim = $("#filtro-data-fim").val();
-      
+
       if (!dataInicio || !dataFim) {
         esconderWarnings();
         return true; // Se alguma data estiver vazia, não validar
       }
-      
+
       const inicio = new Date(dataInicio);
       const fim = new Date(dataFim);
       const hoje = new Date();
-      
+
       // Resetar warnings
       esconderWarnings();
-      
+
       // Validar se as datas não são futuras
       if (inicio > hoje || fim > hoje) {
-        mostrarWarning("warning-data-fim", "⚠️ Não é possível selecionar datas futuras!");
+        mostrarWarning(
+          "warning-data-fim",
+          "⚠️ Não é possível selecionar datas futuras!"
+        );
         return false;
       }
-      
+
       // Validar se data início não é maior que data fim
       if (inicio > fim) {
-        mostrarWarning("warning-data-inicio", "⚠️ Data inicial não pode ser maior que a final!");
+        mostrarWarning(
+          "warning-data-inicio",
+          "⚠️ Data inicial não pode ser maior que a final!"
+        );
         return false;
       }
-      
+
       // Calcular diferença em dias
       const diferencaMs = fim.getTime() - inicio.getTime();
       const diferencaDias = Math.ceil(diferencaMs / (1000 * 60 * 60 * 24));
-      
-      if (diferencaDias > 15) {
-        mostrarWarning("warning-data-inicio", "⚠️ Período máximo permitido: 15 dias!");
+
+      if (diferencaDias > 31) {
+        mostrarWarning(
+          "warning-data-inicio",
+          "⚠️ Período máximo permitido: 31 dias!"
+        );
         return false;
       }
-      
+
       return true;
     }
 
@@ -326,17 +481,17 @@
     function ajustarDataFim() {
       const dataInicio = $("#filtro-data-inicio").val();
       if (!dataInicio) return;
-      
+
       const inicio = new Date(dataInicio);
       const maxDataFim = new Date(inicio);
-      maxDataFim.setDate(inicio.getDate() + 15); // Máximo 15 dias após o início
-      
+      maxDataFim.setDate(inicio.getDate() + 31); // Máximo x dias após o início
+
       const hoje = new Date();
       const dataLimite = maxDataFim > hoje ? hoje : maxDataFim;
-      
-      $("#filtro-data-fim").attr('min', dataInicio);
-      $("#filtro-data-fim").attr('max', formatarDataParaInput(dataLimite));
-      
+
+      $("#filtro-data-fim").attr("min", dataInicio);
+      $("#filtro-data-fim").attr("max", formatarDataParaInput(dataLimite));
+
       // Se a data fim atual for inválida, ajustar
       const dataFimAtual = $("#filtro-data-fim").val();
       if (dataFimAtual) {
@@ -351,14 +506,17 @@
     function ajustarDataInicio() {
       const dataFim = $("#filtro-data-fim").val();
       if (!dataFim) return;
-      
+
       const fim = new Date(dataFim);
       const minDataInicio = new Date(fim);
-      minDataInicio.setDate(fim.getDate() - 15); // Mínimo 15 dias antes do fim
-      
-      $("#filtro-data-inicio").attr('max', dataFim);
-      $("#filtro-data-inicio").attr('min', formatarDataParaInput(minDataInicio));
-      
+      minDataInicio.setDate(fim.getDate() - 31); // Mínimo x dias antes do fim
+
+      $("#filtro-data-inicio").attr("max", dataFim);
+      $("#filtro-data-inicio").attr(
+        "min",
+        formatarDataParaInput(minDataInicio)
+      );
+
       // Se a data início atual for inválida, ajustar
       const dataInicioAtual = $("#filtro-data-inicio").val();
       if (dataInicioAtual) {
@@ -388,14 +546,15 @@
       return classes[status] || "status-pendente";
     }
 
-    // Função para carregar pedidos via AJAX
+    // MODIFICADA: Função para carregar pedidos via AJAX com ordenação
     function carregarPedidos() {
       const filtros = {
         nome: $("#filtro-nome").val().trim(),
         tipo_usuario: $("#filtro-tipo-usuario").val(),
         setor: $("#filtro-setor").val(),
         data_inicio: $("#filtro-data-inicio").val(),
-        data_fim: $("#filtro-data-fim").val()
+        data_fim: $("#filtro-data-fim").val(),
+        ordenacao: $("#filtro-ordenacao").val(), // NOVO: Parâmetro de ordenação
       };
 
       $("#loading").show();
@@ -419,8 +578,11 @@
               return;
             }
 
-            // Mostrar total
+            // Mostrar total e ordenação
             $("#total-pedidos").text(response.total);
+            $("#ordenacao-info").text(
+              `- Ordenados ${obterTextoOrdenacao(filtros.ordenacao)}`
+            );
             $("#total-info").show();
 
             // Preencher tabela
@@ -435,9 +597,12 @@
 
               const row = `
                             <tr id="pedido_${pedido.id}">
-                                <td>${pedido.id}</td>
                                 <td>
-                                    <strong>${pedido.solicitante}</strong>
+                                    <a href="{{=URL('financeiro', 'ver_solicitacoes_e_saldo')}}/${
+                                      pedido.solicitante_id
+                                    }" class="user-link"><strong>${
+                pedido.solicitante
+              }</strong></a>
                                     ${observacoes}
                                 </td>
                                 <td><small>${pedido.tipo_usuario}</small></td>
@@ -449,9 +614,9 @@
                                 }</small></td>
                                 <td>${foto}</td>
                                 <td><strong>${pedido.quantidade}</strong></td>
-                                <td><strong>${formatarPreco(
+                                <td><strong class="preco-valor" data-preco="${
                                   pedido.preco
-                                )}</strong></td>
+                                }">${formatarPreco(pedido.preco)}</strong></td>
                                 <td>${pedido.quarto || "-"}</td>
                                 <td><small>${
                                   pedido.data_solicitacao
@@ -464,6 +629,13 @@
                                     </span>
                                 </td>
                                 <td>
+                                    <button class="btn btn-ajustar-preco btn-sm ajustar-preco-pedido" 
+                                            data-id="${pedido.id}"
+                                            data-cliente="${pedido.solicitante}"
+                                            data-prato="${pedido.prato}"
+                                            data-preco="${pedido.preco}">
+                                        💰 Ajustar
+                                    </button>
                                     <button class="btn btn-cancelar btn-sm cancelar-pedido" data-id="${
                                       pedido.id
                                     }">
@@ -498,8 +670,72 @@
       }
     }
 
+    // Variáveis globais para o modal de ajuste de preço
+    let pedidoAjusteId = null;
+    let precoAtualAjuste = 0;
+
+    // Função para calcular e exibir diferença de preço
+    function calcularDiferenca() {
+      const novoPreco = parseFloat($("#modal-novo-preco").val()) || 0;
+      const diferenca = novoPreco - precoAtualAjuste;
+      const diferencaContainer = $("#diferenca-preview");
+      const diferencaTexto = $("#diferenca-texto");
+
+      if (diferenca === 0) {
+        diferencaContainer
+          .removeClass("diferenca-positiva diferenca-negativa")
+          .addClass("diferenca-neutra");
+        diferencaTexto.html("🔄 Nenhuma alteração no preço");
+        diferencaContainer.show();
+      } else if (diferenca > 0) {
+        diferencaContainer
+          .removeClass("diferenca-negativa diferenca-neutra")
+          .addClass("diferenca-positiva");
+        diferencaTexto.html(
+          `📈 <strong>Aumento:</strong> ${formatarPreco(
+            diferenca
+          )}<br>O saldo devedor do cliente será <strong>acrescido</strong> deste valor.`
+        );
+        diferencaContainer.show();
+      } else {
+        diferencaContainer
+          .removeClass("diferenca-positiva diferenca-neutra")
+          .addClass("diferenca-negativa");
+        diferencaTexto.html(
+          `📉 <strong>Desconto:</strong> ${formatarPreco(
+            Math.abs(diferenca)
+          )}<br>O saldo devedor do cliente será <strong>reduzido</strong> deste valor.`
+        );
+        diferencaContainer.show();
+      }
+    }
+
     // Função para associar eventos aos botões
     function associarEventos() {
+      // Ajustar preço do pedido
+      $(".ajustar-preco-pedido")
+        .off("click")
+        .on("click", function () {
+          pedidoAjusteId = $(this).data("id");
+          const cliente = $(this).data("cliente");
+          const prato = $(this).data("prato");
+          precoAtualAjuste = parseFloat($(this).data("preco"));
+
+          // Preencher modal
+          $("#modal-cliente-nome").text(cliente);
+          $("#modal-prato-nome").text(prato);
+          $("#modal-preco-atual").val(formatarPreco(precoAtualAjuste));
+          $("#modal-novo-preco").val(precoAtualAjuste.toFixed(2));
+
+          // Resetar diferença
+          $("#diferenca-preview").hide();
+
+          // Calcular diferença inicial
+          calcularDiferenca();
+
+          $("#ajustarPrecoModal").modal("show");
+        });
+
       // Cancelar pedido
       $(".cancelar-pedido")
         .off("click")
@@ -549,11 +785,83 @@
         });
     }
 
+    // Evento para calcular diferença em tempo real
+    $("#modal-novo-preco").on("input", calcularDiferenca);
+
+    // Evento para confirmar ajuste de preço
+    $("#confirmar-ajuste-preco").on("click", function () {
+      const novoPreco = parseFloat($("#modal-novo-preco").val());
+
+      if (isNaN(novoPreco) || novoPreco < 0) {
+        alert("⚠️ Por favor, digite um preço válido!");
+        return;
+      }
+
+      if (novoPreco === precoAtualAjuste) {
+        alert(
+          "ℹ️ O novo preço é igual ao preço atual. Nenhuma alteração será feita."
+        );
+        return;
+      }
+
+      const diferenca = novoPreco - precoAtualAjuste;
+      let mensagemConfirmacao = `💰 Confirmar ajuste de preço?\n\n`;
+      mensagemConfirmacao += `Preço atual: ${formatarPreco(
+        precoAtualAjuste
+      )}\n`;
+      mensagemConfirmacao += `Novo preço: ${formatarPreco(novoPreco)}\n\n`;
+
+      if (diferenca > 0) {
+        mensagemConfirmacao += `📈 O saldo devedor do cliente será acrescido em ${formatarPreco(
+          diferenca
+        )}`;
+      } else {
+        mensagemConfirmacao += `📉 O saldo devedor do cliente será reduzido em ${formatarPreco(
+          Math.abs(diferenca)
+        )}`;
+      }
+
+      if (confirm(mensagemConfirmacao)) {
+        const button = $(this);
+        button.prop("disabled", true).text("Processando...");
+
+        $.post(
+          "{{=URL('ajustar_preco_pedido')}}",
+          {
+            pedido_id: pedidoAjusteId,
+            novo_preco: novoPreco,
+          },
+          function (response) {
+            if (response.status === "success") {
+              // Atualizar o preço na tabela
+              const row = $(`#pedido_${pedidoAjusteId}`);
+              const precoCell = row.find(".preco-valor");
+              precoCell.attr("data-preco", novoPreco);
+              precoCell.text(formatarPreco(novoPreco));
+
+              // Atualizar o data-preco do botão também
+              row.find(".ajustar-preco-pedido").attr("data-preco", novoPreco);
+
+              $("#ajustarPrecoModal").modal("hide");
+              // alert("✅ Preço ajustado com sucesso!");
+            } else {
+              alert("❌ Erro ao ajustar preço: " + response.message);
+            }
+            button.prop("disabled", false).text("✅ Confirmar Ajuste");
+          }
+        ).fail(function () {
+          alert("❌ Erro ao conectar com o servidor.");
+          button.prop("disabled", false).text("✅ Confirmar Ajuste");
+        });
+      }
+    });
+
     // Eventos dos filtros
     $("#limpar-filtros").on("click", function () {
       $("#filtro-nome").val("");
       $("#filtro-tipo-usuario").val("");
       $("#filtro-setor").val("");
+      $("#filtro-ordenacao").val("data_desc"); // NOVO: Reset ordenação
       esconderWarnings();
       definirDatasPadrao();
       carregarPedidos();
@@ -576,28 +884,31 @@
       carregarPedidos();
     });
 
-    // События для дат с валидацией
-    $("#filtro-data-inicio").on("change", function() {
+    // Eventos para datas com validação
+    $("#filtro-data-inicio").on("change", function () {
       ajustarDataFim();
       carregarPedidosComValidacao();
     });
 
-    $("#filtro-data-fim").on("change", function() {
+    $("#filtro-data-fim").on("change", function () {
       ajustarDataInicio();
       carregarPedidosComValidacao();
     });
 
+    // NOVO: Evento para mudança na ordenação
+    $("#filtro-ordenacao").on("change", carregarPedidos);
+
     // Evento para impedir digitação de datas inválidas
-    $("#filtro-data-inicio, #filtro-data-fim").on("blur", function() {
+    $("#filtro-data-inicio, #filtro-data-fim").on("blur", function () {
       const valor = $(this).val();
       if (valor) {
         const data = new Date(valor);
         const hoje = new Date();
-        
+
         if (data > hoje) {
           mostrarWarning("warning-data-fim", "⚠️ Data não pode ser futura!");
           $(this).val(formatarDataParaInput(hoje));
-          if ($(this).attr('id') === 'filtro-data-inicio') {
+          if ($(this).attr("id") === "filtro-data-inicio") {
             ajustarDataFim();
           } else {
             ajustarDataInicio();
@@ -620,6 +931,5 @@
     definirDatasPadrao();
     ajustarLimitesDatas();
     carregarPedidos();
-
   });
 </script>

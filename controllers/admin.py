@@ -1,5 +1,4 @@
 # controllers/admin.py
-# Adicione estas funções ao seu admin.py existente
 
 def index():
     """
@@ -196,6 +195,7 @@ def api_admin_listar_pedidos():
         filtro_setor = request.vars.setor or ""
         filtro_data_inicio = request.vars.data_inicio or ""
         filtro_data_fim = request.vars.data_fim or ""
+        filtro_ordenacao = request.vars.ordenacao or "data_desc"  # Novo parâmetro
         
         # Query base: todos os pedidos não finalizados
         query = (~db.solicitacao_refeicao.status.belongs(['Pago']))
@@ -229,6 +229,18 @@ def api_admin_listar_pedidos():
             except ValueError:
                 pass  # Ignora se a data estiver em formato inválido
         
+        # Definir ordenação baseada no parâmetro
+        if filtro_ordenacao == "data_asc":
+            orderby = db.solicitacao_refeicao.data_solicitacao
+        elif filtro_ordenacao == "data_desc":
+            orderby = ~db.solicitacao_refeicao.data_solicitacao
+        elif filtro_ordenacao == "preco_asc":
+            orderby = db.solicitacao_refeicao.preco
+        elif filtro_ordenacao == "preco_desc":
+            orderby = ~db.solicitacao_refeicao.preco
+        else:
+            orderby = ~db.solicitacao_refeicao.data_solicitacao  # Padrão: data decrescente
+        
         # Buscar pedidos
         pedidos = db(query).select(
             db.solicitacao_refeicao.ALL,
@@ -245,7 +257,7 @@ def api_admin_listar_pedidos():
                 db.auth_user.on(db.solicitacao_refeicao.solicitante_id == db.auth_user.id),
                 db.setor.on(db.auth_user.setor_id == db.setor.id)
             ],
-            orderby=~db.solicitacao_refeicao.data_solicitacao
+            orderby=orderby
         )
         
         # Formatar pedidos para JSON
@@ -255,6 +267,7 @@ def api_admin_listar_pedidos():
             
             pedidos_json.append({
                 'id': pedido.solicitacao_refeicao.id,
+                'solicitante_id': pedido.solicitacao_refeicao.solicitante_id,
                 'solicitante': pedido.auth_user.first_name,
                 'setor': pedido.setor.name or '-',
                 'prato': pedido.cardapio.nome,
@@ -281,3 +294,238 @@ def api_admin_listar_pedidos():
         error_message = f"Erro ao processar a API: {str(e)}\n{traceback.format_exc()}"
         print(error_message)
         return response.json({'status': 'error', 'message': error_message})
+    
+     
+
+@auth.requires(lambda: any(auth.has_membership(role) for role in ['Administrador', 'Gestor']))
+def ajustar_preco_pedido():
+    """
+    Ajusta o preço de um pedido - CORRIGIDO para lidar com tipos Decimal/Float
+    """
+    try:
+        pedido_id = request.post_vars.get('pedido_id')
+        novo_preco = request.post_vars.get('novo_preco')
+        
+        # Validações básicas
+        if not pedido_id:
+            raise ValueError("ID do pedido não fornecido.")
+        
+        if not novo_preco:
+            raise ValueError("Novo preço não fornecido.")
+        
+        try:
+            novo_preco = float(novo_preco)
+        except (ValueError, TypeError):
+            raise ValueError("Preço inválido. Deve ser um número.")
+        
+        if novo_preco < 0:
+            raise ValueError("O preço não pode ser negativo.")
+
+        if novo_preco > 1000:
+            raise ValueError("Preço muito alto. Valor máximo permitido: R$ 1.000,00")
+
+        # 1. CONSULTAR o pedido atual
+        pedido = db(db.solicitacao_refeicao.id == pedido_id).select().first()
+        if not pedido:
+            raise ValueError("Pedido não encontrado.")
+
+        if pedido.status in ['Entregue', 'Cancelado']:
+            raise ValueError("Não é possível ajustar o preço de pedidos entregues ou cancelados.")
+
+        # 2. CONVERTER valores para float (evita erro de tipo Decimal)
+        preco_antigo = float(pedido.preco or 0)
+        solicitante_id = pedido.solicitante_id
+        diferenca = novo_preco - preco_antigo
+
+        # Se não há diferença significativa, não fazer nada
+        if abs(diferenca) < 0.01:
+            return response.json({
+                'status': 'success', 
+                'message': 'Nenhuma alteração necessária - preços são equivalentes.'
+            })
+
+        # 3. CONSULTAR e ajustar saldo do usuário
+        saldo_atual = db(db.user_balance.user_id == solicitante_id).select().first()
+        
+        if not saldo_atual:
+            # Criar novo registro se não existir
+            novo_saldo = max(0.0, diferenca)
+            db.user_balance.insert(
+                user_id=solicitante_id,
+                saldo_devedor=novo_saldo
+            )
+        else:
+            # CONVERTER saldo atual para float antes da soma
+            saldo_atual_float = float(saldo_atual.saldo_devedor or 0)
+            novo_saldo_devedor = saldo_atual_float + diferenca
+            novo_saldo_devedor = max(0.0, novo_saldo_devedor)  # Nunca negativo
+            
+            saldo_atual.update_record(saldo_devedor=novo_saldo_devedor)
+
+        # 4. ATUALIZAR o preço do pedido
+        pedido.update_record(preco=novo_preco)
+
+        # 5. CONFIRMAR mudanças
+        db.commit()
+
+        # 6. PREPARAR resposta
+        if diferenca > 0:
+            tipo_alteracao = "aumentado"
+            impacto_saldo = "acrescido"
+        else:
+            tipo_alteracao = "reduzido"
+            impacto_saldo = "reduzido"
+            diferenca = abs(diferenca)
+
+        return response.json({
+            'status': 'success',
+            'message': f'Preço {tipo_alteracao} com sucesso! Saldo do cliente foi {impacto_saldo} em R$ {diferenca:.2f}',
+            'preco_antigo': preco_antigo,
+            'novo_preco': novo_preco,
+            'diferenca': diferenca
+        })
+
+    except Exception as e:
+        db.rollback()
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+
+
+# VERSÃO ALTERNATIVA usando Decimal (se preferir manter tipos decimais)
+from decimal import Decimal
+
+@auth.requires(lambda: any(auth.has_membership(role) for role in ['Administrador', 'Gestor']))
+def ajustar_preco_pedido_decimal():
+    """
+    Versão usando Decimal para maior precisão em cálculos financeiros
+    """
+    try:
+        pedido_id = request.post_vars.get('pedido_id')
+        novo_preco = request.post_vars.get('novo_preco')
+        
+        if not pedido_id or not novo_preco:
+            raise ValueError("Dados obrigatórios não fornecidos.")
+        
+        try:
+            # Converter para Decimal desde o início
+            novo_preco = Decimal(str(novo_preco))
+        except:
+            raise ValueError("Preço inválido.")
+        
+        if novo_preco < 0:
+            raise ValueError("O preço não pode ser negativo.")
+
+        # Consultar pedido
+        pedido = db(db.solicitacao_refeicao.id == pedido_id).select().first()
+        if not pedido:
+            raise ValueError("Pedido não encontrado.")
+
+        if pedido.status in ['Entregue', 'Cancelado']:
+            raise ValueError("Não é possível ajustar o preço de pedidos entregues ou cancelados.")
+
+        # Converter preço antigo para Decimal
+        preco_antigo = Decimal(str(pedido.preco or 0))
+        diferenca = novo_preco - preco_antigo
+
+        if abs(diferenca) < Decimal('0.01'):
+            return response.json({
+                'status': 'success', 
+                'message': 'Preços são equivalentes.'
+            })
+
+        # Ajustar saldo
+        saldo_atual = db(db.user_balance.user_id == pedido.solicitante_id).select().first()
+        
+        if not saldo_atual:
+            novo_saldo = max(Decimal('0'), diferenca)
+            db.user_balance.insert(
+                user_id=pedido.solicitante_id,
+                saldo_devedor=novo_saldo
+            )
+        else:
+            # Manter como Decimal
+            saldo_atual_decimal = Decimal(str(saldo_atual.saldo_devedor or 0))
+            novo_saldo_devedor = saldo_atual_decimal + diferenca
+            novo_saldo_devedor = max(Decimal('0'), novo_saldo_devedor)
+            
+            saldo_atual.update_record(saldo_devedor=novo_saldo_devedor)
+
+        # Atualizar preço
+        pedido.update_record(preco=novo_preco)
+        db.commit()
+
+        # Resposta
+        tipo = "aumentado" if diferenca > 0 else "reduzido"
+        return response.json({
+            'status': 'success',
+            'message': f'Preço {tipo} com sucesso! Diferença: R$ {abs(diferenca):.2f}'
+        })
+
+    except Exception as e:
+        db.rollback()
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+
+
+# VERSÃO MAIS SIMPLES E ROBUSTA (RECOMENDADA)
+@auth.requires(lambda: any(auth.has_membership(role) for role in ['Administrador', 'Gestor']))
+def ajustar_preco_pedido_simples():
+    """
+    Versão mais simples e robusta - converte tudo para float
+    """
+    try:
+        pedido_id = request.post_vars.get('pedido_id')
+        novo_preco_str = request.post_vars.get('novo_preco')
+        
+        # Validações
+        if not pedido_id or not novo_preco_str:
+            raise ValueError("Dados obrigatórios não fornecidos.")
+        
+        novo_preco = float(novo_preco_str)
+        if novo_preco < 0:
+            raise ValueError("Preço inválido.")
+
+        # Buscar pedido
+        pedido = db(db.solicitacao_refeicao.id == pedido_id).select().first()
+        if not pedido:
+            raise ValueError("Pedido não encontrado.")
+
+        # Calcular diferença (convertendo tudo para float)
+        preco_antigo = float(pedido.preco or 0)
+        diferenca = novo_preco - preco_antigo
+
+        if abs(diferenca) < 0.01:
+            return response.json({'status': 'success', 'message': 'Preços iguais.'})
+
+        # Atualizar saldo (convertendo para float)
+        saldo = db(db.user_balance.user_id == pedido.solicitante_id).select().first()
+        if saldo:
+            saldo_atual = float(saldo.saldo_devedor or 0)
+            novo_saldo = max(0.0, saldo_atual + diferenca)
+            saldo.update_record(saldo_devedor=novo_saldo)
+        else:
+            db.user_balance.insert(
+                user_id=pedido.solicitante_id,
+                saldo_devedor=max(0.0, diferenca)
+            )
+
+        # Atualizar preço
+        pedido.update_record(preco=novo_preco)
+        db.commit()
+
+        return response.json({
+            'status': 'success',
+            'message': f'Preço ajustado! Diferença: R$ {abs(diferenca):.2f}'
+        })
+
+    except Exception as e:
+        db.rollback()
+        return response.json({'status': 'error', 'message': str(e)})
+    
+
+
+    

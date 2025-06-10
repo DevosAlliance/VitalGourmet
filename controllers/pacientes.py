@@ -80,6 +80,7 @@ def cadastrar_paciente():
     
     return dict(app_name=app_name, tipos_paciente=tipos_paciente)
 
+
 @auth.requires_login()
 def api_cadastrar_paciente():
     """

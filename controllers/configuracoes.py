@@ -16,8 +16,11 @@ def index():
     registros_por_pagina = 10
     inicio = (pagina - 1) * registros_por_pagina
     
-    # Busca todas as configurações com paginação
-    configuracoes = db(db.configuracoes.id > 0).select(
+    # Busca todas as configurações com paginação (omitindo setores_por_tipo_colaborador)
+    configuracoes = db(
+        (db.configuracoes.id > 0) & 
+        (db.configuracoes.nome != 'setores_por_tipo_colaborador')
+    ).select(
         orderby=db.configuracoes.nome,
         limitby=(inicio, inicio + registros_por_pagina)
     )
@@ -25,9 +28,9 @@ def index():
     # Busca todos os tipos de usuário para os checkboxes
     tipos_usuario = []
     try:
-        # Obtém tipos de usuário diretamente do banco
         user_types = db(db.user_type.id > 0).select(db.user_type.name, orderby=db.user_type.name)
         tipos_usuario = [ut.name for ut in user_types]
+        print(f"Tipos de usuário carregados: {tipos_usuario}", file=sys.stderr)
     except Exception as e:
         import sys
         print(f"Erro ao obter tipos de usuário: {e}", file=sys.stderr)
@@ -35,25 +38,64 @@ def index():
     # Busca todos os tipos de refeição para os checkboxes
     tipos_refeicao = []
     try:
-        # Obtém tipos de refeição diretamente do banco
         refeicoes = db(db.horario_refeicoes.id > 0).select(
             db.horario_refeicoes.refeicao, 
             distinct=True,
             orderby=db.horario_refeicoes.refeicao
         )
         tipos_refeicao = [r.refeicao for r in refeicoes]
+        print(f"Tipos de refeição carregados: {tipos_refeicao}", file=sys.stderr)
     except Exception as e:
         import sys
         print(f"Erro ao obter tipos de refeição: {e}", file=sys.stderr)
     
-    # Total de registros para paginação
-    total_configuracoes = db(db.configuracoes.id > 0).count()
+    # Para tipos de paciente, usa os tipos de usuário que são relacionados a pacientes
+    tipos_paciente = []
+    try:
+        # Filtra os tipos de usuário que são relacionados a pacientes
+        user_types = db(db.user_type.id > 0).select(db.user_type.name, orderby=db.user_type.name)
+        # Filtra apenas os tipos que contêm 'Paciente' ou 'Acompanhante'
+        tipos_paciente = [
+            ut.name for ut in user_types 
+            if 'paciente' in ut.name.lower() or 'acompanhante' in ut.name.lower()
+        ]
+        print(f"Tipos de paciente carregados: {tipos_paciente}", file=sys.stderr)
+    except Exception as e:
+        import sys
+        print(f"Erro ao obter tipos de paciente: {e}", file=sys.stderr)
+    
+    # Busca todos os setores para os checkboxes
+    setores = []
+    try:
+        setores_db = db(db.setor.id > 0).select(db.setor.name, orderby=db.setor.name)
+        setores = [s.name for s in setores_db]
+        print(f"Setores carregados: {setores}", file=sys.stderr)
+    except Exception as e:
+        import sys
+        print(f"Erro ao obter setores: {e}", file=sys.stderr)
+    
+    # Total de registros para paginação (excluindo setores_por_tipo_colaborador)
+    total_configuracoes = db(
+        (db.configuracoes.id > 0) & 
+        (db.configuracoes.nome != 'setores_por_tipo_colaborador')
+    ).count()
     total_paginas = (total_configuracoes // registros_por_pagina) + (1 if total_configuracoes % registros_por_pagina > 0 else 0)
+    
+    # Debug final
+    import sys
+    print("=== DADOS CARREGADOS CORRETAMENTE ===", file=sys.stderr)
+    print(f"Tipos de usuário: {len(tipos_usuario)} - {tipos_usuario}", file=sys.stderr)
+    print(f"Tipos de refeição: {len(tipos_refeicao)} - {tipos_refeicao}", file=sys.stderr)
+    print(f"Tipos de paciente: {len(tipos_paciente)} - {tipos_paciente}", file=sys.stderr)
+    print(f"Setores: {len(setores)} - {setores}", file=sys.stderr)
+    print("====================================", file=sys.stderr)
     
     return dict(
         configuracoes=configuracoes,
         tipos_usuario=tipos_usuario,
         tipos_refeicao=tipos_refeicao,
+        tipos_paciente=tipos_paciente,
+        setores=setores,
         pagina=pagina,
         total_paginas=total_paginas
     )
@@ -99,11 +141,16 @@ def api_atualizar_configuracao():
         print(f"Processando atualização: ID={config_id}, Tipo={tipo}", file=sys.stderr)
         print(f"Valor recebido: {valor[:1000]}", file=sys.stderr)
         
-        # Verifica se a configuração existe
+        # Verifica se a configuração existe e não é a omitida
         config = db.configuracoes(config_id)
         if not config:
             print(f"Configuração não encontrada: ID={config_id}", file=sys.stderr)
             return response.json({'status': 'error', 'message': 'Configuração não encontrada.'})
+        
+        # Bloqueia edição da configuração omitida
+        if config.nome == 'setores_por_tipo_colaborador':
+            print(f"Tentativa de editar configuração omitida: {config.nome}", file=sys.stderr)
+            return response.json({'status': 'error', 'message': 'Esta configuração não pode ser editada.'})
         
         print(f"Configuração encontrada: {config.nome}", file=sys.stderr)
         
@@ -146,7 +193,7 @@ def api_atualizar_configuracao():
                 print(f"JSON processado com sucesso. Tipo: {type(json_obj)}", file=sys.stderr)
                 print(f"Conteúdo JSON: {json.dumps(json_obj)[:500]}", file=sys.stderr)
                 
-                # Validações específicas para configurações baseadas em tipos de usuário ou refeição
+                # Validações específicas para configurações baseadas em tipos
                 if config.nome == 'tipos_prato_sem_gratuidade':
                     print("Validando tipos de refeição...", file=sys.stderr)
                     if not isinstance(json_obj, list):
@@ -163,6 +210,24 @@ def api_atualizar_configuracao():
                         return response.json({
                             'status': 'error', 
                             'message': 'O valor deve ser uma lista de tipos de usuário'
+                        })
+                
+                elif config.nome == 'tipos_paciente_acompanhante_herda_gratuidade':
+                    print("Validando tipos de paciente...", file=sys.stderr)
+                    if not isinstance(json_obj, list):
+                        print("Erro: não é uma lista de tipos de paciente", file=sys.stderr)
+                        return response.json({
+                            'status': 'error', 
+                            'message': 'O valor deve ser uma lista de tipos de paciente'
+                        })
+                
+                elif config.nome == 'setores_por_tipo_colaborador':
+                    print("Validando setores...", file=sys.stderr)
+                    if not isinstance(json_obj, list):
+                        print("Erro: não é uma lista de setores", file=sys.stderr)
+                        return response.json({
+                            'status': 'error', 
+                            'message': 'O valor deve ser uma lista de setores'
                         })
                 
                 # Mantemos o valor como está, já que ele é uma string JSON válida
@@ -223,8 +288,7 @@ def api_atualizar_configuracao():
         return response.json({'status': 'error', 'message': str(e)})
     
 
-
-
+    
 
 
 @auth.requires_membership('Administrador')

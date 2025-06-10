@@ -247,7 +247,6 @@ class GerenciadorGratuidade:
         }
 
 
-# controllers/api.py
 def api_registrar_solicitacao_refeicao():
     if request.env.request_method != 'POST':
         return response.json({'status': 'error', 'message': 'Método inválido. Use POST.'})
@@ -368,33 +367,33 @@ def api_listar_pratos_para_usuario():
             (db.cardapio.dias_semana.contains(dia_semana)) &
             (db.cardapio.tipo == db.horario_refeicoes.refeicao)
         ).select(orderby=db.horario_refeicoes.pedido_fim)
-        hora_fim_cafe_manha = db(db.horario_refeicoes.refeicao == 'Café da Manhã').select()[0].pedido_fim
-        if hora_fim_cafe_manha <= hoje.time():
-            cafe_manha_dia_seguinte = db(
-                (db.cardapio.tipos_usuario.contains(validador.user_type_name)) &
-                (db.cardapio.dias_semana.contains(amanha)) &
-                (db.cardapio.tipo == 'Café da Manhã') &
-                (db.cardapio.tipo == db.horario_refeicoes.refeicao)
-            ).select()
-            pratos_permitidos = cafe_manha_dia_seguinte | pratos_permitidos
+        # hora_fim_cafe_manha = db(db.horario_refeicoes.refeicao == 'Café da Manhã').select()[0].pedido_fim
+        # if hora_fim_cafe_manha <= hoje.time():
+        #     cafe_manha_dia_seguinte = db(
+        #         (db.cardapio.tipos_usuario.contains(validador.user_type_name)) &
+        #         (db.cardapio.dias_semana.contains(amanha)) &
+        #         (db.cardapio.tipo == 'Café da Manhã') &
+        #         (db.cardapio.tipo == db.horario_refeicoes.refeicao)
+        #     ).select()
+        #     pratos_permitidos = cafe_manha_dia_seguinte | pratos_permitidos
         pratos_json = {}
         
         # Dicionário para rastrear pratos já processados por tipo
         pratos_processados = {}
         
         for prato in pratos_permitidos:
-            # filtra por horario apenas os items do dia atual(Café da manhã pode incluir items do dia seguinte)
-            if prato.horario_refeicoes.pedido_fim:
-                if (
-                    not (prato.cardapio.tipo == 'Café da Manhã') or
-                    (
-                        prato.cardapio.tipo == 'Café da Manhã' and 
-                        amanha not in prato.cardapio.dias_semana
-                    )
-                ):
-                    hora_fim = prato.horario_refeicoes.pedido_fim
-                    if hora_fim <= hoje.time():
-                        continue
+            # # filtra por horario apenas os items do dia atual(Café da manhã pode incluir items do dia seguinte)
+            # if prato.horario_refeicoes.pedido_fim:
+            #     if (
+            #         not (prato.cardapio.tipo == 'Café da Manhã') or
+            #         (
+            #             prato.cardapio.tipo == 'Café da Manhã' and 
+            #             amanha not in prato.cardapio.dias_semana
+            #         )
+            #     ):
+            #         hora_fim = prato.horario_refeicoes.pedido_fim
+            #         if hora_fim <= hoje.time():
+            #             continue
                         
             # Inicializa a lista para o tipo se não existir
             if not pratos_json.get(prato.cardapio.tipo):
