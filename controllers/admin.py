@@ -694,6 +694,149 @@ def correcao_saldo():
     
     return dict(form=form, resultado=resultado)
 
+def corrigir_saldo_devedor_usuarios():
+    """
+    Função que varre todas as solicitações não pagas e corrige o saldo devedor
+    dos usuários na tabela user_balance.
+    
+    Returns:
+        dict: Relatório da operação com usuários atualizados e valores
+    """
+    try:
+        # Buscar todas as solicitações não pagas agrupadas por usuário
+        query = """
+        SELECT 
+            solicitante_id,
+            SUM(preco) as total_devedor
+        FROM solicitacao_refeicao 
+        WHERE foi_pago = 0 
+        GROUP BY solicitante_id
+        """
+        
+        # Executar a query usando DAL
+        solicitacoes_nao_pagas = db.executesql(query, as_dict=True)
+        
+        usuarios_atualizados = []
+        total_usuarios = 0
+        valor_total_ajustado = 0
+        
+        # Para cada usuário com saldo devedor
+        for registro in solicitacoes_nao_pagas:
+            user_id = registro['solicitante_id']
+            saldo_correto = registro['total_devedor']
+            
+            # Verificar se já existe registro na user_balance
+            balance_existente = db(db.user_balance.user_id == user_id).select().first()
+            
+            if balance_existente:
+                # Atualizar registro existente
+                saldo_anterior = balance_existente.saldo_devedor
+                db(db.user_balance.user_id == user_id).update(
+                    saldo_devedor=saldo_correto,
+                    updated_at=request.now
+                )
+                
+                usuarios_atualizados.append({
+                    'user_id': user_id,
+                    'saldo_anterior': float(saldo_anterior),
+                    'saldo_correto': float(saldo_correto),
+                    'diferenca': float(saldo_correto - saldo_anterior),
+                    'acao': 'atualizado'
+                })
+            else:
+                # Criar novo registro
+                db.user_balance.insert(
+                    user_id=user_id,
+                    saldo_devedor=saldo_correto,
+                    updated_at=request.now
+                )
+                
+                usuarios_atualizados.append({
+                    'user_id': user_id,
+                    'saldo_anterior': 0.0,
+                    'saldo_correto': float(saldo_correto),
+                    'diferenca': float(saldo_correto),
+                    'acao': 'criado'
+                })
+            
+            total_usuarios += 1
+            valor_total_ajustado += saldo_correto
+        
+        # Buscar usuários que não têm mais dívidas (todos os pedidos foram pagos)
+        # mas ainda têm saldo devedor na tabela
+        usuarios_com_balance = db(db.user_balance.saldo_devedor > 0).select()
+        
+        for balance in usuarios_com_balance:
+            # Verificar se este usuário realmente tem dívidas
+            tem_dividas = db((db.solicitacao_refeicao.solicitante_id == balance.user_id) & 
+                           (db.solicitacao_refeicao.foi_pago == False)).count()
+            
+            if tem_dividas == 0:
+                # Zerar saldo devedor
+                saldo_anterior = balance.saldo_devedor
+                db(db.user_balance.user_id == balance.user_id).update(
+                    saldo_devedor=0,
+                    updated_at=request.now
+                )
+                
+                usuarios_atualizados.append({
+                    'user_id': balance.user_id,
+                    'saldo_anterior': float(saldo_anterior),
+                    'saldo_correto': 0.0,
+                    'diferenca': float(-saldo_anterior),
+                    'acao': 'zerado'
+                })
+                
+                total_usuarios += 1
+        
+        # Commit das alterações
+        db.commit()
+        
+        # Criar log da operação
+        db.log_sistema.insert(
+            user_id=auth.user.id if auth.user else 1,
+            entidade='user_balance',
+            acao='edicao',
+            registro_id=0,  # Operação em massa
+            observacao={
+                'tipo': 'correcao_saldo_devedor',
+                'usuarios_afetados': total_usuarios,
+                'valor_total': float(valor_total_ajustado),
+                'detalhes': usuarios_atualizados
+            }
+        )
+        
+        return {
+            'sucesso': True,
+            'total_usuarios_atualizados': total_usuarios,
+            'valor_total_ajustado': float(valor_total_ajustado),
+            'usuarios_atualizados': usuarios_atualizados,
+            'mensagem': f'Saldo devedor corrigido para {total_usuarios} usuários'
+        }
+        
+    except Exception as e:
+        # Em caso de erro, fazer rollback
+        db.rollback()
+        
+        # Log do erro
+        if auth.user:
+            db.log_sistema.insert(
+                user_id=auth.user.id,
+                entidade='user_balance',
+                acao='edicao',
+                registro_id=0,
+                observacao={
+                    'tipo': 'erro_correcao_saldo',
+                    'erro': str(e)
+                }
+            )
+        
+        return {
+            'sucesso': False,
+            'erro': str(e),
+            'mensagem': 'Erro ao corrigir saldo devedor dos usuários'
+        }
+    
 def executar_correcao_saldo_com_relatorio():
     """
     Função que combina verificação e correção, gerando um relatório completo.
