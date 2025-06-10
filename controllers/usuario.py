@@ -298,9 +298,9 @@ def api_registrar_solicitacao_refeicao():
             'status': status
         }
 
-        if prato.cardapio.tipo == 'Café da Manhã' and\
-            prato.horario_refeicoes.pedido_fim < hoje.time():
-            dict_solicitacao['data_solicitacao'] = (hoje + timedelta(days=1)).date()
+        # if prato.cardapio.tipo == 'Café da Manhã' and\
+        #     prato.horario_refeicoes.pedido_fim < hoje.time():
+        #     dict_solicitacao['data_solicitacao'] = (hoje + timedelta(days=1)).date()
 
         # Commit
         solicitacao_id = db.solicitacao_refeicao.insert(**dict_solicitacao)
