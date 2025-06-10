@@ -382,18 +382,18 @@ def api_listar_pratos_para_usuario():
         pratos_processados = {}
         
         for prato in pratos_permitidos:
-            # # filtra por horario apenas os items do dia atual(Café da manhã pode incluir items do dia seguinte)
-            # if prato.horario_refeicoes.pedido_fim:
-            #     if (
-            #         not (prato.cardapio.tipo == 'Café da Manhã') or
-            #         (
-            #             prato.cardapio.tipo == 'Café da Manhã' and 
-            #             amanha not in prato.cardapio.dias_semana
-            #         )
-            #     ):
-            #         hora_fim = prato.horario_refeicoes.pedido_fim
-            #         if hora_fim <= hoje.time():
-            #             continue
+            # filtra por horario apenas os items do dia atual(Café da manhã pode incluir items do dia seguinte)
+            if prato.horario_refeicoes.pedido_fim:
+                # if (
+                #     not (prato.cardapio.tipo == 'Café da Manhã') or
+                #     (
+                #         prato.cardapio.tipo == 'Café da Manhã' and 
+                #         amanha not in prato.cardapio.dias_semana
+                #     )
+                # ):
+                    hora_fim = prato.horario_refeicoes.pedido_fim
+                    if hora_fim <= hoje.time():
+                        continue
                         
             # Inicializa a lista para o tipo se não existir
             if not pratos_json.get(prato.cardapio.tipo):
