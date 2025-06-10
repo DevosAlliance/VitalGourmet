@@ -245,9 +245,9 @@ db.define_table('estoque',
 db.define_table('horario_refeicoes',
     Field('tipo_usuario', 'json', required=True, label="Tipos de Usuário"), 
     Field('refeicao', 'string', required=True), 
-    Field('pedido_inicio', 'time', required=True),
-    Field('pedido_fim', 'time', required=True),
-    Field('servido_inicio', 'time', required=True),
+    Field('pedido_inicio', 'time', required=True), # Horário em que o prato pode começar a ser solicitado
+    Field('pedido_fim', 'time', required=True), # Horário em que o prato deixa de ser solicitado
+    Field('servido_inicio', 'time', required=True), # Horário em que o prato começa a ser servido pela cozinha
     auth.signature,
     format='%(refeicao)s',
 )
@@ -258,9 +258,9 @@ db.define_table('horario_refeicoes',
 db.define_table('cardapio',
     Field('nome', 'string', required=True, label="Nome do Prato"),
     Field('descricao', 'text', required=True, label="Descrição"),
-    Field('tipo', 'string', requires=IS_IN_DB(db, 'horario_refeicoes.refeicao', '%(refeicao)s'), label="Tipo de Refeição"),
+    Field('tipo', 'string', requires=IS_IN_DB(db, 'horario_refeicoes.refeicao', '%(refeicao)s'), label="Tipo de Refeição"), # Lanche, almoço, jantar, etc.
     Field('ingredientes', 'json', required=True, label="Ingredientes"), 
-    Field('tipos_usuario', 'json', required=True, label="Tipos de Usuário"),
+    Field('tipos_usuario', 'json', required=True, label="Tipos de Usuário"), # Tipos de usuário que podem solicitar este prato
     Field('dias_semana', 'json', requires=IS_IN_SET(['Segunda-feira', 'Terca-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sabado', 'Domingo'], multiple=True), required=True, label="Dias da Semana"), 
     Field('foto_do_prato', 'text', label="Foto do Prato"),
     Field('preco', 'decimal(10, 2)', required=True, label="Preço"),

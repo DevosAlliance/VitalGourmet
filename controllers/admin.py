@@ -529,3 +529,213 @@ def ajustar_preco_pedido_simples():
 
 
     
+
+
+# --------------------------------------------------------------------
+
+def verificar_inconsistencias_saldo():
+    """
+    Função auxiliar para identificar inconsistências entre solicitações não pagas
+    e o saldo registrado na user_balance, sem fazer correções.
+    
+    Returns:
+        dict: Relatório das inconsistências encontradas
+    """
+    try:
+        # Calcular saldo real baseado nas solicitações não pagas
+        query = """
+        SELECT 
+            solicitante_id,
+            SUM(preco) as saldo_real
+        FROM solicitacao_refeicao 
+        WHERE foi_pago = 0 
+        GROUP BY solicitante_id
+        """
+        
+        saldos_reais = db.executesql(query, as_dict=True)
+        saldos_reais_dict = {r['solicitante_id']: r['saldo_real'] for r in saldos_reais}
+        
+        # Buscar todos os saldos registrados
+        balances = db(db.user_balance).select()
+        
+        inconsistencias = []
+        
+        # Verificar inconsistências
+        for balance in balances:
+            saldo_registrado = balance.saldo_devedor
+            saldo_real = saldos_reais_dict.get(balance.user_id, 0)
+            
+            if abs(saldo_registrado - saldo_real) > 0.01:  # Tolerância para diferenças de centavos
+                inconsistencias.append({
+                    'user_id': balance.user_id,
+                    'saldo_registrado': float(saldo_registrado),
+                    'saldo_real': float(saldo_real),
+                    'diferenca': float(saldo_real - saldo_registrado)
+                })
+        
+        # Verificar usuários com dívidas que não estão na user_balance
+        for user_id, saldo_real in saldos_reais_dict.items():
+            balance_existente = db(db.user_balance.user_id == user_id).select().first()
+            if not balance_existente and saldo_real > 0:
+                inconsistencias.append({
+                    'user_id': user_id,
+                    'saldo_registrado': 0.0,
+                    'saldo_real': float(saldo_real),
+                    'diferenca': float(saldo_real),
+                    'status': 'usuario_sem_balance'
+                })
+        
+        return {
+            'total_inconsistencias': len(inconsistencias),
+            'inconsistencias': inconsistencias,
+            'requer_correcao': len(inconsistencias) > 0
+        }
+        
+    except Exception as e:
+        return {
+            'erro': str(e),
+            'mensagem': 'Erro ao verificar inconsistências'
+        }
+
+
+def api_corrigir_saldo_devedor():
+    """
+    API para corrigir saldos devedores de todos os usuários.
+    Acesso restrito a administradores.
+    """
+    # Verificar permissões
+    if not auth.has_membership('Administrador'):
+        return dict(
+            erro=True,
+            mensagem="Acesso negado. Apenas administradores podem executar esta operação."
+        )
+    
+    try:
+        # Executar correção com relatório completo
+        resultado = executar_correcao_saldo_com_relatorio()
+        
+        return dict(
+            erro=False,
+            dados=resultado,
+            mensagem=resultado.get('mensagem', 'Operação concluída')
+        )
+        
+    except Exception as e:
+        return dict(
+            erro=True,
+            mensagem=f"Erro inesperado: {str(e)}"
+        )
+
+
+def api_verificar_inconsistencias():
+    """
+    API para apenas verificar inconsistências sem corrigir.
+    """
+    if not auth.has_membership('Administrador'):
+        return dict(
+            erro=True,
+            mensagem="Acesso negado."
+        )
+    
+    try:
+        resultado = verificar_inconsistencias_saldo()
+        
+        return dict(
+            erro=False,
+            dados=resultado,
+            mensagem="Verificação concluída"
+        )
+        
+    except Exception as e:
+        return dict(
+            erro=True,
+            mensagem=f"Erro ao verificar: {str(e)}"
+        )
+
+
+def correcao_saldo():
+    """
+    Página administrativa para correção manual de saldos.
+    """
+    if not auth.has_membership('Administrador'):
+        redirect(URL('default', 'index'))
+    
+    # Formulário para confirmar a operação
+    form = FORM(
+        DIV(
+            H4("Correção de Saldo Devedor"),
+            P("Esta operação irá recalcular os saldos devedores de todos os usuários baseado nas solicitações não pagas."),
+            P("Recomenda-se fazer um backup antes de executar.", _class="text-warning"),
+            BR(),
+            INPUT(_type="submit", _value="Verificar Inconsistências", _name="verificar", _class="btn btn-info"),
+            " ",
+            INPUT(_type="submit", _value="Executar Correção", _name="corrigir", _class="btn btn-warning"),
+            _class="card-body"
+        ),
+        _class="card"
+    )
+    
+    resultado = None
+    
+    if form.process().accepted:
+        try:
+            if request.vars.verificar:
+                # Apenas verificar
+                resultado = verificar_inconsistencias_saldo()
+                resultado['tipo'] = 'verificacao'
+                
+            elif request.vars.corrigir:
+                # Executar correção
+                resultado = executar_correcao_saldo_com_relatorio()
+                resultado['tipo'] = 'correcao'
+                
+        except Exception as e:
+            response.flash = f"Erro: {str(e)}"
+    
+    return dict(form=form, resultado=resultado)
+
+
+def task_correcao_automatica():
+    """
+    Task para ser executada via scheduler periodicamente (ex: diariamente às 2h da manhã).
+    """
+    try:
+        # Verificar se há inconsistências
+        verificacao = verificar_inconsistencias_saldo()
+        
+        if verificacao.get('requer_correcao', False):
+            # Se há inconsistências, corrigir
+            resultado = corrigir_saldo_devedor_usuarios()
+            
+            # Log da operação automática
+            db.log_sistema.insert(
+                user_id=1,  # Sistema
+                entidade='user_balance',
+                acao='edicao',
+                registro_id=0,
+                observacao={
+                    'tipo': 'correcao_automatica',
+                    'inconsistencias_encontradas': verificacao['total_inconsistencias'],
+                    'usuarios_corrigidos': resultado.get('total_usuarios_atualizados', 0),
+                    'executado_em': request.now
+                }
+            )
+            
+            return f"Correção automática executada: {resultado.get('total_usuarios_atualizados', 0)} usuários atualizados"
+        else:
+            return "Nenhuma inconsistência encontrada"
+            
+    except Exception as e:
+        # Log do erro
+        db.log_sistema.insert(
+            user_id=1,
+            entidade='user_balance',
+            acao='edicao',
+            registro_id=0,
+            observacao={
+                'tipo': 'erro_correcao_automatica',
+                'erro': str(e),
+                'executado_em': request.now
+            }
+        )
+        raise e

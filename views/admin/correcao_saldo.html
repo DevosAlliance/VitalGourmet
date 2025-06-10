@@ -1,0 +1,116 @@
+{{extend 'layout.html'}}
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      <h2>Correção de Saldo Devedor</h2>
+
+      {{=form}} {{if resultado:}}
+      <div class="mt-4">
+        {{if resultado['tipo'] == 'verificacao':}}
+        <div class="card">
+          <div class="card-header">
+            <h5>Resultado da Verificação</h5>
+          </div>
+          <div class="card-body">
+            <p>
+              <strong>Inconsistências encontradas:</strong>
+              {{=resultado.get('total_inconsistencias', 0)}}
+            </p>
+
+            {{if resultado.get('inconsistencias'):}}
+            <h6>Detalhes das Inconsistências:</h6>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Usuário ID</th>
+                    <th>Saldo Registrado</th>
+                    <th>Saldo Real</th>
+                    <th>Diferença</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{for inc in resultado['inconsistencias']:}}
+                  <tr>
+                    <td>{{=inc['user_id']}}</td>
+                    <td>R$ {{='%.2f' % inc['saldo_registrado']}}</td>
+                    <td>R$ {{='%.2f' % inc['saldo_real']}}</td>
+                    <td
+                      class="{{='text-danger' if inc['diferenca'] > 0 else 'text-success'}}"
+                    >
+                      R$ {{='%.2f' % inc['diferenca']}}
+                    </td>
+                  </tr>
+                  {{pass}}
+                </tbody>
+              </table>
+            </div>
+            {{else:}}
+            <div class="alert alert-success">
+              Nenhuma inconsistência encontrada!
+            </div>
+            {{pass}}
+          </div>
+        </div>
+
+        {{elif resultado['tipo'] == 'correcao':}}
+        <div class="card">
+          <div class="card-header bg-success text-white">
+            <h5>Correção Executada</h5>
+          </div>
+          <div class="card-body">
+            <p>
+              <strong>Usuários atualizados:</strong>
+              {{=resultado.get('correcoes_realizadas', 0)}}
+            </p>
+            <p>
+              <strong>Valor total ajustado:</strong> R$ {{='%.2f' %
+              resultado.get('valor_total_ajustado', 0)}}
+            </p>
+
+            {{if resultado.get('detalhes_correcoes'):}}
+            <h6>Detalhes das Correções:</h6>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Usuário ID</th>
+                    <th>Saldo Anterior</th>
+                    <th>Saldo Correto</th>
+                    <th>Diferença</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{for corr in resultado['detalhes_correcoes']:}}
+                  <tr>
+                    <td>{{=corr['user_id']}}</td>
+                    <td>R$ {{='%.2f' % corr['saldo_anterior']}}</td>
+                    <td>R$ {{='%.2f' % corr['saldo_correto']}}</td>
+                    <td
+                      class="{{='text-danger' if corr['diferenca'] > 0 else 'text-success'}}"
+                    >
+                      R$ {{='%.2f' % corr['diferenca']}}
+                    </td>
+                    <td>
+                      <span
+                        class="badge {{='badge-primary' if corr['acao'] == 'atualizado' else 'badge-success' if corr['acao'] == 'criado' else 'badge-warning'}}"
+                      >
+                        {{=corr['acao'].title()}}
+                      </span>
+                    </td>
+                  </tr>
+                  {{pass}}
+                </tbody>
+              </table>
+            </div>
+            {{pass}}
+          </div>
+        </div>
+        {{pass}}
+      </div>
+      {{pass}}
+    </div>
+  </div>
+</div>
