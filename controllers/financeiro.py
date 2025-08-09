@@ -44,31 +44,123 @@ def index():
     return dict(usuarios_com_debito=usuarios_com_debito, tipo_usuario=tipo_usuario, saldo_total=saldo_total)
 
 @auth.requires_login()
+def api_listar_pagamentos():
+    """
+    API para listar pagamentos de um paciente específico
+    """
+    try:
+        paciente_id = request.args(0)
+        
+        if not paciente_id:
+            raise ValueError("ID do paciente não fornecido.")
+        
+        # Verificar se o paciente existe
+        paciente = db.auth_user(paciente_id)
+        if not paciente:
+            raise ValueError("Paciente não encontrado.")
+        
+        # Buscar pagamentos do paciente
+        pagamentos = db(db.pagamentos.paciente_id == paciente_id).select(
+            orderby=~db.pagamentos.data_pagamento  # Mais recentes primeiro
+        )
+        
+        # Formaterar dados para JSON
+        pagamentos_json = []
+        for pagamento in pagamentos:
+            pagamentos_json.append({
+                'id': pagamento.id,
+                'valor_pago': float(pagamento.valor_pago),
+                'data_pagamento': pagamento.data_pagamento.strftime('%d/%m/%Y'),
+                'descricao': pagamento.descricao or 'Sem descrição'
+            })
+        
+        return response.json({
+            'status': 'success',
+            'pagamentos': pagamentos_json,
+            'total': len(pagamentos_json)
+        })
+        
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+
+
+@auth.requires_login()
+def api_todos_pedidos_paciente():
+    """
+    API SIMPLES para buscar TODOS os pedidos de um paciente
+    Sem filtro de período - mostra TUDO de uma vez
+    """
+    try:
+        paciente_id = request.args(0, cast=int)
+        
+        if not paciente_id:
+            raise ValueError("ID do paciente não fornecido.")
+        
+        # Verificar se o paciente existe
+        paciente = db.auth_user(paciente_id)
+        if not paciente:
+            raise ValueError("Paciente não encontrado.")
+        
+        # Buscar TODAS as solicitações do paciente (SEM FILTRO DE PERÍODO)
+        solicitacoes = db(
+            db.solicitacao_refeicao.solicitante_id == paciente_id
+        ).select(
+            db.solicitacao_refeicao.ALL,
+            db.cardapio.nome,
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id)
+            ],
+            orderby=~db.solicitacao_refeicao.data_solicitacao  # Mais recentes primeiro
+        )
+        
+        # Formatar dados para JSON de forma simples
+        pedidos_json = []
+        for sol in solicitacoes:
+            pedidos_json.append({
+                'id': sol.solicitacao_refeicao.id,
+                'prato_nome': sol.cardapio.nome,
+                'quantidade_solicitada': sol.solicitacao_refeicao.quantidade_solicitada,
+                'preco': float(sol.solicitacao_refeicao.preco),
+                'data_solicitacao': sol.solicitacao_refeicao.data_solicitacao.strftime('%Y-%m-%d'),
+                'status': sol.solicitacao_refeicao.status,
+                'foi_pago': bool(sol.solicitacao_refeicao.foi_pago),
+                'forma_pagamento': sol.solicitacao_refeicao.forma_pagamento or '',
+                'descricao': sol.solicitacao_refeicao.descricao or ''
+            })
+        
+        return response.json({
+            'status': 'success',
+            'pedidos': pedidos_json,
+            'total': len(pedidos_json)
+        })
+        
+    except Exception as e:
+        import traceback
+        error_msg = f"Erro: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)  # Para debug
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+    
+
+@auth.requires_login()
 def ver_solicitacoes_e_saldo():
+    """
+    Controlador principal SIMPLIFICADO
+    Apenas carrega a página - os dados vêm via API
+    """
     paciente_id = request.args(0, cast=int)
     paciente = db.auth_user(paciente_id) or redirect(URL('default', 'listar_pacientes'))
 
-    # Pega o mês selecionado no filtro, ou usa o mês atual como padrão
-    mes_selecionado = int(request.vars.mes or request.now.month)
-    ano_selecionado = int(request.vars.ano or request.now.year)
-
-    # Filtra as solicitações de refeição do paciente pelo mês e ano selecionado
-    solicitacoes = db(
-        (db.solicitacao_refeicao.solicitante_id == paciente_id) &
-        (db.solicitacao_refeicao.data_solicitacao.month() == mes_selecionado) &
-        (db.solicitacao_refeicao.data_solicitacao.year() == ano_selecionado)
-    ).select()
-
-    # Obtém o saldo devedor da tabela user_balance
-    user_balance = db(db.user_balance.user_id == paciente_id).select(db.user_balance.saldo_devedor).first()
-    saldo_devedor = user_balance.saldo_devedor if user_balance else 0  # Retorna 0 se não houver registro
-
+    # Não precisa mais filtrar por mês/ano aqui
+    # A nova interface carrega tudo via JavaScript
+    
     return dict(
-        paciente=paciente,
-        solicitacoes=solicitacoes,
-        saldo_devedor=saldo_devedor,
-        mes_selecionado=mes_selecionado,
-        ano_selecionado=ano_selecionado
+        paciente=paciente
     )
 
 
@@ -265,13 +357,17 @@ def api_relatorio_financeiro():
         return response.json({"status": "error", "message": str(e)})
 
 
+
+# Adicionar estas funções ao seu controlador financeiro
+
 @auth.requires_login()
-def api_listar_pagamentos():
+def api_todas_solicitacoes():
     """
-    API para listar pagamentos de um paciente específico
+    API para buscar TODAS as solicitações de um paciente, independente do período
+    Otimizada para a nova interface financeira
     """
     try:
-        paciente_id = request.args(0)
+        paciente_id = request.args(0, cast=int)
         
         if not paciente_id:
             raise ValueError("ID do paciente não fornecido.")
@@ -281,25 +377,126 @@ def api_listar_pagamentos():
         if not paciente:
             raise ValueError("Paciente não encontrado.")
         
-        # Buscar pagamentos do paciente
-        pagamentos = db(db.pagamentos.paciente_id == paciente_id).select(
-            orderby=~db.pagamentos.data_pagamento  # Mais recentes primeiro
+        # Buscar TODAS as solicitações do paciente (sem filtro de período)
+        solicitacoes = db(
+            db.solicitacao_refeicao.solicitante_id == paciente_id
+        ).select(
+            db.solicitacao_refeicao.ALL,
+            db.cardapio.nome,
+            left=[
+                db.cardapio.on(db.solicitacao_refeicao.prato_id == db.cardapio.id)
+            ],
+            orderby=~db.solicitacao_refeicao.data_solicitacao  # Mais recentes primeiro
         )
         
-        # Formaterar dados para JSON
+        # Formatar dados para JSON
+        solicitacoes_json = []
+        for solicitacao in solicitacoes:
+            solicitacoes_json.append({
+                'id': solicitacao.solicitacao_refeicao.id,
+                'prato_nome': solicitacao.cardapio.nome,
+                'quantidade_solicitada': solicitacao.solicitacao_refeicao.quantidade_solicitada,
+                'preco': float(solicitacao.solicitacao_refeicao.preco),
+                'data_solicitacao': solicitacao.solicitacao_refeicao.data_solicitacao.isoformat(),
+                'status': solicitacao.solicitacao_refeicao.status,
+                'foi_pago': solicitacao.solicitacao_refeicao.foi_pago or False,
+                'forma_pagamento': solicitacao.solicitacao_refeicao.forma_pagamento,
+                'descricao': solicitacao.solicitacao_refeicao.descricao or ''
+            })
+        
+        # Calcular estatísticas
+        total_pendente = sum(s['preco'] for s in solicitacoes_json if not s['foi_pago'] and s['preco'] > 0)
+        total_pago = sum(s['preco'] for s in solicitacoes_json if s['foi_pago'])
+        qtd_pendentes = len([s for s in solicitacoes_json if not s['foi_pago'] and s['preco'] > 0])
+        qtd_pagos = len([s for s in solicitacoes_json if s['foi_pago']])
+        qtd_gratuitos = len([s for s in solicitacoes_json if s['preco'] == 0])
+        
+        return response.json({
+            'status': 'success',
+            'solicitacoes': solicitacoes_json,
+            'estatisticas': {
+                'total_pendente': total_pendente,
+                'total_pago': total_pago,
+                'qtd_pendentes': qtd_pendentes,
+                'qtd_pagos': qtd_pagos,
+                'qtd_gratuitos': qtd_gratuitos,
+                'total_itens': len(solicitacoes_json)
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        error_msg = f"Erro ao buscar solicitações: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)  # Log para debug
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })
+
+
+@auth.requires_login()
+def api_resumo_financeiro():
+    """
+    API para buscar resumo financeiro rápido (sem detalhes das solicitações)
+    Útil para dashboards e visões gerais
+    """
+    try:
+        paciente_id = request.args(0, cast=int)
+        
+        if not paciente_id:
+            raise ValueError("ID do paciente não fornecido.")
+        
+        # Buscar saldo atual
+        user_balance = db(db.user_balance.user_id == paciente_id).select().first()
+        saldo_devedor = float(user_balance.saldo_devedor) if user_balance else 0.0
+        
+        # Contar solicitações por status
+        query_base = db.solicitacao_refeicao.solicitante_id == paciente_id
+        
+        total_pendentes = db(query_base & (db.solicitacao_refeicao.foi_pago == False) & 
+                           (db.solicitacao_refeicao.preco > 0)).count()
+        
+        total_pagos = db(query_base & (db.solicitacao_refeicao.foi_pago == True)).count()
+        
+        total_gratuitos = db(query_base & (db.solicitacao_refeicao.preco == 0)).count()
+        
+        # Valor total pendente e pago
+        pendentes = db(query_base & (db.solicitacao_refeicao.foi_pago == False) & 
+                      (db.solicitacao_refeicao.preco > 0)).select(
+                          db.solicitacao_refeicao.preco.sum().with_alias('total')
+                      ).first()
+        valor_pendente = float(pendentes.total or 0)
+        
+        pagos = db(query_base & (db.solicitacao_refeicao.foi_pago == True)).select(
+                   db.solicitacao_refeicao.preco.sum().with_alias('total')
+               ).first()
+        valor_pago = float(pagos.total or 0)
+        
+        # Últimos pagamentos
+        ultimos_pagamentos = db(db.pagamentos.paciente_id == paciente_id).select(
+            orderby=~db.pagamentos.data_pagamento,
+            limitby=(0, 5)
+        )
+        
         pagamentos_json = []
-        for pagamento in pagamentos:
+        for pagamento in ultimos_pagamentos:
             pagamentos_json.append({
-                'id': pagamento.id,
-                'valor_pago': float(pagamento.valor_pago),
-                'data_pagamento': pagamento.data_pagamento.strftime('%d/%m/%Y'),
+                'data': pagamento.data_pagamento.strftime('%d/%m/%Y'),
+                'valor': float(pagamento.valor_pago),
                 'descricao': pagamento.descricao or 'Sem descrição'
             })
         
         return response.json({
             'status': 'success',
-            'pagamentos': pagamentos_json,
-            'total': len(pagamentos_json)
+            'resumo': {
+                'saldo_devedor': saldo_devedor,
+                'valor_pendente': valor_pendente,
+                'valor_pago': valor_pago,
+                'qtd_pendentes': total_pendentes,
+                'qtd_pagos': total_pagos,
+                'qtd_gratuitos': total_gratuitos,
+                'ultimos_pagamentos': pagamentos_json
+            }
         })
         
     except Exception as e:
@@ -309,4 +506,102 @@ def api_listar_pagamentos():
         })
 
 
-
+@auth.requires_login()
+def api_estatisticas_periodo():
+    """
+    API para buscar estatísticas por período específico
+    """
+    try:
+        paciente_id = request.args(0, cast=int)
+        periodo = request.vars.periodo or 'mes_atual'  # mes_atual, mes_anterior, ultimo_3_meses, etc.
+        
+        if not paciente_id:
+            raise ValueError("ID do paciente não fornecido.")
+        
+        # Calcular datas baseado no período
+        hoje = datetime.now().date()
+        
+        if periodo == 'mes_atual':
+            inicio = hoje.replace(day=1)
+            fim = hoje
+        elif periodo == 'mes_anterior':
+            primeiro_dia_mes_atual = hoje.replace(day=1)
+            ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
+            inicio = ultimo_dia_mes_anterior.replace(day=1)
+            fim = ultimo_dia_mes_anterior
+        elif periodo == 'ultimo_3_meses':
+            inicio = (hoje.replace(day=1) - timedelta(days=90))
+            fim = hoje
+        elif periodo == 'ano_atual':
+            inicio = hoje.replace(month=1, day=1)
+            fim = hoje
+        else:
+            # Se não especificado, usar todos os dados
+            inicio = None
+            fim = None
+        
+        # Construir query
+        query = db.solicitacao_refeicao.solicitante_id == paciente_id
+        
+        if inicio and fim:
+            query &= (db.solicitacao_refeicao.data_solicitacao >= inicio) & \
+                     (db.solicitacao_refeicao.data_solicitacao <= fim)
+        
+        # Buscar dados do período
+        solicitacoes = db(query).select()
+        
+        # Processar estatísticas
+        stats = {
+            'total_itens': len(solicitacoes),
+            'valor_total': 0,
+            'valor_pago': 0,
+            'valor_pendente': 0,
+            'itens_pagos': 0,
+            'itens_pendentes': 0,
+            'itens_gratuitos': 0,
+            'por_dia': {},
+            'por_status': {}
+        }
+        
+        for solicitacao in solicitacoes:
+            valor = float(solicitacao.preco)
+            data_str = solicitacao.data_solicitacao.strftime('%Y-%m-%d')
+            
+            # Totais gerais
+            stats['valor_total'] += valor
+            
+            if solicitacao.foi_pago:
+                stats['valor_pago'] += valor
+                stats['itens_pagos'] += 1
+            elif valor > 0:
+                stats['valor_pendente'] += valor
+                stats['itens_pendentes'] += 1
+            else:
+                stats['itens_gratuitos'] += 1
+            
+            # Por dia
+            if data_str not in stats['por_dia']:
+                stats['por_dia'][data_str] = {'valor': 0, 'quantidade': 0}
+            stats['por_dia'][data_str]['valor'] += valor
+            stats['por_dia'][data_str]['quantidade'] += 1
+            
+            # Por status
+            status = solicitacao.status
+            if status not in stats['por_status']:
+                stats['por_status'][status] = {'valor': 0, 'quantidade': 0}
+            stats['por_status'][status]['valor'] += valor
+            stats['por_status'][status]['quantidade'] += 1
+        
+        return response.json({
+            'status': 'success',
+            'periodo': periodo,
+            'inicio': inicio.isoformat() if inicio else None,
+            'fim': fim.isoformat() if fim else None,
+            'estatisticas': stats
+        })
+        
+    except Exception as e:
+        return response.json({
+            'status': 'error',
+            'message': str(e)
+        })

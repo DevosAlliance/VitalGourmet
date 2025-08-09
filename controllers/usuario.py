@@ -246,104 +246,6 @@ class GerenciadorGratuidade:
             'preco_total': prato.preco * quantidade
         }
 
-
-def api_registrar_solicitacao_refeicao():
-    if request.env.request_method != 'POST':
-        return response.json({'status': 'error', 'message': 'Método inválido. Use POST.'})
-    
-    try:
-        solicitante_id = request.post_vars.get('solicitante_id') or (auth.user.id if auth.user else None)
-        dados = json.loads(request.body.read().decode('utf-8'))
-        
-        # Validação básica dos dados
-        prato_id = int(dados.get('pratoid'))
-        quantidade_solicitada = int(dados.get('quantidade'))
-        descricao = dados.get('descricao', None)
-        status = dados.get('status', 'Pendente')
-
-        hoje = datetime.now()
-
-        # Verifica se o prato existe
-        prato = db(db.cardapio.id == prato_id).select(
-            db.cardapio.ALL,
-            db.horario_refeicoes.pedido_fim,
-            left=[
-                db.horario_refeicoes.on(db.cardapio.tipo == db.horario_refeicoes.refeicao)
-            ]
-        ).first()
-
-        if not prato:
-            raise ValueError("O prato especificado não existe.")
-
-        # Inicializa classes de validação e gratuidade
-        validador = ValidadorUsuario(solicitante_id, db)
-        gerenciador = GerenciadorGratuidade(validador, db)
-
-        # Verifica se o usuário pode solicitar o prato
-        if not validador.pode_solicitar_prato(prato.cardapio):
-            raise ValueError("Você não tem permissão para solicitar este prato.")
-
-        # Calcula preço/verifica gratuidade
-        resultado_gratuidade = gerenciador.calcular_gratuidade(prato.cardapio, quantidade_solicitada)
-
-        observacao_pedido = descricao or validador.obter_nome_observacao_pedido()
-
-        dict_solicitacao = {
-            'solicitante_id': validador.solicitante_real_id,
-            'is_acompanhante': validador.is_acompanhante,
-            'prato_id': prato_id,
-            'preco': resultado_gratuidade['preco_total'],
-            'quantidade_solicitada': quantidade_solicitada,
-            'descricao': observacao_pedido,
-            'status': status
-        }
-
-        # if prato.cardapio.tipo == 'Café da Manhã' and\
-        #     prato.horario_refeicoes.pedido_fim < hoje.time():
-        #     dict_solicitacao['data_solicitacao'] = (hoje + timedelta(days=1)).date()
-
-        # Commit
-        solicitacao_id = db.solicitacao_refeicao.insert(**dict_solicitacao)
-
-        # Atualiza o saldo
-        _atualizar_saldo_usuario(validador.solicitante_real_id, resultado_gratuidade['preco_total'])
-
-        db.commit()
-        return response.json({
-            'status': 'success', 
-            'message': 'Solicitação de refeição registrada com sucesso!', 
-            'solicitacao_id': solicitacao_id
-        })
-
-    except Exception as e:
-        db.rollback()
-        return response.json({'status': 'error', 'message': str(e)})
-
-
-def _atualizar_saldo_usuario(usuario_id, valor_adicional):
-    """Função auxiliar para atualizar o saldo do usuário"""
-    saldo_atual = db(db.user_balance.user_id == usuario_id).select().first()
-    
-    if saldo_atual:
-        novo_saldo = saldo_atual.saldo_devedor + valor_adicional
-        saldo_atual.update_record(saldo_devedor=novo_saldo)
-    else:
-        db.user_balance.insert(user_id=usuario_id, saldo_devedor=valor_adicional)
-
-def _converter_dia_semana(dia_ingles):
-    """Função auxiliar para converter o dia da semana para português"""
-    dias_semana = {
-        'Monday': 'Segunda-feira',
-        'Tuesday': 'Terca-feira',
-        'Wednesday': 'Quarta-feira',
-        'Thursday': 'Quinta-feira',
-        'Friday': 'Sexta-feira',
-        'Saturday': 'Sabado',
-        'Sunday': 'Domingo'
-    }
-    return dias_semana.get(dia_ingles, dia_ingles)
-
-
 def api_listar_pratos_para_usuario():
     try:
         solicitante_id = (
@@ -453,6 +355,103 @@ def api_listar_pratos_para_usuario():
     except Exception as e:
         print(f"Erro na API listar pratos: {str(e)}")
         return response.json({'status': 'error', 'message': str(e)})
+
+def api_registrar_solicitacao_refeicao():
+    if request.env.request_method != 'POST':
+        return response.json({'status': 'error', 'message': 'Método inválido. Use POST.'})
+    
+    try:
+        solicitante_id = request.post_vars.get('solicitante_id') or (auth.user.id if auth.user else None)
+        dados = json.loads(request.body.read().decode('utf-8'))
+        
+        # Validação básica dos dados
+        prato_id = int(dados.get('pratoid'))
+        quantidade_solicitada = int(dados.get('quantidade'))
+        descricao = dados.get('descricao', None)
+        status = dados.get('status', 'Pendente')
+
+        hoje = datetime.now()
+
+        # Verifica se o prato existe
+        prato = db(db.cardapio.id == prato_id).select(
+            db.cardapio.ALL,
+            db.horario_refeicoes.pedido_fim,
+            left=[
+                db.horario_refeicoes.on(db.cardapio.tipo == db.horario_refeicoes.refeicao)
+            ]
+        ).first()
+
+        if not prato:
+            raise ValueError("O prato especificado não existe.")
+
+        # Inicializa classes de validação e gratuidade
+        validador = ValidadorUsuario(solicitante_id, db)
+        gerenciador = GerenciadorGratuidade(validador, db)
+
+        # Verifica se o usuário pode solicitar o prato
+        if not validador.pode_solicitar_prato(prato.cardapio):
+            raise ValueError("Você não tem permissão para solicitar este prato.")
+
+        # Calcula preço/verifica gratuidade
+        resultado_gratuidade = gerenciador.calcular_gratuidade(prato.cardapio, quantidade_solicitada)
+
+        observacao_pedido = descricao or validador.obter_nome_observacao_pedido()
+
+        dict_solicitacao = {
+            'solicitante_id': validador.solicitante_real_id,
+            'is_acompanhante': validador.is_acompanhante,
+            'prato_id': prato_id,
+            'preco': resultado_gratuidade['preco_total'],
+            'quantidade_solicitada': quantidade_solicitada,
+            'descricao': observacao_pedido,
+            'status': status
+        }
+
+        # if prato.cardapio.tipo == 'Café da Manhã' and\
+        #     prato.horario_refeicoes.pedido_fim < hoje.time():
+        #     dict_solicitacao['data_solicitacao'] = (hoje + timedelta(days=1)).date()
+
+        # Commit
+        solicitacao_id = db.solicitacao_refeicao.insert(**dict_solicitacao)
+
+        # Atualiza o saldo
+        _atualizar_saldo_usuario(validador.solicitante_real_id, resultado_gratuidade['preco_total'])
+
+        db.commit()
+        return response.json({
+            'status': 'success', 
+            'message': 'Solicitação de refeição registrada com sucesso!', 
+            'solicitacao_id': solicitacao_id
+        })
+
+    except Exception as e:
+        db.rollback()
+        return response.json({'status': 'error', 'message': str(e)})
+
+def _atualizar_saldo_usuario(usuario_id, valor_adicional):
+    """Função auxiliar para atualizar o saldo do usuário"""
+    saldo_atual = db(db.user_balance.user_id == usuario_id).select().first()
+    
+    if saldo_atual:
+        novo_saldo = saldo_atual.saldo_devedor + valor_adicional
+        saldo_atual.update_record(saldo_devedor=novo_saldo)
+    else:
+        db.user_balance.insert(user_id=usuario_id, saldo_devedor=valor_adicional)
+
+def _converter_dia_semana(dia_ingles):
+    """Função auxiliar para converter o dia da semana para português"""
+    dias_semana = {
+        'Monday': 'Segunda-feira',
+        'Tuesday': 'Terca-feira',
+        'Wednesday': 'Quarta-feira',
+        'Thursday': 'Quinta-feira',
+        'Friday': 'Sexta-feira',
+        'Saturday': 'Sabado',
+        'Sunday': 'Domingo'
+    }
+    return dias_semana.get(dia_ingles, dia_ingles)
+
+
 
 
 def _obter_horarios_prato(tipo_refeicao, tipo_usuario):

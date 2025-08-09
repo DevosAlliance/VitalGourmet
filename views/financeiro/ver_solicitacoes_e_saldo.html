@@ -1,342 +1,377 @@
 {{extend 'layout.html'}}
 
 <style>
-  /* Estilo básico para o skeleton loader */
+  .card-resumo {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+  }
 
-  .skeleton {
-    background-color: #e0e0e0;
-    border-radius: 4px;
-    position: relative;
+  .card-resumo:hover {
+    transform: translateY(-5px);
+  }
+
+  .valor-destaque {
+    font-size: 2rem;
+    font-weight: bold;
+  }
+
+  .valor-pendente {
+    color: #dc3545;
+  }
+
+  .valor-pago {
+    color: #28a745;
+  }
+
+  .filtro-rapido {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 20px;
+    color: white;
+    margin-bottom: 25px;
+  }
+
+  .btn-filtro {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    border-radius: 25px;
+    padding: 10px 20px;
+    margin: 5px;
+    transition: all 0.3s ease;
+  }
+
+  .btn-filtro:hover,
+  .btn-filtro.active {
+    background: white;
+    color: #667eea;
+    border-color: white;
+    transform: scale(1.05);
+  }
+
+  .table-moderna {
+    border-radius: 15px;
     overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   }
 
-  .skeleton::after {
-    content: "";
-    display: block;
-    position: absolute;
-    left: -100%;
-    height: 100%;
-    width: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.2),
-      transparent
-    );
-    animation: loading 1.5s infinite;
+  .table-moderna thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
 
-  @keyframes loading {
+  .table-moderna thead th {
+    color: white;
+    border: none;
+    padding: 15px;
+    font-weight: 600;
+  }
+
+  .linha-pendente {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+  }
+
+  .linha-pago {
+    background-color: #f8f9fa;
+    opacity: 0.7;
+  }
+
+  .linha-selecionada {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #2196f3 !important;
+    animation: pulse-selection 1s ease-in-out;
+  }
+
+  @keyframes pulse-selection {
     0% {
-      left: -100%;
+      transform: scale(1);
     }
     50% {
-      left: 100%;
+      transform: scale(1.02);
     }
     100% {
-      left: 100%;
+      transform: scale(1);
     }
   }
 
-  .skeleton-text {
-    height: 20px;
-    margin-bottom: 10px;
-    width: 80%;
+  .checkbox-grande {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
   }
 
-  .skeleton-sm {
-    height: 12px;
-    width: 60%;
-    margin-bottom: 10px;
+  .badge-status {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+    border-radius: 12px;
   }
 
-  /* Estilo para badges de status */
-  .badge-pago {
-    background-color: #28a745;
+  .area-selecao {
+    background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
     color: white;
-  }
-
-  .badge-pendente {
-    background-color: #ffc107;
-    color: #212529;
-  }
-
-  /* Estilo para linhas da tabela */
-  .linha-solicitacao.pago {
-    background-color: #f8f9fa;
-    opacity: 0.8;
-  }
-
-  /* Botões de ação */
-  .btn-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  /* Saldo devedor */
-  .saldo-info {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid #dc3545;
+    border-radius: 15px;
+    padding: 15px 20px;
     margin-bottom: 20px;
   }
 
-  .saldo-valor {
-    font-size: 1.25rem;
+  .btn-acao {
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-weight: 600;
+  }
+
+  .valor-selecionado {
+    font-size: 1.5rem;
     font-weight: bold;
-    color: #dc3545;
+  }
+
+  .info-vazia {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+  }
+
+  .info-vazia i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
   }
 </style>
 
 <div class="container-fluid">
-  <h2>Solicitações de Refeição do(a): {{=paciente.first_name}}</h2>
-  
-  <!-- Botões de ação -->
-  <div class="btn-actions mb-3">
-    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#visualizarPagamentosModal">
-      <i class="fas fa-eye"></i> Ver Pagamentos
-    </button>
-
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adicionarPagamentoModal">
-      <i class="fas fa-plus"></i> Adicionar Pagamento
-    </button>
-  </div>
-
-  <!-- Filtro por mês -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h5 class="card-title mb-0">Filtrar por Período</h5>
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">💰 Financeiro - {{=paciente.first_name}}</h2>
+      <p class="text-muted mb-0">
+        Visualize e gerencie todos os pedidos pendentes
+      </p>
     </div>
-    <div class="card-body">
-      <form method="GET" action="{{=URL('financeiro', 'ver_solicitacoes_e_saldo', args=[paciente.id])}}">
-        <div class="row align-items-end">
-          <div class="col-md-4">
-            <label for="mes" class="form-label">Mês</label>
-            <select class="form-select" id="mes" name="mes">
-              {{for mes, nome_mes in enumerate(['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'], start=1):}}
-                <option value="{{=mes}}" {{= 'selected' if mes == mes_selecionado else ''}}>{{=nome_mes}}</option>
-              {{pass}}
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label for="ano" class="form-label">Ano</label>
-            <select class="form-select" id="ano" name="ano">
-              {{for ano in range(2020, request.now.year+1):}}
-                <option value="{{=ano}}" {{= 'selected' if ano == ano_selecionado else ''}}>{{=ano}}</option>
-              {{pass}}
-            </select>
-          </div>
-          <div class="col-md-4">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-filter"></i> Filtrar
-            </button>
-            <a href="{{=URL('financeiro', 'ver_solicitacoes_e_saldo', args=[paciente.id])}}" class="btn btn-outline-secondary">
-              <i class="fas fa-times"></i> Limpar
-            </a>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Saldo Devedor -->
-  <div class="saldo-info">
-    <h4>Saldo Devedor</h4>
-    <div class="saldo-valor" data-valor="{{=saldo_devedor}}"></div>
-  </div>
-
-  <!-- Filtro de pagamentos -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="row align-items-center">
-        <div class="col-md-6">
-          <label for="filtroPagamentos" class="form-label">Filtrar por status de pagamento:</label>
-          <select id="filtroPagamentos" class="form-select">
-            <option value="nao-pagos" selected>Não pagos</option>
-            <option value="pagos">Pagos</option>
-            <option value="todos">Todos</option>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <div class="mt-3 mt-md-0">
-            <small class="text-muted">
-              <i class="fas fa-info-circle"></i>
-              Selecione itens não pagos para adicionar ao pagamento
-            </small>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tabela de solicitações -->
-  <div class="card">
-    <div class="card-header">
-      <h5 class="card-title mb-0">Histórico de Solicitações</h5>
-    </div>
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead >
-            <tr>
-              <th>ID</th>
-              <th>Prato</th>
-              <th>Quantidade</th>
-              <th>Preço</th>
-              <th>Observação</th>
-              <th>Forma Pagamento</th>
-              <th>Status</th>
-              <th>Data</th>
-              <th>Selecionar</th>
-            </tr>
-          </thead>
-          <tbody id="tabelaSolicitacoes">
-            {{for solicitacao in sorted(solicitacoes, key=lambda s: s.foi_pago):}}
-            <tr class="linha-solicitacao {{='pago' if solicitacao.foi_pago else ''}}" data-foi-pago="{{=1 if solicitacao.foi_pago else 0}}">
-              <td><span class="badge bg-secondary">{{=solicitacao.id}}</span></td>
-              <td>{{=solicitacao.prato_id.nome}}</td>
-              <td><span class="badge bg-info">{{=solicitacao.quantidade_solicitada}}</span></td>
-              <td data-valor="{{=solicitacao.preco}}"></td>
-              <td>
-                {{if solicitacao.descricao:}}
-                  <span class="text-muted">{{=solicitacao.descricao}}</span>
-                {{else:}}
-                  <span class="text-muted fst-italic">Sem observação</span>
-                {{pass}}
-              </td>
-              <td>
-                {{if solicitacao.forma_pagamento:}}
-                  <span class="badge bg-primary">{{=solicitacao.forma_pagamento.upper()}}</span>
-                {{else:}}
-                  <span class="text-muted">-</span>
-                {{pass}}
-              </td>
-              <td>
-                {{if solicitacao.status == 'Pendente':}}
-                  <span class="badge bg-warning">{{=solicitacao.status}}</span>
-                {{elif solicitacao.status == 'Em Preparação':}}
-                  <span class="badge bg-info">{{=solicitacao.status}}</span>
-                {{elif solicitacao.status == 'Finalizado':}}
-                  <span class="badge bg-success">{{=solicitacao.status}}</span>
-                {{else:}}
-                  <span class="badge bg-secondary">{{=solicitacao.status}}</span>
-                {{pass}}
-              </td>
-              <td>{{=solicitacao.data_solicitacao.strftime('%d/%m/%Y')}}</td>
-              <td>
-                {{if solicitacao.preco > 0 and not solicitacao.foi_pago:}} 
-                  <input type="checkbox" class="form-check-input check-pagamento" data-id="{{=solicitacao.id}}" data-valor="{{=solicitacao.preco}}">
-                {{elif solicitacao.preco > 0 and solicitacao.foi_pago:}}
-                  <span class="badge bg-success"><i class="fas fa-check"></i> Pago</span>
-                {{else:}}
-                  <span class="badge bg-secondary">Gratuito</span>
-                {{pass}}
-              </td>
-            </tr>
-            {{pass}}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="mt-3">
-    <button class="btn btn-secondary" onclick="window.history.back();">
+    <button class="btn btn-outline-secondary" onclick="window.history.back();">
       <i class="fas fa-arrow-left"></i> Voltar
     </button>
   </div>
-</div>
 
-<!-- Modal de visualização de pagamentos -->
-<div class="modal fade" id="visualizarPagamentosModal" tabindex="-1" aria-labelledby="visualizarPagamentosModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="visualizarPagamentosModalLabel">
-          <i class="fas fa-receipt"></i> Pagamentos Realizados
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <!-- Skeleton Loader -->
-        <div id="skeletonLoader">
-          <div class="skeleton skeleton-text"></div>
-          <div class="skeleton skeleton-sm"></div>
-          <div class="skeleton skeleton-text"></div>
-          <div class="skeleton skeleton-sm"></div>
-          <div class="skeleton skeleton-text"></div>
+  <!-- Cards de Resumo -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card card-resumo border-danger">
+        <div class="card-body text-center">
+          <div class="valor-destaque valor-pendente" id="totalPendente">
+            R$ 0,00
+          </div>
+          <div><span id="qtdPendentes">0</span> pedidos pendentes</div>
+          <small class="text-muted">Total a pagar</small>
         </div>
-
-        <!-- Tabela de pagamentos -->
-        <div class="table-responsive d-none" id="pagamentosContainer">
-          <table class="table table-striped" id="pagamentosTable">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Valor</th>
-                <th>Descrição</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Pagamentos serão carregados aqui via JavaScript -->
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Mensagem quando não há pagamentos -->
-        <div id="noPagamentosMessage" class="text-center py-4 d-none">
-          <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
-          <h5 class="text-muted">Nenhum pagamento encontrado</h5>
-          <p class="text-muted">Este paciente ainda não possui pagamentos registrados.</p>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
       </div>
     </div>
+    <div class="col-md-3">
+      <div class="card card-resumo border-success">
+        <div class="card-body text-center">
+          <div class="valor-destaque valor-pago" id="totalPago">R$ 0,00</div>
+          <div><span id="qtdPagos">0</span> pedidos pagos</div>
+          <small class="text-muted">Total pago</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-resumo border-info">
+        <div class="card-body text-center">
+          <div class="valor-destaque text-info" id="totalSelecionado">
+            R$ 0,00
+          </div>
+          <div><span id="qtdSelecionados">0</span> selecionados</div>
+          <small class="text-muted">Para pagamento</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card card-resumo border-secondary">
+        <div class="card-body text-center">
+          <button
+            class="btn btn-primary w-100"
+            data-bs-toggle="modal"
+            data-bs-target="#historicoModal"
+          >
+            <i class="fas fa-history"></i><br />
+            Ver Histórico
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros Rápidos -->
+  <div class="filtro-rapido">
+    <h5 class="mb-3"><i class="fas fa-filter"></i> Filtros Rápidos</h5>
+    <div class="d-flex flex-wrap align-items-center">
+      <button
+        class="btn btn-filtro active"
+        data-filtro="pendentes"
+        id="btnPendentes"
+      >
+        📋 Pendentes (<span id="countPendentes">0</span>)
+      </button>
+      <button class="btn btn-filtro" data-filtro="pagos" id="btnPagos">
+        ✅ Pagos (<span id="countPagos">0</span>)
+      </button>
+      <button class="btn btn-filtro" data-filtro="todos" id="btnTodos">
+        📊 Todos (<span id="countTodos">0</span>)
+      </button>
+      <button class="btn btn-filtro" data-filtro="gratuitos" id="btnGratuitos">
+        🆓 Gratuitos (<span id="countGratuitos">0</span>)
+      </button>
+
+      <div class="ms-auto">
+        <input
+          type="text"
+          class="form-control"
+          id="buscarPrato"
+          placeholder="🔍 Buscar prato..."
+          style="width: 200px; border-radius: 20px"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Área de Seleção (aparece quando há itens selecionados) -->
+  <div id="areaSelecao" class="area-selecao d-none">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <span class="valor-selecionado" id="valorTotalSelecionado"
+          >R$ 0,00</span
+        >
+        <div>
+          <span id="itensSelecionadosTexto">0</span> itens selecionados para
+          pagamento
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-light btn-acao me-2" onclick="desmarcarTodos()">
+          <i class="fas fa-times"></i> Desmarcar Todos
+        </button>
+        <button
+          class="btn btn-warning btn-acao"
+          data-bs-toggle="modal"
+          data-bs-target="#pagamentoModal"
+        >
+          <i class="fas fa-credit-card"></i> Pagar Selecionados
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de Pedidos -->
+  <div class="card table-moderna">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th width="50">
+              <input
+                type="checkbox"
+                class="checkbox-grande"
+                id="selecionarTodos"
+              />
+            </th>
+            <th>Prato</th>
+            <th>Data</th>
+            <th>Qtd</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Pagamento</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaPedidos">
+          <tr>
+            <td colspan="7" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+              </div>
+              <div class="mt-2">Carregando pedidos...</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Info quando não há dados -->
+  <div id="infoVazia" class="info-vazia d-none">
+    <i class="fas fa-search"></i>
+    <h4>Nenhum pedido encontrado</h4>
+    <p>Não há pedidos que correspondam aos filtros selecionados.</p>
   </div>
 </div>
 
 <!-- Modal de Pagamento -->
-<div class="modal fade" id="adicionarPagamentoModal" tabindex="-1" aria-labelledby="adicionarPagamentoModalLabel" aria-hidden="true">
+<div class="modal fade" id="pagamentoModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="adicionarPagamentoModalLabel">
-          <i class="fas fa-plus"></i> Adicionar Pagamento
+      <div
+        class="modal-header"
+        style="
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        "
+      >
+        <h5 class="modal-title">
+          <i class="fas fa-credit-card"></i> Registrar Pagamento
         </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-info">
-          <i class="fas fa-info-circle"></i>
-          <strong>Total Selecionado:</strong> <span id="totalSelecionado">R$ 0,00</span>
-        </div>
-        
-        <form id="novoPagamentoForm">
-          <input type="hidden" id="valor_pago" name="valor_pago">
-          
-          <div class="mb-3">
-            <label for="descricao" class="form-label">Descrição</label>
-            <input type="text" class="form-control" id="descricao" name="descricao" placeholder="Ex: Pagamento das refeições de Janeiro">
+          <div class="row">
+            <div class="col-6">
+              <strong>Itens:</strong> <span id="modalQtdItens">0</span>
+            </div>
+            <div class="col-6 text-end">
+              <strong>Total:</strong>
+              <span class="fs-5 text-success" id="modalValorTotal"
+                >R$ 0,00</span
+              >
+            </div>
           </div>
-          
+        </div>
+
+        <form id="formPagamento">
           <div class="mb-3">
-            <label for="forma_pagamento" class="form-label">Forma de Pagamento <span class="text-danger">*</span></label>
-            <select class="form-select" id="forma_pagamento" name="forma_pagamento" required>
-              <option value="">Selecione a forma de pagamento</option>
+            <label class="form-label"
+              >Forma de Pagamento <span class="text-danger">*</span></label
+            >
+            <select class="form-select" id="formaPagamento" required>
+              <option value="">Selecione...</option>
               <option value="pix">PIX</option>
-              <option value="transferencia">Transferência Bancária</option>
-              <option value="credito">Cartão de Crédito</option>
-              <option value="debito">Cartão de Débito</option>
+              <option value="transferencia">Transferência</option>
+              <option value="credito">Cartão Crédito</option>
+              <option value="debito">Cartão Débito</option>
               <option value="especie">Dinheiro</option>
             </select>
           </div>
-          
+
+          <div class="mb-3">
+            <label class="form-label">Observações</label>
+            <textarea
+              class="form-control"
+              id="observacoes"
+              rows="3"
+              placeholder="Informações adicionais..."
+            ></textarea>
+          </div>
+
           <div class="d-grid">
-            <button type="submit" class="btn btn-primary" id="btnConfirmarPagamento">
+            <button
+              type="submit"
+              class="btn btn-success btn-lg"
+              id="btnConfirmar"
+            >
               <i class="fas fa-check"></i> Confirmar Pagamento
             </button>
           </div>
@@ -346,244 +381,504 @@
   </div>
 </div>
 
+<!-- Modal de Histórico -->
+<div class="modal fade" id="historicoModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div
+        class="modal-header"
+        style="
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        "
+      >
+        <h5 class="modal-title">
+          <i class="fas fa-history"></i> Histórico de Pagamentos
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div id="historicoLoading" class="text-center py-4">
+          <div class="spinner-border text-primary"></div>
+          <div class="mt-2">Carregando histórico...</div>
+        </div>
+
+        <div id="historicoContent" class="d-none">
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Valor</th>
+                  <th>Descrição</th>
+                </tr>
+              </thead>
+              <tbody id="historicoTabela"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="historicoVazio" class="text-center py-4 d-none">
+          <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+          <h5>Nenhum pagamento encontrado</h5>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    // ===== CONFIGURAÇÃO INICIAL =====
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+  document.addEventListener("DOMContentLoaded", function () {
+    // ===== VARIÁVEIS GLOBAIS =====
+    let todosPedidos = [];
+    let pedidosFiltrados = [];
+    let itensSelecionados = new Set();
+    let filtroAtual = "pendentes";
 
-    // ===== FILTRO DE MÊS/ANO =====
-    function configurarFiltroData() {
-        const mesSelect = document.getElementById("mes");
-        const anoSelect = document.getElementById("ano");
-
-        // Se não há mês selecionado na URL, selecionar o mês atual
-        if (!mesSelect.value || mesSelect.value === "") {
-            mesSelect.value = currentMonth;
-        }
-
-        // Se não há ano selecionado na URL, selecionar o ano atual
-        if (!anoSelect.value || anoSelect.value === "") {
-            anoSelect.value = currentYear;
-        }
-
-        function atualizarMesesDisponiveis() {
-            const anoSelecionado = parseInt(anoSelect.value);
-            const opcoesMes = mesSelect.querySelectorAll("option");
-
-            opcoesMes.forEach(opcao => {
-                const mesOpcao = parseInt(opcao.value);
-                
-                if (anoSelecionado === currentYear && mesOpcao > currentMonth) {
-                    opcao.disabled = true;
-                    opcao.style.color = "#ccc";
-                } else {
-                    opcao.disabled = false;
-                    opcao.style.color = "";
-                }
-            });
-
-            // Se o mês selecionado está no futuro, selecionar o mês atual
-            const mesSelecionado = parseInt(mesSelect.value);
-            if (anoSelecionado === currentYear && mesSelecionado > currentMonth) {
-                mesSelect.value = currentMonth;
-            }
-        }
-
-        // Configurar evento de mudança do ano
-        anoSelect.addEventListener("change", atualizarMesesDisponiveis);
-        
-        // Executar na inicialização
-        atualizarMesesDisponiveis();
-    }
-
-    // ===== FILTRO DE PAGAMENTOS =====
-    function filtrarPagamentos() {
-        const filtro = document.getElementById("filtroPagamentos").value;
-        const linhas = document.querySelectorAll(".linha-solicitacao");
-
-        linhas.forEach(linha => {
-            const foiPago = linha.getAttribute("data-foi-pago") === "1";
-            let mostrar = true;
-
-            switch(filtro) {
-                case "pagos":
-                    mostrar = foiPago;
-                    break;
-                case "nao-pagos":
-                    mostrar = !foiPago;
-                    break;
-                case "todos":
-                    mostrar = true;
-                    break;
-            }
-
-            linha.style.display = mostrar ? "" : "none";
-        });
-    }
-
-    // ===== FORMATAÇÃO DE VALORES =====
+    // ===== FORMATAÇÃO =====
     function formatarBRL(valor) {
-        return new Intl.NumberFormat("pt-BR", {
-            style: "currency",
-            currency: "BRL"
-        }).format(valor);
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format(valor);
     }
 
-    function formatarValores() {
-        const elementosComValor = document.querySelectorAll("[data-valor]");
-        elementosComValor.forEach(function(elemento) {
-            const valorBruto = parseFloat(elemento.getAttribute("data-valor"));
-            elemento.textContent = formatarBRL(valorBruto);
+    function formatarData(data) {
+      return new Date(data + "T00:00:00").toLocaleDateString("pt-BR");
+    }
+
+    // ===== CARREGAMENTO DE DADOS =====
+    async function carregarTodosPedidos() {
+      try {
+        // Esta API vai buscar TODOS os pedidos do paciente, sem filtro de período
+        const response = await fetch(
+          '{{=URL("financeiro", "api_todos_pedidos_paciente", args=[paciente.id])}}'
+        );
+        const data = await response.json();
+
+        if (data.status === "success") {
+          todosPedidos = data.pedidos;
+          aplicarFiltro();
+          atualizarResumo();
+          atualizarContadores();
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar pedidos:", error);
+        mostrarErro("Erro ao carregar dados. Recarregue a página.");
+      }
+    }
+
+    // ===== FILTROS =====
+    function aplicarFiltro() {
+      let resultado = [...todosPedidos];
+
+      // Aplicar filtro principal
+      switch (filtroAtual) {
+        case "pendentes":
+          resultado = resultado.filter((p) => !p.foi_pago && p.preco > 0);
+          break;
+        case "pagos":
+          resultado = resultado.filter((p) => p.foi_pago);
+          break;
+        case "gratuitos":
+          resultado = resultado.filter((p) => p.preco === 0);
+          break;
+        case "todos":
+          // Mostrar todos
+          break;
+      }
+
+      // Aplicar busca por texto
+      const textoBusca = document
+        .getElementById("buscarPrato")
+        .value.toLowerCase();
+      if (textoBusca) {
+        resultado = resultado.filter((p) =>
+          p.prato_nome.toLowerCase().includes(textoBusca)
+        );
+      }
+
+      // Ordenar por data (mais recentes primeiro)
+      resultado.sort(
+        (a, b) => new Date(b.data_solicitacao) - new Date(a.data_solicitacao)
+      );
+
+      pedidosFiltrados = resultado;
+      renderizarTabela();
+    }
+
+    // ===== RENDERIZAÇÃO =====
+    function renderizarTabela() {
+      const tbody = document.getElementById("tabelaPedidos");
+      const infoVazia = document.getElementById("infoVazia");
+
+      if (pedidosFiltrados.length === 0) {
+        tbody.innerHTML = "";
+        infoVazia.classList.remove("d-none");
+        return;
+      }
+
+      infoVazia.classList.add("d-none");
+
+      tbody.innerHTML = pedidosFiltrados
+        .map(
+          (pedido) => `
+            <tr class="linha-pedido ${
+              pedido.foi_pago ? "linha-pago" : "linha-pendente"
+            } ${itensSelecionados.has(pedido.id) ? "linha-selecionada" : ""}" 
+                data-id="${pedido.id}">
+                <td>
+                    ${
+                      !pedido.foi_pago && pedido.preco > 0
+                        ? `<input type="checkbox" class="checkbox-grande pedido-checkbox" value="${
+                            pedido.id
+                          }" ${
+                            itensSelecionados.has(pedido.id) ? "checked" : ""
+                          }>`
+                        : '<span class="text-muted">-</span>'
+                    }
+                </td>
+                <td>
+                    <div class="fw-bold">${pedido.prato_nome}</div>
+                    ${
+                      pedido.descricao
+                        ? `<small class="text-muted">${pedido.descricao}</small>`
+                        : ""
+                    }
+                </td>
+                <td>${formatarData(pedido.data_solicitacao)}</td>
+                <td><span class="badge bg-info">${
+                  pedido.quantidade_solicitada
+                }</span></td>
+                <td class="fw-bold ${
+                  pedido.preco > 0 ? "text-danger" : "text-success"
+                }">
+                    ${pedido.preco > 0 ? formatarBRL(pedido.preco) : "Gratuito"}
+                </td>
+                <td>
+                    <span class="badge badge-status ${getStatusClass(
+                      pedido.status
+                    )}">${pedido.status}</span>
+                </td>
+                <td>
+                    ${getPagamentoStatus(pedido)}
+                </td>
+            </tr>
+        `
+        )
+        .join("");
+
+      // Adicionar event listeners para checkboxes
+      document.querySelectorAll(".pedido-checkbox").forEach((checkbox) => {
+        checkbox.addEventListener("change", handleCheckboxChange);
+      });
+    }
+
+    function getStatusClass(status) {
+      const classes = {
+        Pendente: "bg-warning text-dark",
+        "Em Preparação": "bg-info",
+        Finalizado: "bg-success",
+        Pago: "bg-success",
+      };
+      return classes[status] || "bg-secondary";
+    }
+
+    function getPagamentoStatus(pedido) {
+      if (pedido.foi_pago) {
+        return `<span class="badge bg-success">✅ Pago</span>
+                    ${
+                      pedido.forma_pagamento
+                        ? `<br><small class="text-muted">${pedido.forma_pagamento.toUpperCase()}</small>`
+                        : ""
+                    }`;
+      } else if (pedido.preco > 0) {
+        return '<span class="badge bg-warning text-dark">⏳ Pendente</span>';
+      } else {
+        return '<span class="badge bg-secondary">🆓 Gratuito</span>';
+      }
+    }
+
+    // ===== SELEÇÃO DE ITENS =====
+    function handleCheckboxChange(event) {
+      const pedidoId = parseInt(event.target.value);
+      const linha = event.target.closest("tr");
+
+      if (event.target.checked) {
+        itensSelecionados.add(pedidoId);
+        linha.classList.add("linha-selecionada");
+      } else {
+        itensSelecionados.delete(pedidoId);
+        linha.classList.remove("linha-selecionada");
+      }
+
+      atualizarSelecao();
+    }
+
+    function atualizarSelecao() {
+      const qtd = itensSelecionados.size;
+      const valorTotal = calcularValorSelecionado();
+
+      // Atualizar card de resumo
+      document.getElementById("qtdSelecionados").textContent = qtd;
+      document.getElementById("totalSelecionado").textContent =
+        formatarBRL(valorTotal);
+
+      // Mostrar/esconder área de seleção
+      const areaSelecao = document.getElementById("areaSelecao");
+      if (qtd > 0) {
+        areaSelecao.classList.remove("d-none");
+        document.getElementById("valorTotalSelecionado").textContent =
+          formatarBRL(valorTotal);
+        document.getElementById("itensSelecionadosTexto").textContent = qtd;
+      } else {
+        areaSelecao.classList.add("d-none");
+      }
+
+      // Atualizar modal
+      document.getElementById("modalQtdItens").textContent = qtd;
+      document.getElementById("modalValorTotal").textContent =
+        formatarBRL(valorTotal);
+
+      // Atualizar checkbox "selecionar todos"
+      const checkboxTodos = document.getElementById("selecionarTodos");
+      const checkboxesVisiveis = document.querySelectorAll(".pedido-checkbox");
+      const todosChecked =
+        checkboxesVisiveis.length > 0 &&
+        Array.from(checkboxesVisiveis).every((cb) => cb.checked);
+      checkboxTodos.checked = todosChecked;
+    }
+
+    function calcularValorSelecionado() {
+      return Array.from(itensSelecionados).reduce((total, id) => {
+        const pedido = todosPedidos.find((p) => p.id === id);
+        return total + (pedido ? pedido.preco : 0);
+      }, 0);
+    }
+
+    // ===== RESUMO E CONTADORES =====
+    function atualizarResumo() {
+      const pendentes = todosPedidos.filter((p) => !p.foi_pago && p.preco > 0);
+      const pagos = todosPedidos.filter((p) => p.foi_pago);
+
+      const valorPendente = pendentes.reduce((total, p) => total + p.preco, 0);
+      const valorPago = pagos.reduce((total, p) => total + p.preco, 0);
+
+      document.getElementById("totalPendente").textContent =
+        formatarBRL(valorPendente);
+      document.getElementById("qtdPendentes").textContent = pendentes.length;
+
+      document.getElementById("totalPago").textContent = formatarBRL(valorPago);
+      document.getElementById("qtdPagos").textContent = pagos.length;
+    }
+
+    function atualizarContadores() {
+      const pendentes = todosPedidos.filter(
+        (p) => !p.foi_pago && p.preco > 0
+      ).length;
+      const pagos = todosPedidos.filter((p) => p.foi_pago).length;
+      const gratuitos = todosPedidos.filter((p) => p.preco === 0).length;
+
+      document.getElementById("countPendentes").textContent = pendentes;
+      document.getElementById("countPagos").textContent = pagos;
+      document.getElementById("countGratuitos").textContent = gratuitos;
+      document.getElementById("countTodos").textContent = todosPedidos.length;
+    }
+
+    // ===== EVENT LISTENERS =====
+
+    // Filtros por botão
+    document.querySelectorAll(".btn-filtro").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        document
+          .querySelectorAll(".btn-filtro")
+          .forEach((b) => b.classList.remove("active"));
+        this.classList.add("active");
+        filtroAtual = this.dataset.filtro;
+        aplicarFiltro();
+      });
+    });
+
+    // Busca por texto
+    document
+      .getElementById("buscarPrato")
+      .addEventListener("input", aplicarFiltro);
+
+    // Selecionar todos
+    document
+      .getElementById("selecionarTodos")
+      .addEventListener("change", function () {
+        const checkboxes = document.querySelectorAll(".pedido-checkbox");
+        checkboxes.forEach((cb) => {
+          cb.checked = this.checked;
+          const pedidoId = parseInt(cb.value);
+          if (this.checked) {
+            itensSelecionados.add(pedidoId);
+            cb.closest("tr").classList.add("linha-selecionada");
+          } else {
+            itensSelecionados.delete(pedidoId);
+            cb.closest("tr").classList.remove("linha-selecionada");
+          }
         });
+        atualizarSelecao();
+      });
+
+    // Form de pagamento
+    document
+      .getElementById("formPagamento")
+      .addEventListener("submit", async function (e) {
+        e.preventDefault();
+        await processarPagamento();
+      });
+
+    // ===== FUNÇÕES AUXILIARES =====
+
+    function desmarcarTodos() {
+      itensSelecionados.clear();
+      document
+        .querySelectorAll(".pedido-checkbox")
+        .forEach((cb) => (cb.checked = false));
+      document
+        .querySelectorAll(".linha-pedido")
+        .forEach((linha) => linha.classList.remove("linha-selecionada"));
+      document.getElementById("selecionarTodos").checked = false;
+      atualizarSelecao();
     }
 
-    // ===== GERENCIAMENTO DE PAGAMENTOS =====
-    let totalSelecionado = 0;
-    let pagamentosSelecionados = new Set();
-
-    function atualizarTotal() {
-        let total = 0;
-        pagamentosSelecionados.forEach(id => {
-            const checkbox = document.querySelector(`.check-pagamento[data-id="${id}"]`);
-            if (checkbox) {
-                total += parseFloat(checkbox.getAttribute("data-valor"));
-            }
-        });
-
-        totalSelecionado = total;
-        document.getElementById("totalSelecionado").textContent = formatarBRL(totalSelecionado);
-        document.getElementById("valor_pago").value = totalSelecionado;
+    function mostrarErro(mensagem) {
+      alert("❌ " + mensagem);
     }
 
-    function configurarCheckboxesPagamento() {
-        document.querySelectorAll(".check-pagamento").forEach(checkbox => {
-            checkbox.addEventListener("change", function () {
-                const id = this.getAttribute("data-id");
-
-                if (this.checked) {
-                    pagamentosSelecionados.add(id);
-                } else {
-                    pagamentosSelecionados.delete(id);
-                }
-
-                atualizarTotal();
-            });
-        });
+    function mostrarSucesso(mensagem) {
+      alert("✅ " + mensagem);
     }
 
-    // ===== FORMULÁRIO DE PAGAMENTO =====
-    function configurarFormularioPagamento() {
-        document.getElementById("novoPagamentoForm").addEventListener("submit", function (event) {
-            event.preventDefault();
+    // ===== PAGAMENTO =====
+    async function processarPagamento() {
+      const formaPagamento = document.getElementById("formaPagamento").value;
+      const observacoes = document.getElementById("observacoes").value;
+      const btnConfirmar = document.getElementById("btnConfirmar");
 
-            const descricao = document.getElementById("descricao").value;
-            const valorPago = document.getElementById("valor_pago").value;
-            const formaPagamento = document.getElementById("forma_pagamento").value;
-            const solicitacoesSelecionadas = Array.from(pagamentosSelecionados);
-            const btnConfirmar = document.getElementById("btnConfirmarPagamento");
+      if (!formaPagamento) {
+        mostrarErro("Selecione a forma de pagamento");
+        return;
+      }
 
-            if (valorPago <= 0 || !formaPagamento) {
-                alert("Selecione pelo menos um pagamento e a forma de pagamento!");
-                return;
-            }
+      if (itensSelecionados.size === 0) {
+        mostrarErro("Selecione pelo menos um item");
+        return;
+      }
 
-            // Mostrar loading
-            btnConfirmar.disabled = true;
-            btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
+      // Loading
+      btnConfirmar.disabled = true;
+      btnConfirmar.innerHTML =
+        '<span class="spinner-border spinner-border-sm"></span> Processando...';
 
-            // Enviar requisição
-            fetch('{{=URL("financeiro", "marcar_pagamento_realizado")}}', {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    solicitacoes_ids: solicitacoesSelecionadas,
-                    valor_pago: valorPago,
-                    descricao: descricao,
-                    forma_pagamento: formaPagamento
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "success") {
-                    alert("Pagamento registrado com sucesso!");
-                    location.reload();
-                } else {
-                    alert("Erro ao registrar pagamento: " + data.message);
-                }
-            })
-            .catch(error => {
-                console.error("Erro ao registrar pagamento:", error);
-                alert("Erro ao conectar com o servidor. Tente novamente.");
-            })
-            .finally(() => {
-                btnConfirmar.disabled = false;
-                btnConfirmar.innerHTML = '<i class="fas fa-check"></i> Confirmar Pagamento';
-            });
-        });
+      try {
+        const valorTotal = calcularValorSelecionado();
+
+        const response = await fetch(
+          '{{=URL("financeiro", "marcar_pagamento_realizado")}}',
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              solicitacoes_ids: Array.from(itensSelecionados),
+              valor_pago: valorTotal,
+              descricao: observacoes,
+              forma_pagamento: formaPagamento,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+          mostrarSucesso("Pagamento registrado com sucesso!");
+
+          // Fechar modal e limpar
+          bootstrap.Modal.getInstance(
+            document.getElementById("pagamentoModal")
+          ).hide();
+          document.getElementById("formPagamento").reset();
+
+          // Recarregar dados
+          await carregarTodosPedidos();
+          desmarcarTodos();
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (error) {
+        console.error("Erro:", error);
+        mostrarErro("Erro ao processar pagamento: " + error.message);
+      } finally {
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML =
+          '<i class="fas fa-check"></i> Confirmar Pagamento';
+      }
     }
 
-    // ===== MODAL DE VISUALIZAR PAGAMENTOS =====
-    function carregarPagamentos() {
-        const modal = document.getElementById('visualizarPagamentosModal');
-        
-        modal.addEventListener('show.bs.modal', function () {
-            const skeletonLoader = document.getElementById('skeletonLoader');
-            const pagamentosContainer = document.getElementById('pagamentosContainer');
-            const noPagamentosMessage = document.getElementById('noPagamentosMessage');
-            
-            // Mostrar skeleton e esconder outros elementos
-            skeletonLoader.classList.remove('d-none');
-            pagamentosContainer.classList.add('d-none');
-            noPagamentosMessage.classList.add('d-none');
-            
-            // Carregar pagamentos
-            fetch('{{=URL("financeiro", "api_listar_pagamentos", args=[paciente.id])}}')
-                .then(response => response.json())
-                .then(data => {
-                    setTimeout(() => { // Pequeno delay para mostrar o skeleton
-                        skeletonLoader.classList.add('d-none');
-                        
-                        if (data.status === 'success' && data.pagamentos.length > 0) {
-                            const tbody = document.querySelector('#pagamentosTable tbody');
-                            tbody.innerHTML = '';
-                            
-                            data.pagamentos.forEach(pagamento => {
-                                const row = document.createElement('tr');
-                                row.innerHTML = `
-                                    <td>${pagamento.data_pagamento}</td>
-                                    <td>${formatarBRL(pagamento.valor_pago)}</td>
-                                    <td>${pagamento.descricao || 'Sem descrição'}</td>
-                                `;
-                                tbody.appendChild(row);
-                            });
-                            
-                            pagamentosContainer.classList.remove('d-none');
-                        } else {
-                            noPagamentosMessage.classList.remove('d-none');
-                        }
-                    }, 500);
-                })
-                .catch(error => {
-                    console.error('Erro ao carregar pagamentos:', error);
-                    skeletonLoader.classList.add('d-none');
-                    noPagamentosMessage.classList.remove('d-none');
-                });
-        });
+    // ===== HISTÓRICO =====
+    async function carregarHistorico() {
+      const loading = document.getElementById("historicoLoading");
+      const content = document.getElementById("historicoContent");
+      const vazio = document.getElementById("historicoVazio");
+
+      loading.classList.remove("d-none");
+      content.classList.add("d-none");
+      vazio.classList.add("d-none");
+
+      try {
+        const response = await fetch(
+          '{{=URL("financeiro", "api_listar_pagamentos", args=[paciente.id])}}'
+        );
+        const data = await response.json();
+
+        setTimeout(() => {
+          loading.classList.add("d-none");
+
+          if (data.status === "success" && data.pagamentos.length > 0) {
+            const tbody = document.getElementById("historicoTabela");
+            tbody.innerHTML = data.pagamentos
+              .map(
+                (pag) => `
+                        <tr>
+                            <td>${pag.data_pagamento}</td>
+                            <td class="fw-bold text-success">${formatarBRL(
+                              pag.valor_pago
+                            )}</td>
+                            <td>${pag.descricao || "Sem descrição"}</td>
+                        </tr>
+                    `
+              )
+              .join("");
+            content.classList.remove("d-none");
+          } else {
+            vazio.classList.remove("d-none");
+          }
+        }, 300);
+      } catch (error) {
+        console.error("Erro ao carregar histórico:", error);
+        loading.classList.add("d-none");
+        vazio.classList.remove("d-none");
+      }
     }
+
+    // Event listener para modal de histórico
+    document
+      .getElementById("historicoModal")
+      .addEventListener("show.bs.modal", carregarHistorico);
+
+    // Função global para desmarcar todos
+    window.desmarcarTodos = desmarcarTodos;
 
     // ===== INICIALIZAÇÃO =====
-    configurarFiltroData();
-    formatarValores();
-    configurarCheckboxesPagamento();
-    configurarFormularioPagamento();
-    carregarPagamentos();
-    
-    // Event listeners
-    document.getElementById("filtroPagamentos").addEventListener("change", filtrarPagamentos);
-    
-    // Executar filtro inicial
-    filtrarPagamentos();
-});
+    carregarTodosPedidos();
+  });
 </script>

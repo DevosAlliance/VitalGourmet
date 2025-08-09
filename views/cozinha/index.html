@@ -2,7 +2,12 @@
 
 <h2>Pedidos Pendentes</h2>
 <div id="loading" style="display: none">Carregando...</div>
-<button id="imprimir" class="btn btn-primary mb-3">Imprimir PDF</button>
+<div class="mb-3">
+  <button id="imprimir" class="btn btn-primary">Imprimir PDF</button>
+</div>
+<div id="status-info" class="alert alert-info mb-3">
+  Sistema iniciado. Aguardando pedidos...
+</div>
 <table class="table table-striped">
   <thead>
     <tr>
@@ -52,11 +57,72 @@
   </div>
 </div>
 
+<!-- Audio element para notificações -->
+<audio id="notificationSound" preload="auto">
+  <source
+    src="{{=URL('static', 'sounds/notification.mp3')}}"
+    type="audio/mpeg"
+  />
+</audio>
+
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    let pedidosAtuais = [];
+    let primeiroCarregamento = true;
+
+    // Função para tocar som de notificação
+    function tocarNotificacao() {
+      const audio = document.getElementById("notificationSound");
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch((error) => {
+          console.log("Erro ao tocar som:", error);
+        });
+      }
+    }
+
+    // Função para atualizar status na tela
+    function atualizarStatusInfo(mensagem, tipo = "info") {
+      const statusElement = document.getElementById("status-info");
+      statusElement.className = `alert alert-${tipo} mb-3`;
+      statusElement.textContent = mensagem;
+
+      // Auto-hide após 5 segundos para mensagens de sucesso
+      if (tipo === "success") {
+        setTimeout(() => {
+          statusElement.className = "alert alert-info mb-3";
+          statusElement.textContent = "Buscando novos pedidos...";
+        }, 5000);
+      }
+    }
+
+    // Função para comparar pedidos e detectar novos
+    function detectarNovosPedidos(novosPedidos) {
+      if (primeiroCarregamento) {
+        return [];
+      }
+
+      const idsAtuais = new Set(pedidosAtuais.map((p) => p.id));
+      const novosPedidosDetectados = novosPedidos.filter(
+        (p) => !idsAtuais.has(p.id)
+      );
+
+      console.log("IDs atuais:", Array.from(idsAtuais));
+      console.log(
+        "IDs dos novos pedidos:",
+        novosPedidos.map((p) => p.id)
+      );
+      console.log(
+        "Novos pedidos detectados:",
+        novosPedidosDetectados.map((p) => p.id)
+      );
+
+      return novosPedidosDetectados;
+    }
+
     // Função para imprimir pedidos
     function imprimirPedidos() {
-      fetch("{{=URL('cozinha', 'api_gerenciar_pedidos')}}")
+      fetch("{{=URL('api_gerenciar_pedidos')}}")
         .then((response) => response.json())
         .then((data) => {
           if (data.status === "success" || data.pedidos) {
@@ -81,22 +147,32 @@
                 const tabelaBody = iframeDoc.querySelector(
                   "#tabela-pedidos tbody"
                 );
-                pedidos.forEach((pedido) => {
-                  const linha = `
-                    <tr>
-                      <td>${pedido["Solicitante"]}</td>
-                      <td>${pedido["Setor"] || "-"}</td>
-                      <td>${pedido["Prato"]}</td>
-                      <td>${pedido["Quantidade"]}</td>
-                    </tr>
-                  `;
-                  tabelaBody.insertAdjacentHTML("beforeend", linha);
-                });
+                if (tabelaBody) {
+                  pedidos.forEach((pedido) => {
+                    const linha = `
+                      <tr>
+                        <td>${pedido["Solicitante"]}</td>
+                        <td>${pedido["Setor"] || "-"}</td>
+                        <td>${pedido["Prato"]}</td>
+                        <td>${pedido["Quantidade"]}</td>
+                      </tr>
+                    `;
+                    tabelaBody.insertAdjacentHTML("beforeend", linha);
+                  });
+                }
 
-                printIframe.onload = () => {
+                // Aguardar um pouco para garantir que o conteúdo foi carregado
+                setTimeout(() => {
                   printIframe.contentWindow.print();
-                  printIframe.remove();
-                };
+                  setTimeout(() => {
+                    printIframe.remove();
+                  }, 1000);
+                }, 100);
+              })
+              .catch((error) => {
+                console.error("Erro ao carregar template:", error);
+                // Fallback: imprimir os dados atuais da tela
+                imprimirPedidosAtual();
               });
           } else {
             const errorMessage =
@@ -106,68 +182,189 @@
         })
         .catch((error) => {
           console.error("Erro ao carregar pedidos:", error);
-          alert("Erro ao carregar pedidos para impressão.");
+          // Fallback: imprimir os dados atuais da tela
+          imprimirPedidosAtual();
         });
     }
 
+    // Função fallback para imprimir pedidos atuais da tela
+    function imprimirPedidosAtual() {
+      const printWindow = window.open("", "_blank");
+      const tabelaAtual = document.querySelector("#tabela-pedidos").innerHTML;
+
+      const htmlImpressao = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Pedidos Pendentes</title>
+          <style>
+            body { font-family: Arial, sans-serif; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+            th { background-color: #f2f2f2; }
+            h2 { text-align: center; }
+            .no-print { display: none; }
+          </style>
+        </head>
+        <body>
+          <h2>Pedidos Pendentes - ${new Date().toLocaleString()}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Solicitante</th>
+                <th>Setor</th>
+                <th>Prato</th>
+                <th>Quantidade</th>
+                <th>Quarto</th>
+                <th>Observações</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tabelaAtual
+                .replace(/<img[^>]*>/g, "")
+                .replace(/<button[^>]*>.*?<\/button>/g, "")}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlImpressao);
+      printWindow.document.close();
+      printWindow.print();
+      printWindow.close();
+    }
+
     // Função para carregar pedidos via Ajax
-    function carregarPedidos() {
-      $("#loading").show();
+    function carregarPedidos(forcarAtualizacao = false) {
+      if (forcarAtualizacao) {
+        $("#loading").show();
+      }
+
       $.ajax({
         url: "{{=URL('api_listar_pedidos')}}",
         method: "GET",
         success: function (response) {
           $("#loading").hide();
           if (response.status === "success") {
-            const pedidos = response.pedidos;
-            const tabelaBody = $("#tabela-pedidos");
-            tabelaBody.empty();
+            const novosPedidos = response.pedidos;
 
-            pedidos.forEach((pedido) => {
-              const row = `
-                <tr id="pedido_${pedido.id}" class="${
-                pedido.status === "Em Preparação" ? "preparacao" : ""
-              }">
-                  <td>${pedido.solicitante}</td>
-                  <td>${pedido.setor}</td>
-                  <td>${pedido.prato}</td>
-                  <td>
-                    ${
-                      pedido.foto
-                        ? `<img src="${pedido.foto}" class="img-thumbnail small-image" alt="Foto do Prato" />`
-                        : ""
-                    }
-                  </td>
-                  <td>${pedido.quantidade}</td>
-                  <td>${pedido.quarto}</td>
-                  <td>${pedido.observacoes}</td>
-                  <td class="status">${pedido.status}</td>
-                  <td>
-                    <button class="btn ${
-                      pedido.status === "Pendente"
-                        ? "btn-danger"
-                        : "btn-warning"
-                    } atualizar-status" data-id="${pedido.id}">
-                      Confirmar
-                    </button>
-                  </td>
-                  <td>
-                    <button class="btn btn-danger cancelar-pedido" data-id="${
-                      pedido.id
-                    }">X</button>
-                  </td>
-                </tr>
-              `;
-              tabelaBody.append(row);
-            });
+            // Log para debug
+            console.log(
+              "Pedidos atuais:",
+              pedidosAtuais.map((p) => p.id)
+            );
+            console.log(
+              "Novos pedidos:",
+              novosPedidos.map((p) => p.id)
+            );
 
-            associarEventos();
+            // Detectar novos pedidos
+            const pedidosNovos = detectarNovosPedidos(novosPedidos);
+            console.log(
+              "Pedidos detectados como novos:",
+              pedidosNovos.map((p) => p.id)
+            );
+
+            // Verificar se há mudanças nos pedidos (novos, removidos ou alterados)
+            const houveMudanca =
+              pedidosNovos.length > 0 ||
+              pedidosAtuais.length !== novosPedidos.length ||
+              forcarAtualizacao ||
+              primeiroCarregamento;
+
+            console.log("Houve mudança:", houveMudanca);
+
+            // Se há mudanças, atualizar a tela
+            if (houveMudanca) {
+              // Tocar som se há novos pedidos (não no primeiro carregamento)
+              if (pedidosNovos.length > 0 && !primeiroCarregamento) {
+                console.log("Tocando som de notificação");
+                tocarNotificacao();
+                atualizarStatusInfo(
+                  `${pedidosNovos.length} novo(s) pedido(s) recebido(s)!`,
+                  "success"
+                );
+              }
+
+              console.log("Atualizando tabela");
+
+              // Atualizar pedidos atuais
+              pedidosAtuais = [...novosPedidos];
+
+              // Atualizar tabela
+              const tabelaBody = $("#tabela-pedidos");
+              tabelaBody.empty();
+
+              novosPedidos.forEach((pedido) => {
+                const isNovo = pedidosNovos.some((p) => p.id === pedido.id);
+                const row = `
+                  <tr id="pedido_${pedido.id}" class="${
+                  pedido.status === "Em Preparação" ? "preparacao" : ""
+                }${isNovo ? " novo-pedido" : ""}">
+                    <td>${pedido.solicitante}</td>
+                    <td>${pedido.setor}</td>
+                    <td>${pedido.prato}</td>
+                    <td>
+                      ${
+                        pedido.foto
+                          ? `<img src="${pedido.foto}" class="img-thumbnail small-image" alt="Foto do Prato" />`
+                          : ""
+                      }
+                    </td>
+                    <td>${pedido.quantidade}</td>
+                    <td>${pedido.quarto}</td>
+                    <td>${pedido.observacoes}</td>
+                    <td class="status">${pedido.status}</td>
+                    <td>
+                      <button class="btn ${
+                        pedido.status === "Pendente"
+                          ? "btn-danger"
+                          : "btn-warning"
+                      } atualizar-status" data-id="${pedido.id}">
+                        Confirmar
+                      </button>
+                    </td>
+                    <td>
+                      <button class="btn btn-danger cancelar-pedido" data-id="${
+                        pedido.id
+                      }">X</button>
+                    </td>
+                  </tr>
+                `;
+                tabelaBody.append(row);
+              });
+
+              associarEventos();
+
+              // Remover destaque de novos pedidos após 5 segundos
+              setTimeout(() => {
+                $(".novo-pedido").removeClass("novo-pedido");
+              }, 5000);
+
+              if (primeiroCarregamento) {
+                primeiroCarregamento = false;
+                atualizarStatusInfo("Buscando novos pedidos...", "info");
+              }
+            }
+
+            // Atualizar status se não há mudanças
+            if (!houveMudanca) {
+              const agora = new Date().toLocaleTimeString();
+              console.log(`${agora}: Nenhuma mudança detectada`);
+              atualizarStatusInfo("Sem novos pedidos por hora.", "info");
+            }
           } else {
-            alert("Erro ao carregar pedidos: " + response.message);
+            atualizarStatusInfo(
+              "Erro ao carregar pedidos: " + response.message,
+              "danger"
+            );
           }
         },
         error: function () {
-          $("#loading").text("Erro ao carregar pedidos.").show();
+          $("#loading").hide();
+          atualizarStatusInfo("Erro ao conectar com o servidor", "danger");
         },
       });
     }
@@ -194,6 +391,12 @@
                 } else {
                   row.removeClass("preparacao").addClass("pendente");
                 }
+
+                // Atualizar pedidos atuais
+                const index = pedidosAtuais.findIndex((p) => p.id == pedidoId);
+                if (index !== -1) {
+                  pedidosAtuais[index].status = response.novo_status;
+                }
               } else {
                 alert("Erro ao atualizar status: " + response.message);
               }
@@ -213,6 +416,9 @@
               function (response) {
                 if (response.status === "success") {
                   row.remove();
+
+                  // Remover do array de pedidos atuais
+                  pedidosAtuais = pedidosAtuais.filter((p) => p.id != pedidoId);
                 } else {
                   alert("Erro ao cancelar pedido: " + response.message);
                 }
@@ -230,16 +436,70 @@
         });
     }
 
+    // Função para permitir que o usuário habilite o áudio
+    function habilitarAudio() {
+      document.addEventListener(
+        "click",
+        function enableAudio() {
+          const audio = document.getElementById("notificationSound");
+          audio
+            .play()
+            .then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+            })
+            .catch(() => {
+              // Silenciar erros de autoplay
+            });
+          document.removeEventListener("click", enableAudio);
+        },
+        { once: true }
+      );
+    }
+
     // Inicialização
     $("#imprimir").on("click", imprimirPedidos);
-    carregarPedidos();
-    setInterval(carregarPedidos, 15000);
+
+    // Habilitar áudio no primeiro clique
+    habilitarAudio();
+
+    // Carregar pedidos inicialmente
+    carregarPedidos(true);
+
+    // Verificar novos pedidos a cada 10 segundos
+    setInterval(() => carregarPedidos(false), 10000);
+
+    // Permitir atualização manual
+    $(document).on("keydown", function (e) {
+      if (e.key === "F5" || (e.ctrlKey && e.key === "r")) {
+        e.preventDefault();
+        atualizarStatusInfo("Atualizando manualmente...", "warning");
+        carregarPedidos(true);
+      }
+    });
   });
 </script>
 
 <style>
   .preparacao {
-    background-color: orange;
+    background-color: orange !important;
+  }
+
+  .novo-pedido {
+    background-color: #d4edda !important;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      background-color: #d4edda;
+    }
+    50% {
+      background-color: #c3e6cb;
+    }
+    100% {
+      background-color: #d4edda;
+    }
   }
 
   .small-image {
@@ -263,6 +523,11 @@
     color: #333;
     margin-bottom: 1rem;
     text-align: center;
+  }
+
+  #status-info {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
   }
 </style>
 

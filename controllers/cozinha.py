@@ -86,10 +86,6 @@ def api_gerenciar_pedidos():
 
     return response.json({'pedidos': resultado})
 
-#  meus pedidos
-@auth.requires_login()
-def impressao():
-    return dict()
 
 
 def api_listar_pedidos():
@@ -267,6 +263,8 @@ def api_listar_pedidos():
         print(error_message)  # Log para depuração
         return response.json({'status': 'error', 'message': error_message})
 
+
+
 @auth.requires_login()
 def cancelar_pedido():
     try:
@@ -315,6 +313,11 @@ def atualizar_status():
         return response.json({'status': 'success', 'novo_status': novo_status})
     except Exception as e:
         return response.json({'status': 'failed', 'message': str(e)})
+
+#  meus pedidos
+@auth.requires_login()
+def impressao():
+    return dict()
 
 
 @auth.requires(lambda: any(auth.has_membership(role) for role in ['Cozinha', 'Gestor', 'Colaborador', 'Administrador']))
