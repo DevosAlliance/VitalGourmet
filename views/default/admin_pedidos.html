@@ -831,6 +831,68 @@
   </div>
 </div>
 
+<!-- Modal de Detalhes por Tipo de Refeição -->
+<div class="modal fade" id="tipoRefeicaoDetailsModal" tabindex="-1" aria-labelledby="tipoRefeicaoDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #ffc107 0%, #ff8f00 100%); color: white;">
+        <h5 class="modal-title" id="tipoRefeicaoDetailsModalLabel">
+          <i class="fas fa-utensils"></i> Detalhes por Tipo de Refeição - <span id="tipoRefeicaoTitle"></span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Loading State -->
+        <div id="tipoRefeicaoDetailsLoading" class="text-center py-4">
+          <div class="spinner-border text-warning" role="status"></div>
+          <p class="mt-3">Carregando detalhes do tipo de refeição...</p>
+        </div>
+
+        <!-- Content -->
+        <div id="tipoRefeicaoDetailsContent" class="d-none">
+          <div class="alert alert-warning">
+            <i class="fas fa-info-circle"></i>
+            <strong>Total de usuários:</strong> <span id="totalUsersTipoRefeicao">0</span> |
+            <strong>Receita total:</strong> <span id="totalRevenueTipoRefeicao">R$ 0,00</span>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead class="table-warning">
+                <tr>
+                  <th>Nome do Usuário</th>
+                  <th>Tipo de Usuário</th>
+                  <th>Setor</th>
+                  <th>Total de Pedidos</th>
+                  <th>Total Gasto</th>
+                  <th>Média por Pedido</th>
+                </tr>
+              </thead>
+              <tbody id="tipoRefeicaoDetailsTable">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="tipoRefeicaoDetailsError" class="d-none">
+          <div class="text-center py-4">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h5>Erro ao carregar detalhes</h5>
+            <p>Não foi possível carregar os detalhes do tipo de refeição.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <!-- <button type="button" class="btn btn-warning" onclick="exportarDetalhesTipoRefeicao()">
+          <i class="fas fa-download"></i> Exportar CSV
+        </button> -->
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // Variáveis globais
   let currentAnalyticsType = null;
@@ -1323,42 +1385,60 @@
     renderizarAnalyticsBySetor(data.por_setor);
   }
 
-  // Funções de renderização (mantidas do código anterior)
-  function renderizarAnalyticsByTipoRefeicao(dados) {
-    const container = document.getElementById('analyticsByTipoRefeicao');
+function renderizarAnalyticsByTipoRefeicao(dados) {
+  const container = document.getElementById('analyticsByTipoRefeicao');
+  
+  if (!dados || dados.length === 0) {
+    container.innerHTML = '<div class="no-data-message"><p>Nenhum dado encontrado para tipos de refeição.</p></div>';
+    return;
+  }
+  
+  let html = '';
+  dados.forEach(item => {
+    const percentual = (item.total_receita / dados.reduce((sum, d) => sum + d.total_receita, 0)) * 100;
     
-    if (!dados || dados.length === 0) {
-      container.innerHTML = '<div class="no-data-message"><p>Nenhum dado encontrado para tipos de refeição.</p></div>';
-      return;
-    }
-    
-    let html = '';
-    dados.forEach(item => {
-      const percentual = (item.total_receita / dados.reduce((sum, d) => sum + d.total_receita, 0)) * 100;
-      
-      html += `
-        <div class="metric-card">
-          <div class="metric-title">${item.tipo_refeicao || 'Sem tipo definido'}</div>
-          <div class="metric-value">
-            <div>
-              <span class="metric-number">${item.total_pedidos} pedidos</span>
-              <span class="text-muted">• ${item.total_unidades} unidades</span>
-            </div>
-            <div class="metric-money">${formatarBRL(item.total_receita)}</div>
-          </div>
-          <div class="progress-container">
-            <div class="progress">
-              <div class="progress-bar bg-warning" style="width: ${percentual}%"></div>
-            </div>
-            <small class="text-muted">${percentual.toFixed(1)}% do total</small>
-          </div>
+    html += `
+      <div class="metric-card tipo-refeicao-card" data-tipo-refeicao="${item.tipo_refeicao}" style="cursor: pointer; transition: all 0.3s ease;" 
+           onclick="abrirDetalhesTipoRefeicao('${item.tipo_refeicao}')" 
+           title="Clique para ver detalhes individuais dos usuários que consumiram ${item.tipo_refeicao}">
+        <div class="metric-title">
+          ${item.tipo_refeicao || 'Sem tipo definido'}
+          <small class="text-muted float-end">
+            <i class="fas fa-utensils"></i> Clique para detalhes
+          </small>
         </div>
-      `;
+        <div class="metric-value">
+          <div>
+            <span class="metric-number">${item.total_pedidos} pedidos</span>
+            <span class="text-muted">• ${item.total_unidades} unidades</span>
+          </div>
+          <div class="metric-money">${formatarBRL(item.total_receita)}</div>
+        </div>
+        <div class="progress-container">
+          <div class="progress">
+            <div class="progress-bar bg-warning" style="width: ${percentual}%"></div>
+          </div>
+          <small class="text-muted">${percentual.toFixed(1)}% do total</small>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+  
+  // Adicionar efeito hover
+  container.querySelectorAll('.tipo-refeicao-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+      this.style.transform = 'translateY(-3px)';
+      this.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
     });
     
-    container.innerHTML = html;
-  }
-
+    card.addEventListener('mouseleave', function() {
+      this.style.transform = 'translateY(0)';
+      this.style.boxShadow = '';
+    });
+  });
+}
   
   function renderizarAnalyticsBySetor(dados) {
   const container = document.getElementById('analyticsBySetor');
@@ -1977,4 +2057,120 @@ function exportarDetalhesSetor() {
   document.body.removeChild(link);
 }
 
+// Função para abrir modal de detalhes por tipo de refeição
+function abrirDetalhesTipoRefeicao(tipoRefeicao) {
+  // Atualizar título
+  document.getElementById('tipoRefeicaoTitle').textContent = tipoRefeicao;
+  
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('tipoRefeicaoDetailsModal'));
+  modal.show();
+  
+  // Carregar dados
+  carregarDetalhesTipoRefeicao(tipoRefeicao);
+}
+
+// Função para carregar detalhes do tipo de refeição
+function carregarDetalhesTipoRefeicao(tipoRefeicao) {
+  // Mostrar loading
+  document.getElementById('tipoRefeicaoDetailsLoading').classList.remove('d-none');
+  document.getElementById('tipoRefeicaoDetailsContent').classList.add('d-none');
+  document.getElementById('tipoRefeicaoDetailsError').classList.add('d-none');
+  
+  // Construir URL com todos os filtros atuais
+  const params = new URLSearchParams();
+  const filtros = ['nome', 'nome_prato', 'tipo_usuario', 'setor', 'data_inicio', 'data_fim', 'tipo_refeicao'];
+  filtros.forEach(filtro => {
+    const elemento = document.querySelector(`[name="${filtro}"]`);
+    if (elemento && elemento.value) {
+      params.append(filtro, elemento.value);
+    }
+  });
+  
+  // Adicionar tipo de refeição
+  params.append('tipo_refeicao_detalhes', tipoRefeicao);
+  
+  const url = `{{=URL('default', 'api_detalhes_usuarios_por_tipo_refeicao')}}?${params.toString()}`;
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        renderizarDetalhesTipoRefeicao(data);
+      } else {
+        mostrarErroDetalhesTipoRefeicao();
+      }
+    })
+    .catch(error => {
+      console.error('Erro ao carregar detalhes do tipo de refeição:', error);
+      mostrarErroDetalhesTipoRefeicao();
+    });
+}
+
+// Função para renderizar tabela de detalhes do tipo de refeição
+function renderizarDetalhesTipoRefeicao(data) {
+  // Esconder loading
+  document.getElementById('tipoRefeicaoDetailsLoading').classList.add('d-none');
+  document.getElementById('tipoRefeicaoDetailsContent').classList.remove('d-none');
+  
+  // Atualizar resumo
+  document.getElementById('totalUsersTipoRefeicao').textContent = data.resumo.total_usuarios;
+  document.getElementById('totalRevenueTipoRefeicao').textContent = formatarBRL(data.resumo.receita_total);
+  
+  // Renderizar tabela
+  const tbody = document.getElementById('tipoRefeicaoDetailsTable');
+  tbody.innerHTML = '';
+  
+  data.usuarios.forEach(usuario => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="fw-bold">${usuario.nome_usuario}</td>
+      <td><span class="badge bg-secondary">${usuario.tipo_usuario}</span></td>
+      <td>${usuario.setor}</td>
+      <td><span class="badge bg-info">${usuario.total_pedidos}</span></td>
+      <td class="fw-bold text-success">${formatarBRL(usuario.total_gasto)}</td>
+      <td>${formatarBRL(usuario.media_por_pedido)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+  
+  // Armazenar dados para exportação
+  window.currentTipoRefeicaoDetails = data;
+}
+
+// Função para mostrar erro
+function mostrarErroDetalhesTipoRefeicao() {
+  document.getElementById('tipoRefeicaoDetailsLoading').classList.add('d-none');
+  document.getElementById('tipoRefeicaoDetailsContent').classList.add('d-none');
+  document.getElementById('tipoRefeicaoDetailsError').classList.remove('d-none');
+}
+
+// Função para exportar detalhes do tipo de refeição
+function exportarDetalhesTipoRefeicao() {
+  if (!window.currentTipoRefeicaoDetails) {
+    alert('Nenhum dado para exportar');
+    return;
+  }
+  
+  const data = window.currentTipoRefeicaoDetails;
+  let csvContent = "data:text/csv;charset=utf-8,";
+  
+  csvContent += `Detalhes do Tipo de Refeição - ${data.tipo_refeicao}\n`;
+  csvContent += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
+  
+  csvContent += "Nome do Usuário,Tipo de Usuário,Setor,Total de Pedidos,Total Gasto,Média por Pedido\n";
+  
+  data.usuarios.forEach(usuario => {
+    csvContent += `${usuario.nome_usuario},${usuario.tipo_usuario},${usuario.setor},${usuario.total_pedidos},${formatarBRL(usuario.total_gasto)},${formatarBRL(usuario.media_por_pedido)}\n`;
+  });
+  
+  // Download
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `detalhes_tipo_refeicao_${data.tipo_refeicao}_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 </script>
